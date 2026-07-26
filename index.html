@@ -3,23 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#12121f">
+<meta name="theme-color" content="#00071a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="PoKoalaShop">
 <link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@800;900&display=swap" rel="stylesheet">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>PoKoalaShop</title>
 <style>
 :root{
---bg:#12121f;--surf:#1b1b2e;--surf2:#25253d;--surf3:#32324f;
---acc:#7c6af7;--accS:rgba(124,106,247,.16);
---org:#f79a5c;--orgS:rgba(247,154,92,.14);
---grn:#4ecb8d;--grnS:rgba(78,203,141,.14);
---yel:#f5cd5c;--yelS:rgba(245,205,92,.14);
---red:#f76a7a;--redS:rgba(247,106,122,.14);
---blu:#5cb4f7;--bluS:rgba(92,180,247,.14);
---tx:#eaeaf2;--tx2:#9494b4;--tx3:#5d5d80;
---bd:rgba(255,255,255,.07);--r:14px;--r2:9px;
+--bg:#00071a;--surf:#0b1430;--surf2:#152045;--surf3:#202c58;
+--red:#E3350D;--redS:rgba(227,53,13,.16);
+--yel:#FFCB05;--yelS:rgba(255,203,5,.14);
+--gold:#F0D890;
+--grn:#4ECB8D;--grnS:rgba(78,203,141,.14);
+--blu:#5CB4F7;--bluS:rgba(92,180,247,.14);
+--dng:#FF7A8A;--dngS:rgba(255,122,138,.14);
+--tx:#eaeaf2;--tx2:#8c9ac0;--tx3:#556289;
+--bd:rgba(255,255,255,.08);--r:14px;--r2:9px;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--tx);max-width:560px;margin:0 auto;padding-bottom:calc(70px + env(safe-area-inset-bottom));overscroll-behavior-y:none}
@@ -28,33 +32,35 @@ input,select,textarea,button{font-family:inherit}
 
 /* AUTH */
 #auth{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;text-align:center}
-.aLogo{font-size:52px;margin-bottom:14px}
-.aTit{font-size:25px;font-weight:800;letter-spacing:-.5px}
-.aTit b{color:var(--acc);font-weight:800}
+.aLogo{width:132px;margin-bottom:18px}
+.aTit{font-family:Raleway,-apple-system,sans-serif;font-weight:900;font-size:31px;letter-spacing:-.7px;line-height:1}
+.aTit .p{color:var(--red)}.aTit .k{color:var(--yel)}.aTit .s{color:var(--gold);font-size:18px;margin-left:3px;letter-spacing:.8px}
 .aSub{color:var(--tx2);font-size:14px;margin:6px 0 34px}
 .gBtn{display:flex;align-items:center;gap:10px;background:#fff;color:#2c2c3a;border:0;border-radius:11px;padding:13px 26px;font-size:15px;font-weight:700;cursor:pointer}
 
 /* HEADER */
 header{position:sticky;top:0;z-index:60;background:var(--bg);padding:calc(10px + env(safe-area-inset-top)) 16px 0}
 .hTop{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
-.brand{font-size:17px;font-weight:800;letter-spacing:-.3px}
-.brand b{color:var(--acc)}
+.brand{display:flex;align-items:center;gap:9px}
+.brand img{width:38px;height:auto;display:block;flex:none}
+.wm{font-family:Raleway,-apple-system,sans-serif;font-weight:900;font-size:21px;letter-spacing:-.5px;line-height:1}
+.wm .p{color:var(--red)}.wm .k{color:var(--yel)}.wm .s{color:var(--gold);font-size:13px;margin-left:2px;letter-spacing:.6px}
 .hRight{display:flex;align-items:center;gap:8px}
 .sync{font-size:10px;color:var(--tx3);display:flex;align-items:center;gap:4px}
 .syncDot{width:6px;height:6px;border-radius:50%;background:var(--grn)}
 .syncDot.busy{background:var(--yel)}
-.syncDot.err{background:var(--red)}
+.syncDot.err{background:var(--dng)}
 .iBtn{background:var(--surf2);border:0;color:var(--tx2);width:32px;height:32px;border-radius:9px;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .srch{position:relative;margin-bottom:10px}
 .srch input{width:100%;background:var(--surf);border:1px solid var(--bd);border-radius:11px;padding:10px 34px 10px 34px;color:var(--tx);font-size:14px;outline:none}
-.srch input:focus{border-color:var(--acc)}
+.srch input:focus{border-color:var(--red)}
 .srch .ic{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--tx3);font-size:13px}
 .srch .clr{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--surf2);border:0;color:var(--tx2);width:22px;height:22px;border-radius:50%;font-size:13px;cursor:pointer}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;padding-bottom:10px}
 .st{background:var(--surf);border-radius:10px;padding:7px 4px;text-align:center}
 .stV{font-size:17px;font-weight:800;line-height:1.1}
 .stL{font-size:9.5px;color:var(--tx2);margin-top:2px}
-.st.a .stV{color:var(--acc)}.st.b .stV{color:var(--yel)}.st.c .stV{color:var(--org)}.st.d .stV{color:var(--grn);font-size:14px}
+.st.a .stV{color:var(--red)}.st.b .stV{color:var(--yel)}.st.c .stV{color:var(--blu)}.st.d .stV{color:var(--grn);font-size:14px}
 
 /* CONTENT */
 main{padding:4px 16px 20px}
@@ -72,17 +78,18 @@ main{padding:4px 16px 20px}
 .cSub{font-size:11px;color:var(--tx2);margin-top:2px}
 .chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
 .chip{font-size:10.5px;padding:2px 7px;border-radius:9px;font-weight:600;white-space:nowrap}
-.cA{background:var(--accS);color:var(--acc)}
+.cA{background:var(--redS);color:var(--red)}
 .cY{background:var(--yelS);color:var(--yel)}
 .cG{background:var(--grnS);color:var(--grn)}
 .cB{background:var(--bluS);color:var(--blu)}
-.cO{background:var(--orgS);color:var(--org)}
+.cO{background:var(--bluS);color:var(--blu)}
 .acts{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
 .aBtn{font-size:11px;font-weight:700;padding:5px 10px;border-radius:20px;border:0;cursor:pointer;background:var(--surf2);color:var(--tx2)}
-.aBtn.p{background:var(--accS);color:var(--acc)}
+.aBtn.p{background:var(--redS);color:var(--red)}
 .aBtn.g{background:var(--grnS);color:var(--grn)}
 .aBtn.y{background:var(--yelS);color:var(--yel)}
-.aBtn.o{background:var(--orgS);color:var(--org)}
+.aBtn.o{background:var(--bluS);color:var(--blu)}
+.aBtn.d{background:var(--dngS);color:var(--dng)}
 
 /* ORDER */
 .ord{background:var(--surf);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
@@ -112,7 +119,7 @@ main{padding:4px 16px 20px}
 
 /* EMPTY */
 .empty{text-align:center;padding:52px 22px;color:var(--tx3)}
-.empty .e1{font-size:38px;margin-bottom:12px;opacity:.65}
+.empty .e1{margin-bottom:14px;opacity:.5;color:var(--tx3)}
 .empty .e2{font-size:14px;line-height:1.5}
 
 /* SHEET */
@@ -126,7 +133,7 @@ main{padding:4px 16px 20px}
 .fld{padding:0 18px;margin-bottom:13px}
 .lbl{font-size:11.5px;color:var(--tx2);font-weight:600;margin-bottom:5px;display:block}
 .inp{width:100%;background:var(--surf2);border:1px solid var(--bd);border-radius:var(--r2);padding:11px 12px;color:var(--tx);font-size:15px;outline:none}
-.inp:focus{border-color:var(--acc)}
+.inp:focus{border-color:var(--red)}
 textarea.inp{height:66px;resize:none;font-size:13px;line-height:1.5}
 select.inp{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--tx3) 50%),linear-gradient(135deg,var(--tx3) 50%,transparent 50%);background-position:calc(100% - 16px) 50%,calc(100% - 11px) 50%;background-size:5px 5px;background-repeat:no-repeat}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 18px;margin-bottom:13px}
@@ -137,10 +144,10 @@ select.inp{appearance:none;background-image:linear-gradient(45deg,transparent 50
 .phZ img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .phX{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.65);border:0;color:#fff;width:26px;height:26px;border-radius:50%;font-size:14px;cursor:pointer;z-index:3}
 .shF{display:flex;gap:9px;padding:6px 18px 0}
-.bP{flex:1;background:var(--acc);color:#fff;border:0;border-radius:var(--r2);padding:13px;font-size:15px;font-weight:700;cursor:pointer}
-.bP.g{background:var(--grn)}.bP.r{background:var(--red)}
+.bP{flex:1;background:var(--red);color:#fff;border:0;border-radius:var(--r2);padding:13px;font-size:15px;font-weight:700;cursor:pointer}
+.bP.g{background:var(--grn)}.bP.r{background:var(--dng);color:#2b0a10}
 .bS{background:var(--surf2);color:var(--tx2);border:0;border-radius:var(--r2);padding:13px 18px;font-size:15px;font-weight:600;cursor:pointer}
-.dgr{width:calc(100% - 36px);margin:14px 18px 0;background:transparent;border:1px solid var(--redS);color:var(--red);border-radius:var(--r2);padding:10px;font-size:13px;font-weight:600;cursor:pointer}
+.dgr{width:calc(100% - 36px);margin:14px 18px 0;background:transparent;border:1px solid var(--dngS);color:var(--dng);border-radius:var(--r2);padding:10px;font-size:13px;font-weight:600;cursor:pointer}
 
 /* CONFIRM */
 .cfm{display:none;position:fixed;inset:0;z-index:300;background:rgba(6,6,12,.8);align-items:center;justify-content:center;padding:24px}
@@ -156,10 +163,10 @@ select.inp{appearance:none;background-image:linear-gradient(45deg,transparent 50
 /* NAV */
 nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;background:var(--surf);border-top:1px solid var(--bd);display:flex;padding:7px 0 calc(9px + env(safe-area-inset-bottom));z-index:100}
 .nv{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;color:var(--tx3);font-size:10px;font-weight:600;position:relative}
-.nv.on{color:var(--acc)}
-.nvI{font-size:19px;line-height:1}
-.nvB{position:absolute;top:-2px;right:50%;margin-right:-20px;background:var(--org);color:#12121f;font-size:9px;font-weight:800;min-width:15px;height:15px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px}
-.fab{position:fixed;bottom:calc(78px + env(safe-area-inset-bottom));right:max(16px,calc(50% - 264px));width:52px;height:52px;border-radius:50%;background:var(--acc);color:#fff;border:0;font-size:27px;font-weight:300;cursor:pointer;z-index:99;box-shadow:0 5px 18px rgba(124,106,247,.42);display:flex;align-items:center;justify-content:center}
+.nv.on{color:var(--red)}
+.nvI{width:21px;height:21px;display:block}
+.nvB{position:absolute;top:-2px;right:50%;margin-right:-20px;background:var(--blu);color:#00071a;font-size:9px;font-weight:800;min-width:15px;height:15px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.fab{position:fixed;bottom:calc(78px + env(safe-area-inset-bottom));right:max(16px,calc(50% - 264px));width:52px;height:52px;border-radius:50%;background:var(--red);color:#fff;border:0;font-size:27px;font-weight:300;cursor:pointer;z-index:99;box-shadow:0 5px 18px rgba(124,106,247,.42);display:flex;align-items:center;justify-content:center}
 .hint{font-size:11.5px;color:var(--tx3);text-align:center;padding:14px 20px 0;line-height:1.5}
 .tagBox{background:var(--surf2);border-radius:var(--r2);padding:11px 12px;font-size:12px;color:var(--tx2);line-height:1.55;margin:0 18px 12px;word-break:break-word;max-height:130px;overflow-y:auto}
 </style>
@@ -167,8 +174,8 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 <body>
 
 <div id="auth">
-  <div class="aLogo">🐨</div>
-  <div class="aTit">PoKoala<b>Shop</b></div>
+  <img class="aLogo" src="icons/logo.png" alt="">
+  <div class="aTit"><span class="p">Po</span><span class="k">Koala</span><span class="s">Shop</span></div>
   <div class="aSub">Ta boutique Vinted, hors de Vinted</div>
   <button class="gBtn" id="btnSignin">Connexion avec Google</button>
 </div>
@@ -176,15 +183,15 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 <div id="app" class="hide">
   <header>
     <div class="hTop">
-      <div class="brand">PoKoala<b>Shop</b></div>
+      <div class="brand"><img src="icons/logo.png" alt=""><div class="wm"><span class="p">Po</span><span class="k">Koala</span><span class="s">Shop</span></div></div>
       <div class="hRight">
         <div class="sync"><span class="syncDot" id="syncDot"></span><span id="syncTx">—</span></div>
         <button class="iBtn" id="btnTags" title="Hashtags">#</button>
-        <button class="iBtn" id="btnAcc" title="Compte">👤</button>
+        <button class="iBtn" id="btnAcc" aria-label="Compte"><span style="width:16px;height:16px;display:block"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><circle cx="12" cy="8" r="3.6"/><path d="M4.6 20a7.6 7.6 0 0 1 14.8 0"/></svg></span></button>
       </div>
     </div>
     <div class="srch">
-      <span class="ic">🔍</span>
+      <span class="ic" style="width:14px;height:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.7-4.7"/></svg></span>
       <input type="search" id="q" placeholder="Nom, Pokémon, boîte…" autocomplete="off">
       <button class="clr hide" id="qClr">×</button>
     </div>
@@ -201,10 +208,10 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
   <button class="fab" id="fab">+</button>
 
   <nav>
-    <div class="nv on" data-t="vitrine"><div class="nvI">🛍️</div>Vitrine</div>
-    <div class="nv" data-t="afaire"><div class="nvI">📦</div>À faire<span class="nvB hide" id="nb2"></span></div>
-    <div class="nv" data-t="cmd"><div class="nvI">🚚</div>Commandes<span class="nvB hide" id="nb3"></span></div>
-    <div class="nv" data-t="histo"><div class="nvI">📈</div>Historique</div>
+    <div class="nv on" data-t="vitrine"><svg class="nvI" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16l-1.2 11.2a2 2 0 0 1-2 1.8H7.2a2 2 0 0 1-2-1.8L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>Vitrine</div>
+    <div class="nv" data-t="afaire"><svg class="nvI" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5 12 4l9 4.5v7L12 20l-9-4.5v-7Z"/><path d="m3 8.5 9 4.5 9-4.5"/><path d="M12 13v7"/></svg>À faire<span class="nvB hide" id="nb2"></span></div>
+    <div class="nv" data-t="cmd"><svg class="nvI" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7h11v9H2z"/><path d="M13 10h4l4 3.2V16h-8z"/><circle cx="6" cy="18.5" r="1.8"/><circle cx="17" cy="18.5" r="1.8"/></svg>Commandes<span class="nvB hide" id="nb3"></span></div>
+    <div class="nv" data-t="histo"><svg class="nvI" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20V4"/><path d="M3 20h18"/><path d="m6.5 15 4-4.5 3.5 3 5-6"/></svg>Historique</div>
   </nav>
 </div>
 
@@ -225,7 +232,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '2.01';
+var APP_VERSION = '2.02';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -330,10 +337,10 @@ function askWho(){
   $('view').innerHTML = '';
   openSheet(
     '<div class="shT">Cet appareil, c\'est qui ?</div>' +
-    '<div class="shS">Chacun écrit dans son propre fichier : vos modifications ne peuvent jamais s\'écraser. Modifiable ensuite dans 👤.</div>' +
+    '<div class="shS">Chacun écrit dans son propre fichier : vos modifications ne peuvent jamais s\'écraser. Modifiable ensuite depuis l\'icône de compte.</div>' +
     '<div class="fld" style="display:flex;gap:10px">' +
-    '<button class="bP" style="flex:1;background:var(--acc)" data-who="thomas">Thomas</button>' +
-    '<button class="bP" style="flex:1;background:var(--org)" data-who="cindy">Cindy</button>' +
+    '<button class="bP" style="flex:1;background:var(--red)" data-who="thomas">Thomas</button>' +
+    '<button class="bP" style="flex:1;background:var(--blu)" data-who="cindy">Cindy</button>' +
     '</div>'
   );
   var b = document.querySelectorAll('[data-who]');
@@ -556,7 +563,7 @@ function empty(icon, txt){
 
 function renderSearch(q){
   var res = lots.filter(function(l){ return matches(l, q); });
-  if(!res.length){ $('view').innerHTML = empty('🔍','Aucun lot ne correspond à « ' + esc(q) + ' »'); return; }
+  if(!res.length){ $('view').innerHTML = empty('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:54px;height:54px;display:block;margin:0 auto"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.7-4.7"/></svg>','Aucun lot ne correspond à « ' + esc(q) + ' »'); return; }
   var h = '<div class="secH">Résultats <span>' + res.length + '</span></div>';
   h += res.map(card).join('');
   $('view').innerHTML = h;
@@ -564,13 +571,13 @@ function renderSearch(q){
 
 function renderVitrine(){
   var v = byStatus('vitrine');
-  if(!v.length){ $('view').innerHTML = empty('🛍️','Rien en vitrine.<br>Prépare un lot puis mets-le en ligne.'); return; }
+  if(!v.length){ $('view').innerHTML = empty('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:54px;height:54px;display:block;margin:0 auto"><path d="M4 8h16l-1.2 11.2a2 2 0 0 1-2 1.8H7.2a2 2 0 0 1-2-1.8L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>','Rien en vitrine.<br>Prépare un lot puis mets-le en ligne.'); return; }
   $('view').innerHTML = '<div class="secH">En vitrine <span>' + v.length + '</span></div>' + v.map(card).join('');
 }
 
 function renderAfaire(){
   var a = byStatus('afaire'), p = byStatus('pret');
-  if(!a.length && !p.length){ $('view').innerHTML = empty('📦','Rien à préparer.<br>Ajoute un lot avec le bouton +'); return; }
+  if(!a.length && !p.length){ $('view').innerHTML = empty('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:54px;height:54px;display:block;margin:0 auto"><path d="M3 8.5 12 4l9 4.5v7L12 20l-9-4.5v-7Z"/><path d="m3 8.5 9 4.5 9-4.5"/><path d="M12 13v7"/></svg>','Rien à préparer.<br>Ajoute un lot avec le bouton +'); return; }
   var h = '';
   if(a.length) h += '<div class="secH">À préparer <span>' + a.length + '</span></div>' + a.map(card).join('');
   if(p.length) h += '<div class="secH">Prêts, pas encore en ligne <span>' + p.length + '</span></div>' + p.map(card).join('');
@@ -579,35 +586,35 @@ function renderAfaire(){
 
 function card(l){
   var ph = l.photo
-    ? '<div class="cPh" data-ph="' + l.photo + '" data-open="' + l.id + '">📷</div>'
-    : '<div class="cPh" data-open="' + l.id + '">🃏</div>';
+    ? '<div class="cPh" data-ph="' + l.photo + '" data-open="' + l.id + '"></div>'
+    : '<div class="cPh" data-open="' + l.id + '"><span style="width:26px;height:26px;display:block"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M3 8.5 12 4l9 4.5v7L12 20l-9-4.5v-7Z"/><path d="m3 8.5 9 4.5 9-4.5"/></svg></span></div>';
 
   var chips = [];
   if(l.nb) chips.push('<span class="chip cB">' + l.nb + ' cartes</span>');
-  if(l.boite) chips.push('<span class="chip cO">📦 ' + esc(l.boite) + (l.sep ? ' · ' + esc(l.sep) : '') + '</span>');
+  if(l.boite) chips.push('<span class="chip cO">Boîte ' + esc(l.boite) + (l.sep ? ' · ' + esc(l.sep) : '') + '</span>');
   if(num(l.pa) != null) chips.push('<span class="chip cA">' + eur(num(l.pa)) + '</span>');
   if(num(l.pm) != null) chips.push('<span class="chip cY">min ' + eur(num(l.pm)) + '</span>');
   if(num(l.pv) != null) chips.push('<span class="chip cG">vendu ' + eur(num(l.pv)) + '</span>');
 
   var acts = [];
   if(l.st === 'afaire'){
-    acts.push('<button class="aBtn y" data-mv="' + l.id + '|pret">✓ Préparé</button>');
-    acts.push('<button class="aBtn p" data-list="' + l.id + '">🛍️ Mettre en ligne</button>');
+    acts.push('<button class="aBtn y" data-mv="' + l.id + '|pret">Préparé</button>');
+    acts.push('<button class="aBtn p" data-list="' + l.id + '">Mettre en ligne</button>');
   } else if(l.st === 'pret'){
-    acts.push('<button class="aBtn p" data-list="' + l.id + '">🛍️ Mettre en ligne</button>');
+    acts.push('<button class="aBtn p" data-list="' + l.id + '">Mettre en ligne</button>');
   } else if(l.st === 'vitrine'){
-    acts.push('<button class="aBtn g" data-sell="' + l.id + '">💰 Vendu</button>');
-    acts.push('<button class="aBtn" data-tag="' + l.id + '"># tags</button>');
+    acts.push('<button class="aBtn g" data-sell="' + l.id + '">Vendu</button>');
+    acts.push('<button class="aBtn" data-tag="' + l.id + '">Hashtags</button>');
   } else if(l.st === 'vendu'){
-    acts.push('<button class="aBtn o" data-mv="' + l.id + '|expedie">🚚 Expédié</button>');
+    acts.push('<button class="aBtn o" data-mv="' + l.id + '|expedie">Expédié</button>');
   } else if(l.st === 'expedie'){
-    acts.push('<button class="aBtn p" data-again="' + l.id + '">↻ Refaire</button>');
+    acts.push('<button class="aBtn p" data-again="' + l.id + '">Refaire</button>');
   }
-  acts.push('<button class="aBtn" data-open="' + l.id + '">✏️</button>');
+  acts.push('<button class="aBtn" data-open="' + l.id + '" aria-label="Modifier"><span style="width:13px;height:13px;display:inline-block;vertical-align:-2px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3Z"/><path d="m14.5 6.5 3 3"/></svg></span></button>');
 
   var sub = [];
   if(l.poke && l.nom) sub.push(esc(l.poke));
-  if(l.st === 'vendu' || l.st === 'expedie'){ if(l.acheteur) sub.push('👤 ' + esc(l.acheteur)); }
+  if(l.st === 'vendu' || l.st === 'expedie'){ if(l.acheteur) sub.push(esc(l.acheteur)); }
   if(l.st === 'vitrine' && l.dtListe) sub.push('en ligne depuis le ' + dt(l.dtListe));
 
   return '<div class="card"><div class="cIn">' + ph + '<div class="cBd">' +
@@ -620,7 +627,7 @@ function card(l){
 
 function renderCmd(){
   var v = lots.filter(function(l){ return l.st === 'vendu'; });
-  if(!v.length){ $('view').innerHTML = empty('🚚','Aucune commande à expédier.'); return; }
+  if(!v.length){ $('view').innerHTML = empty('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:54px;height:54px;display:block;margin:0 auto"><path d="M2 7h11v9H2z"/><path d="M13 10h4l4 3.2V16h-8z"/><circle cx="6" cy="18.5" r="1.8"/><circle cx="17" cy="18.5" r="1.8"/></svg>','Aucune commande à expédier.'); return; }
   var groups = {};
   for(var i=0;i<v.length;i++){
     var key = (v[i].acheteur || '').trim().toLowerCase() || ('_' + v[i].id);
@@ -638,23 +645,23 @@ function renderCmd(){
     var tot = 0, ids = [];
     var rows = g.items.map(function(l){
       tot += (num(l.pv) || 0); ids.push(l.id);
-      var th = l.photo ? '<div class="th" data-ph="' + l.photo + '"></div>' : '<div class="th">🃏</div>';
+      var th = l.photo ? '<div class="th" data-ph="' + l.photo + '"></div>' : '<div class="th"><span style="width:17px;height:17px;display:block"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M3 8.5 12 4l9 4.5v7L12 20l-9-4.5v-7Z"/><path d="m3 8.5 9 4.5 9-4.5"/></svg></span></div>';
       return '<div class="ordI">' + th + '<div class="nm">' + esc(lotTitle(l)) +
-        (l.boite ? '<div style="font-size:11px;color:var(--tx3)">📦 ' + esc(l.boite) + (l.sep?' · '+esc(l.sep):'') + '</div>' : '') +
+        (l.boite ? '<div style="font-size:11px;color:var(--tx3)">Boîte ' + esc(l.boite) + (l.sep?' · '+esc(l.sep):'') + '</div>' : '') +
         '</div><div class="pr">' + eur(num(l.pv)) + '</div></div>';
     }).join('');
     h += '<div class="ord"><div class="ordH"><div><div class="ordN">' + esc(g.nom) + '</div>' +
       '<div class="ordM">' + g.items.length + ' lot' + (g.items.length>1?'s':'') + ' · ' + dt(g.items[0].dtVente) + '</div></div>' +
       '<div class="ordT">' + eur(tot) + '</div></div>' +
       '<div class="ordL">' + rows + '</div>' +
-      '<div class="ordF"><button class="bP g" style="width:100%;padding:11px;font-size:14px" data-ship="' + ids.join(',') + '">🚚 Tout marquer expédié</button></div></div>';
+      '<div class="ordF"><button class="bP g" style="width:100%;padding:11px;font-size:14px" data-ship="' + ids.join(',') + '">Tout marquer expédié</button></div></div>';
   }
   $('view').innerHTML = h;
 }
 
 function renderHisto(){
   var sold = lots.filter(function(l){ return l.st === 'vendu' || l.st === 'expedie'; });
-  if(!sold.length){ $('view').innerHTML = empty('📈','Aucune vente enregistrée.'); return; }
+  if(!sold.length){ $('view').innerHTML = empty('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:54px;height:54px;display:block;margin:0 auto"><path d="M3 20V4"/><path d="M3 20h18"/><path d="m6.5 15 4-4.5 3.5 3 5-6"/></svg>','Aucune vente enregistrée.'); return; }
   var g = {};
   for(var i=0;i<sold.length;i++){
     var p = (sold[i].poke || '?').trim();
@@ -713,7 +720,7 @@ function sheetNew(){
     '<div class="fld"><label class="lbl">Boîte</label><input class="inp" id="f_boite" placeholder="3" autocomplete="off"></div></div>' +
     '<div class="fld"><label class="lbl">Séparateur (optionnel)</label><input class="inp" id="f_sep" placeholder="Évoli B" autocomplete="off"></div>' +
     '<div class="shF"><button class="bS" id="x1">Annuler</button><button class="bP" id="k1">Ajouter à préparer</button></div>' +
-    '<button class="dgr" id="k1b" style="border-color:var(--accS);color:var(--acc)">Ajouter et mettre en ligne →</button>'
+    '<button class="dgr" id="k1b" style="border-color:var(--redS);color:var(--red)">Ajouter et mettre en ligne →</button>'
   );
   $('x1').onclick = closeSheet;
   $('k1').onclick = function(){ createLot('afaire'); };
@@ -758,11 +765,11 @@ function sheetList(id){
     '<div class="shS">' + esc(lotTitle(l)) + '</div>' +
     '<div class="fld"><label class="lbl">Photo de l\'annonce</label>' + photoZone(l) + '</div>' +
     '<div class="fld"><label class="lbl">Titre de l\'annonce (optionnel)</label><input class="inp" id="f_nom" value="' + esc(l.nom) + '" placeholder="' + esc(lotTitle(l)) + '"></div>' +
-    '<div class="row2"><div class="fld"><label class="lbl">💜 Prix affiché</label><input class="inp" id="f_pa" type="number" inputmode="decimal" step="0.5" value="' + (l.pa==null?'':l.pa) + '" placeholder="12"></div>' +
-    '<div class="fld"><label class="lbl">⚡ Prix mini accepté</label><input class="inp" id="f_pm" type="number" inputmode="decimal" step="0.5" value="' + (l.pm==null?'':l.pm) + '" placeholder="9"></div></div>' +
+    '<div class="row2"><div class="fld"><label class="lbl">Prix affiché</label><input class="inp" id="f_pa" type="number" inputmode="decimal" step="0.5" value="' + (l.pa==null?'':l.pa) + '" placeholder="12"></div>' +
+    '<div class="fld"><label class="lbl">Prix mini accepté</label><input class="inp" id="f_pm" type="number" inputmode="decimal" step="0.5" value="' + (l.pm==null?'':l.pm) + '" placeholder="9"></div></div>' +
     hint +
-    '<div class="shF"><button class="bS" id="x2">Annuler</button><button class="bP" id="k2">🛍️ En vitrine</button></div>' +
-    '<button class="dgr" id="k2b" style="border-color:var(--bd);color:var(--tx2)"># Copier les hashtags</button>'
+    '<div class="shF"><button class="bS" id="x2">Annuler</button><button class="bP" id="k2">Mettre en vitrine</button></div>' +
+    '<button class="dgr" id="k2b" style="border-color:var(--bd);color:var(--tx2)">Copier les hashtags</button>'
   );
   bindPhoto();
   $('x2').onclick = closeSheet;
@@ -793,7 +800,7 @@ function sheetSell(id){
   openSheet(
     '<div class="shT">Lot vendu</div>' +
     '<div class="shS">' + esc(lotTitle(l)) + (num(l.pa)!=null ? ' · affiché ' + eur(num(l.pa)) : '') + '</div>' +
-    '<div class="fld"><label class="lbl">✅ Prix de vente réel</label><input class="inp" id="f_pv" type="number" inputmode="decimal" step="0.5" value="' + (l.pa==null?'':l.pa) + '"></div>' +
+    '<div class="fld"><label class="lbl">Prix de vente réel</label><input class="inp" id="f_pv" type="number" inputmode="decimal" step="0.5" value="' + (l.pa==null?'':l.pa) + '"></div>' +
     '<div class="fld"><label class="lbl">Acheteur (pour grouper la commande)</label><input class="inp" id="f_ach" placeholder="pseudo Vinted" autocomplete="off" value="' + esc(l.acheteur) + '"></div>' +
     quick +
     '<div class="shF"><button class="bS" id="x3">Annuler</button><button class="bP g" id="k3">Enregistrer la vente</button></div>'
@@ -824,18 +831,18 @@ function sheetEdit(id){
     '<div class="fld"><label class="lbl">Titre de l\'annonce</label><input class="inp" id="f_nom" value="' + esc(l.nom) + '" placeholder="' + esc(lotTitle(l)) + '"></div>' +
     '<div class="row2"><div class="fld"><label class="lbl">Pokémon</label><input class="inp" id="f_poke" value="' + esc(l.poke) + '"></div>' +
     '<div class="fld"><label class="lbl">Nb cartes</label><input class="inp" id="f_nb" type="number" inputmode="numeric" value="' + (l.nb==null?'':l.nb) + '"></div></div>' +
-    '<div class="row2"><div class="fld"><label class="lbl">📦 Boîte</label><input class="inp" id="f_boite" value="' + esc(l.boite) + '"></div>' +
+    '<div class="row2"><div class="fld"><label class="lbl">Boîte</label><input class="inp" id="f_boite" value="' + esc(l.boite) + '"></div>' +
     '<div class="fld"><label class="lbl">Séparateur</label><input class="inp" id="f_sep" value="' + esc(l.sep) + '"></div></div>' +
-    '<div class="row3"><div class="fld"><label class="lbl">💜 Affiché</label><input class="inp" id="f_pa" type="number" inputmode="decimal" step="0.5" value="' + (l.pa==null?'':l.pa) + '"></div>' +
-    '<div class="fld"><label class="lbl">⚡ Mini</label><input class="inp" id="f_pm" type="number" inputmode="decimal" step="0.5" value="' + (l.pm==null?'':l.pm) + '"></div>' +
-    '<div class="fld"><label class="lbl">✅ Vendu</label><input class="inp" id="f_pv" type="number" inputmode="decimal" step="0.5" value="' + (l.pv==null?'':l.pv) + '"></div></div>' +
+    '<div class="row3"><div class="fld"><label class="lbl">Affiché</label><input class="inp" id="f_pa" type="number" inputmode="decimal" step="0.5" value="' + (l.pa==null?'':l.pa) + '"></div>' +
+    '<div class="fld"><label class="lbl">Mini</label><input class="inp" id="f_pm" type="number" inputmode="decimal" step="0.5" value="' + (l.pm==null?'':l.pm) + '"></div>' +
+    '<div class="fld"><label class="lbl">Vendu</label><input class="inp" id="f_pv" type="number" inputmode="decimal" step="0.5" value="' + (l.pv==null?'':l.pv) + '"></div></div>' +
     '<div class="row2"><div class="fld"><label class="lbl">Statut</label><select class="inp" id="f_st">' +
       opt('afaire', l.st) + opt('pret', l.st) + opt('vitrine', l.st) + opt('vendu', l.st) + opt('expedie', l.st) +
     '</select></div>' +
     '<div class="fld"><label class="lbl">Acheteur</label><input class="inp" id="f_ach" value="' + esc(l.acheteur) + '"></div></div>' +
     '<div class="fld"><label class="lbl">Notes</label><textarea class="inp" id="f_notes" placeholder="Contenu, état, remarques…">' + esc(l.notes) + '</textarea></div>' +
     '<div class="shF"><button class="bS" id="x4">Annuler</button><button class="bP" id="k4">Enregistrer</button></div>' +
-    '<button class="dgr" id="k4t" style="border-color:var(--bd);color:var(--tx2)"># Copier les hashtags</button>' +
+    '<button class="dgr" id="k4t" style="border-color:var(--bd);color:var(--tx2)">Copier les hashtags</button>' +
     '<button class="dgr" id="k4d">Supprimer ce lot</button>'
   );
   bindPhoto();
@@ -873,7 +880,7 @@ function opt(v, cur){ return '<option value="' + v + '"' + (v === cur ? ' select
 function photoZone(l){
   var inner = l.photo
     ? '<div class="phZ" id="phZ" data-ph="' + l.photo + '"><input type="file" accept="image/*" id="f_ph"><button class="phX" id="phX">×</button></div>'
-    : '<div class="phZ" id="phZ"><span style="font-size:22px">📷</span><span>Ajouter la photo Vinted</span><input type="file" accept="image/*" id="f_ph"></div>';
+    : '<div class="phZ" id="phZ"><span style="font-size:13px">Ajouter la photo Vinted</span><input type="file" accept="image/*" id="f_ph"></div>';
   return inner;
 }
 function bindPhoto(){
@@ -895,7 +902,7 @@ function bindPhotoX(){
   x.onclick = function(e){
     e.stopPropagation(); e.preventDefault();
     pendingPhoto = 'none';
-    $('phZ').innerHTML = '<span style="font-size:22px">📷</span><span>Ajouter la photo Vinted</span><input type="file" accept="image/*" id="f_ph">';
+    $('phZ').innerHTML = '<span style="font-size:13px">Ajouter la photo Vinted</span><input type="file" accept="image/*" id="f_ph">';
     bindPhoto();
   };
 }
@@ -980,7 +987,7 @@ function sheetAcc(){
     '<button class="aBtn ' + (who==='thomas'?'p':'') + '" style="flex:1;padding:10px" data-sw="thomas">Thomas</button>' +
     '<button class="aBtn ' + (who==='cindy'?'o':'') + '" style="flex:1;padding:10px" data-sw="cindy">Cindy</button>' +
     '</div></div>' +
-    '<div class="shF"><button class="bS" id="x7">Fermer</button><button class="bP" id="k7r">🔄 Rafraîchir</button></div>' +
+    '<div class="shF"><button class="bS" id="x7">Fermer</button><button class="bP" id="k7r">Rafraîchir</button></div>' +
     '<button class="dgr" id="k7">Se déconnecter</button>'
   );
   var sw = document.querySelectorAll('[data-sw]');

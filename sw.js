@@ -1,6 +1,6 @@
-const CACHE_VERSION = '2.01';
+const CACHE_VERSION = '2.02';
 const CACHE_NAME = 'pokoalashop-v' + CACHE_VERSION;
-const ASSETS = ['./', './index.html', './manifest.json'];
+const ASSETS = ['./', './index.html', './manifest.json', './icons/logo.png', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
