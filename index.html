@@ -225,7 +225,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '2.00';
+var APP_VERSION = '2.01';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -237,6 +237,8 @@ var lots = [];
 var tab = 'vitrine';
 var token = null, tokenExp = 0, tokenClient = null;
 var me = null, myFile = null, myFileId = null;
+var who = null;
+var WHOS = { thomas:'Thomas', cindy:'Cindy' };
 var dirty = false, saving = false, pollTimer = null, sheetOpen = false;
 var cfmCb = null;
 var tagTpl = '#pokemon #cartepokemon #lotpokemon #{poke} #carte{poke} #pokemontcg #collectionpokemon #cartesapokemon #dracaufeu #pikachu #evoli #boosterpokemon #lotcartes';
@@ -313,13 +315,43 @@ function api(url, opts){
 
 async function start(){
   await openIdb();
-  var r = await api('https://www.googleapis.com/oauth2/v3/userinfo');
-  me = await r.json();
-  var slug = (me.email || me.sub || 'user').split('@')[0].toLowerCase().replace(/[^a-z0-9]/g,'');
-  myFile = PREFIX + slug + '.json';
+  try{
+    var r = await api('https://www.googleapis.com/oauth2/v3/userinfo');
+    me = await r.json();
+  }catch(e){ me = {}; }
+  who = localStorage.getItem('pks_who');
+  if(!who || !WHOS[who]){ askWho(); return; }
+  boot();
+}
+
+function askWho(){
+  $('auth').classList.add('hide');
+  $('app').classList.remove('hide');
+  $('view').innerHTML = '';
+  openSheet(
+    '<div class="shT">Cet appareil, c\'est qui ?</div>' +
+    '<div class="shS">Chacun écrit dans son propre fichier : vos modifications ne peuvent jamais s\'écraser. Modifiable ensuite dans 👤.</div>' +
+    '<div class="fld" style="display:flex;gap:10px">' +
+    '<button class="bP" style="flex:1;background:var(--acc)" data-who="thomas">Thomas</button>' +
+    '<button class="bP" style="flex:1;background:var(--org)" data-who="cindy">Cindy</button>' +
+    '</div>'
+  );
+  var b = document.querySelectorAll('[data-who]');
+  for(var i=0;i<b.length;i++){
+    b[i].onclick = function(){
+      who = this.getAttribute('data-who');
+      localStorage.setItem('pks_who', who);
+      closeSheet(); boot();
+    };
+  }
+}
+
+async function boot(){
+  myFile = PREFIX + who + '.json';
   $('auth').classList.add('hide');
   $('app').classList.remove('hide');
   await sync(true);
+  if(pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(function(){ if(!sheetOpen && !saving) sync(false); }, POLL_MS);
 }
 
@@ -409,7 +441,7 @@ async function save(){
 /* écrit un lot : dans mon fichier + dans la vue locale */
 function commit(lot){
   lot.updatedAt = now();
-  lot.by = (me && me.given_name) || 'moi';
+  lot.by = who || 'moi';
   savedLots[lot.id] = lot;
   var i = -1;
   for(var j=0;j<lots.length;j++){ if(lots[j].id === lot.id){ i = j; break; } }
@@ -810,7 +842,7 @@ function sheetEdit(id){
   $('x4').onclick = closeSheet;
   $('k4t').onclick = function(){ copyTags(l); };
   $('k4d').onclick = function(){
-    confirmBox('Supprimer ce lot ?', lotTitle(l) + ' sera retiré pour toi et pour ' + (me && me.given_name === 'Thomas' ? 'Cindy' : 'Thomas') + '.', 'Supprimer', function(){
+    confirmBox('Supprimer ce lot ?', lotTitle(l) + ' sera retiré pour toi et pour ' + (who === 'thomas' ? 'Cindy' : 'Thomas') + '.', 'Supprimer', function(){
       l.deleted = true; closeSheet(); commit(l); toast('Lot supprimé');
     });
   };
@@ -938,17 +970,29 @@ function sheetTags(){
 }
 
 function sheetAcc(){
-  var mine = 0;
-  for(var k in savedLots) mine++;
   openSheet(
-    '<div class="shT">Compte</div>' +
+    '<div class="shT">Cet appareil : ' + esc(WHOS[who] || '?') + '</div>' +
     '<div class="shS">' + esc((me && (me.name || me.email)) || '') + '</div>' +
-    '<div class="fld"><div class="tagBox" style="margin:0">Fichier : <b>' + esc(myFile) + '</b><br>' +
+    '<div class="fld"><div class="tagBox" style="margin:0">Fichier d\'écriture : <b>' + esc(myFile) + '</b><br>' +
     'Lots visibles : <b>' + lots.length + '</b><br>Version : <b>' + APP_VERSION + '</b><br><br>' +
-    'Chacun écrit dans son propre fichier Drive. Aucune écriture ne peut écraser celle de l\'autre.</div></div>' +
+    'Chaque appareil écrit dans son propre fichier Drive. Aucune modification ne peut écraser celle de l\'autre.</div></div>' +
+    '<div class="fld"><label class="lbl">Changer d\'identité sur cet appareil</label><div style="display:flex;gap:9px">' +
+    '<button class="aBtn ' + (who==='thomas'?'p':'') + '" style="flex:1;padding:10px" data-sw="thomas">Thomas</button>' +
+    '<button class="aBtn ' + (who==='cindy'?'o':'') + '" style="flex:1;padding:10px" data-sw="cindy">Cindy</button>' +
+    '</div></div>' +
     '<div class="shF"><button class="bS" id="x7">Fermer</button><button class="bP" id="k7r">🔄 Rafraîchir</button></div>' +
     '<button class="dgr" id="k7">Se déconnecter</button>'
   );
+  var sw = document.querySelectorAll('[data-sw]');
+  for(var i=0;i<sw.length;i++){
+    sw[i].onclick = function(){
+      var w = this.getAttribute('data-sw');
+      if(w === who) return;
+      who = w; localStorage.setItem('pks_who', w);
+      savedLots = {}; myFileId = null;
+      closeSheet(); boot(); toast('Identité : ' + WHOS[w]);
+    };
+  }
   $('x7').onclick = closeSheet;
   $('k7r').onclick = function(){ closeSheet(); sync(true); toast('Synchronisation…'); };
   $('k7').onclick = function(){
