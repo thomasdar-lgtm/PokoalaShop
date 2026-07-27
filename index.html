@@ -149,11 +149,13 @@ select.inp{appearance:none;background-image:linear-gradient(45deg,transparent 50
 .phZ input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .phZ img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#00040f}
 .phZ.has .ph-holder{display:none}
-.phV{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.65);border:0;color:#fff;width:26px;height:26px;border-radius:50%;cursor:pointer;z-index:4;display:none;align-items:center;justify-content:center;padding:5px}
-.phZ.has .phV{display:flex}
+.phE{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.65);border:0;color:#fff;width:28px;height:28px;border-radius:50%;cursor:pointer;z-index:5;display:none;align-items:center;justify-content:center;padding:6px}
+.phZ.has input{display:none}
+.phZ.has{cursor:zoom-in;border-style:solid}
+.phZ.has .phE{display:flex}
 .phZ.has .phX{display:flex}
 .phX{display:none;align-items:center;justify-content:center;padding:6px}
-.phX{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.65);border:0;color:#fff;width:26px;height:26px;border-radius:50%;cursor:pointer;z-index:4}
+.phX{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.65);border:0;color:#fff;width:28px;height:28px;border-radius:50%;cursor:pointer;z-index:5}
 .shF{display:flex;gap:9px;padding:6px 18px 0}
 .bP{flex:1;background:var(--red);color:#fff;border:0;border-radius:var(--r2);padding:13px;font-size:15px;font-weight:700;cursor:pointer}
 .bP.g{background:var(--grn)}.bP.r{background:var(--dng);color:#2b0a10}
@@ -289,7 +291,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '2.11';
+var APP_VERSION = '2.12';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -580,18 +582,20 @@ function hydratePhotos(){
 }
 
 /* visionneuse plein écran */
-function openLightbox(id){
+function showLightbox(src){
   var lb = $('lb');
+  lb.querySelector('img').src = src;
   lb.classList.add('on');
-  lb.querySelector('img').removeAttribute('src');
-  photoUrl(id).then(function(u){ if(u) lb.querySelector('img').src = u; });
   history.pushState({ d:2 }, '');
+}
+function openLightbox(id){
+  photoUrl(id).then(function(u){ if(u) showLightbox(u); });
 }
 function closeLightbox(){
   var lb = $('lb');
   if(!lb.classList.contains('on')) return;
-  lb.classList.remove('on');
   if(history.state && history.state.d === 2) history.back();
+  else lb.classList.remove('on');
 }
 
 /* ═══ SELECTORS ═══ */
@@ -1026,12 +1030,11 @@ function opt(v, cur){ return '<option value="' + v + '"' + (v === cur ? ' select
 
 function photoZone(l){
   var holder = '<span class="ph-holder" style="font-size:13px">Ajouter la photo Vinted</span>';
-  var btns = '<button class="phV" type="button" id="phV" aria-label="Voir en grand">' + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M15 3h6v6"/> <path d="m21 3-7 7"/> <path d="m3 21 7-7"/> <path d="M9 21H3v-6"/></svg>' + '</button>' +
-             '<button class="phX" type="button" id="phX" aria-label="Retirer">' + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M18 6 6 18"/> <path d="m6 6 12 12"/></svg>' + '</button>';
   var attr = (l && l.photo) ? ' data-ph="' + l.photo + '"' : '';
-  var pid  = (l && l.photo) ? l.photo : '';
-  return '<div class="phZ" id="phZ"' + attr + ' data-pid="' + pid + '">' + holder +
-    '<input type="file" accept="image/*" id="f_ph">' + btns + '</div>';
+  return '<div class="phZ" id="phZ"' + attr + '>' + holder +
+    '<input type="file" accept="image/*" id="f_ph">' +
+    '<button class="phE" type="button" id="phE" aria-label="Remplacer la photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/> <path d="m15 5 4 4"/></svg></button>' +
+    '<button class="phX" type="button" id="phX" aria-label="Retirer la photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M18 6 6 18"/> <path d="m6 6 12 12"/></svg></button></div>';
 }
 
 function bindPhoto(){
@@ -1049,27 +1052,25 @@ function bindPhoto(){
       img.src = URL.createObjectURL(b); img.alt = '';
       z.insertBefore(img, z.firstChild);
       z.classList.add('has');
-      z.setAttribute('data-pid','');
     };
   }
+  var e2 = $('phE');
+  if(e2) e2.onclick = function(ev){
+    ev.stopPropagation(); ev.preventDefault();
+    if(inp) inp.click();
+  };
   var x = $('phX');
-  if(x) x.onclick = function(e){
-    e.stopPropagation(); e.preventDefault();
+  if(x) x.onclick = function(ev){
+    ev.stopPropagation(); ev.preventDefault();
     pendingPhoto = 'none';
     var old = z.querySelector('img');
     if(old) old.remove();
     z.classList.remove('has');
-    z.setAttribute('data-pid','');
   };
-  var v = $('phV');
-  if(v) v.onclick = function(e){
-    e.stopPropagation(); e.preventDefault();
+  z.onclick = function(ev){
+    if(ev.target === e2 || ev.target === x || (e2 && e2.contains(ev.target)) || (x && x.contains(ev.target))) return;
     var img = z.querySelector('img');
-    if(!img) return;
-    var lb = $('lb');
-    lb.classList.add('on');
-    lb.querySelector('img').src = img.src;
-    history.pushState({ d:2 }, '');
+    if(img) showLightbox(img.src);
   };
   hydratePhotos();
 }
@@ -1243,7 +1244,7 @@ $('cfmY').onclick = function(){ var c = cfmCb; closeCfm(); if(c) c(); };
 /* back Android : ferme les feuilles avant de quitter */
 history.replaceState({ d:0 }, '');
 window.addEventListener('popstate', function(){
-  if($('lb').classList.contains('on')){ $('lb').classList.remove('on'); history.pushState({d:1},''); return; }
+  if($('lb').classList.contains('on')){ $('lb').classList.remove('on'); return; }
   if($('cfm').classList.contains('on')){ closeCfm(); history.pushState({d:1},''); return; }
   if(sheetOpen){ closeSheet(); history.pushState({d:1},''); return; }
   if(query()){ $('q').value = ''; render(); history.pushState({d:1},''); return; }
