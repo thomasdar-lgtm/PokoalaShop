@@ -236,7 +236,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '2.07';
+var APP_VERSION = '2.08';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -607,17 +607,17 @@ function card(l){
 
   var acts = [];
   if(l.st === 'afaire'){
-    acts.push('<button class="aBtn y" data-mv="' + l.id + '|pret">Préparé</button>');
+    acts.push('<button class="aBtn y" data-mv="' + l.id + '|pret">Marquer préparé</button>');
     acts.push('<button class="aBtn p" data-list="' + l.id + '">Mettre en ligne</button>');
   } else if(l.st === 'pret'){
     acts.push('<button class="aBtn p" data-list="' + l.id + '">Mettre en ligne</button>');
   } else if(l.st === 'vitrine'){
-    acts.push('<button class="aBtn g" data-sell="' + l.id + '">Vendu</button>');
+    acts.push('<button class="aBtn g" data-sell="' + l.id + '">Marquer vendu</button>');
     acts.push('<button class="aBtn" data-tag="' + l.id + '">Hashtags</button>');
   } else if(l.st === 'vendu'){
-    acts.push('<button class="aBtn o" data-mv="' + l.id + '|expedie">Expédié</button>');
+    acts.push('<button class="aBtn o" data-mv="' + l.id + '|expedie">Marquer expédié</button>');
   } else if(l.st === 'expedie'){
-    acts.push('<button class="aBtn p" data-again="' + l.id + '">Refaire</button>');
+    acts.push('<button class="aBtn p" data-again="' + l.id + '">Refaire ce lot</button>');
   }
   acts.push('<button class="aBtn" data-open="' + l.id + '" aria-label="Modifier"><span style="width:13px;height:13px;display:inline-block;vertical-align:-2px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/> <path d="m15 5 4 4"/></svg></span></button>');
 
