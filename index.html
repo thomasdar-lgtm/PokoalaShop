@@ -74,6 +74,11 @@ main{padding:4px 16px 20px}
 .cIn{display:flex;min-height:70px}
 .cPh{width:76px;flex-shrink:0;align-self:stretch;background:var(--surf2);display:flex;align-items:center;justify-content:center;color:var(--tx3);cursor:pointer;overflow:hidden;position:relative}
 .cPh img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.cPh.has .ph-holder{display:none}
+#lb{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,2,10,.94);align-items:center;justify-content:center;padding:16px}
+#lb.on{display:flex}
+#lb img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
+#lbX{position:absolute;top:calc(14px + env(safe-area-inset-top));right:16px;background:rgba(255,255,255,.14);border:0;color:#fff;width:38px;height:38px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:9px}
 .cBd{flex:1;padding:8px 11px;min-width:0}
 .cNm{font-size:14px;font-weight:700;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cSub{font-size:11px;color:var(--tx2);margin-top:2px}
@@ -142,8 +147,13 @@ select.inp{appearance:none;background-image:linear-gradient(45deg,transparent 50
 .row2 .fld,.row3 .fld{padding:0;margin:0}
 .phZ{width:100%;height:106px;background:var(--surf2);border:2px dashed var(--bd);border-radius:var(--r2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:var(--tx3);font-size:12.5px;position:relative;cursor:pointer;overflow:hidden}
 .phZ input{position:absolute;inset:0;opacity:0;cursor:pointer}
-.phZ img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.phX{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.65);border:0;color:#fff;width:26px;height:26px;border-radius:50%;font-size:14px;cursor:pointer;z-index:3}
+.phZ img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#00040f}
+.phZ.has .ph-holder{display:none}
+.phV{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.65);border:0;color:#fff;width:26px;height:26px;border-radius:50%;cursor:pointer;z-index:4;display:none;align-items:center;justify-content:center;padding:5px}
+.phZ.has .phV{display:flex}
+.phZ.has .phX{display:flex}
+.phX{display:none;align-items:center;justify-content:center;padding:6px}
+.phX{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.65);border:0;color:#fff;width:26px;height:26px;border-radius:50%;cursor:pointer;z-index:4}
 .shF{display:flex;gap:9px;padding:6px 18px 0}
 .bP{flex:1;background:var(--red);color:#fff;border:0;border-radius:var(--r2);padding:13px;font-size:15px;font-weight:700;cursor:pointer}
 .bP.g{background:var(--grn)}.bP.r{background:var(--dng);color:#2b0a10}
@@ -172,6 +182,48 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 .nvB{position:absolute;top:-2px;right:50%;margin-right:-20px;background:var(--blu);color:#00071a;font-size:9px;font-weight:800;min-width:15px;height:15px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px}
 .fab{position:fixed;bottom:calc(78px + env(safe-area-inset-bottom));right:max(16px,calc(50% - 264px));width:52px;height:52px;border-radius:50%;background:var(--red);color:#fff;border:0;font-size:27px;font-weight:300;cursor:pointer;z-index:99;box-shadow:0 5px 18px rgba(124,106,247,.42);display:flex;align-items:center;justify-content:center}
 .hint{font-size:11.5px;color:var(--tx3);text-align:center;padding:14px 20px 0;line-height:1.5}
+
+/* ═══ TABLETTE / GRAND ÉCRAN ═══ */
+@media (min-width:760px){
+  body{max-width:1060px;padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+  header{padding-left:22px;padding-right:22px}
+  main{padding:6px 22px 28px}
+  nav{max-width:1060px;padding:10px 0 calc(11px + env(safe-area-inset-bottom))}
+  .nv{font-size:11px;gap:4px}
+  .nvI{width:23px;height:23px}
+  .fab{width:56px;height:56px;font-size:29px;right:max(22px,calc(50% - 508px));bottom:calc(90px + env(safe-area-inset-bottom))}
+  .stats{gap:10px;padding-bottom:12px}
+  .st{padding:10px 6px}
+  .stV{font-size:21px}
+  .stL{font-size:11px}
+  .srch input{font-size:15px;padding:12px 36px}
+  .wm{font-size:24px}
+  .wm .s{font-size:15px}
+  .brand img{width:44px}
+
+  #view{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:11px;align-items:start}
+  #view>.secH{grid-column:1/-1;margin:14px 0 -1px}
+  #view>.secH:first-child{margin-top:2px}
+  #view>.empty{grid-column:1/-1}
+  #view>.card,#view>.ord,#view>.hCard{margin-bottom:0}
+  #view>.ord{grid-column:span 1}
+  .cPh{width:92px}
+  .cIn{min-height:82px}
+
+  .ovl{align-items:center;padding:26px}
+  .sheet{border-radius:18px;max-width:560px;max-height:86vh;padding-bottom:26px;animation:pop .2s ease}
+  .grab{display:none}
+  .shT{padding-top:18px}
+  .phZ{height:150px}
+}
+@keyframes pop{from{transform:scale(.97);opacity:.5}to{transform:none;opacity:1}}
+
+@media (min-width:1180px){
+  body{max-width:1280px}
+  nav{max-width:1280px}
+  .fab{right:max(22px,calc(50% - 618px))}
+  #view{grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}
+}
 .tagBox{background:var(--surf2);border-radius:var(--r2);padding:11px 12px;font-size:12px;color:var(--tx2);line-height:1.55;margin:0 18px 12px;word-break:break-word;max-height:130px;overflow-y:auto}
 </style>
 </head>
@@ -232,11 +284,12 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
   </div>
 </div>
 
+<div id="lb"><button id="lbX" aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M18 6 6 18"/> <path d="m6 6 12 12"/></svg></button><img alt=""></div>
 <div id="toast"></div>
 
 <script>
 'use strict';
-var APP_VERSION = '2.08';
+var APP_VERSION = '2.10';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -515,9 +568,30 @@ function hydratePhotos(){
     (function(el){
       var id = el.getAttribute('data-ph');
       el.removeAttribute('data-ph');
-      photoUrl(id).then(function(u){ if(u) el.innerHTML = '<img src="' + u + '" alt="">'; });
+      photoUrl(id).then(function(u){
+        if(!u) return;
+        var img = document.createElement('img');
+        img.src = u; img.alt = '';
+        el.insertBefore(img, el.firstChild);
+        el.classList.add('has');
+      });
     })(els[i]);
   }
+}
+
+/* visionneuse plein écran */
+function openLightbox(id){
+  var lb = $('lb');
+  lb.classList.add('on');
+  lb.querySelector('img').removeAttribute('src');
+  photoUrl(id).then(function(u){ if(u) lb.querySelector('img').src = u; });
+  history.pushState({ d:2 }, '');
+}
+function closeLightbox(){
+  var lb = $('lb');
+  if(!lb.classList.contains('on')) return;
+  lb.classList.remove('on');
+  if(history.state && history.state.d === 2) history.back();
 }
 
 /* ═══ SELECTORS ═══ */
@@ -596,7 +670,7 @@ function renderAfaire(){
 function card(l){
   var ph = l.photo
     ? '<div class="cPh" data-ph="' + l.photo + '" data-open="' + l.id + '"></div>'
-    : '<div class="cPh" data-open="' + l.id + '"><span style="width:26px;height:26px;display:block"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/> <path d="M12 22V12"/> <polyline points="3.29 7 12 12 20.71 7"/> <path d="m7.5 4.27 9 5.15"/></svg></span></div>';
+    : '<div class="cPh" data-open="' + l.id + '"><span class="ph-holder" style="width:26px;height:26px;display:block"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/> <path d="M12 22V12"/> <polyline points="3.29 7 12 12 20.71 7"/> <path d="m7.5 4.27 9 5.15"/></svg></span></div>';
 
   var chips = [];
   if(l.nb) chips.push('<span class="chip cB">' + l.nb + ' cartes</span>');
@@ -917,33 +991,53 @@ function sheetEdit(id){
 function opt(v, cur){ return '<option value="' + v + '"' + (v === cur ? ' selected' : '') + '>' + ST[v] + '</option>'; }
 
 function photoZone(l){
-  var inner = l.photo
-    ? '<div class="phZ" id="phZ" data-ph="' + l.photo + '"><input type="file" accept="image/*" id="f_ph"><button class="phX" id="phX">×</button></div>'
-    : '<div class="phZ" id="phZ"><span style="font-size:13px">Ajouter la photo Vinted</span><input type="file" accept="image/*" id="f_ph"></div>';
-  return inner;
+  var holder = '<span class="ph-holder" style="font-size:13px">Ajouter la photo Vinted</span>';
+  var btns = '<button class="phV" type="button" id="phV" aria-label="Voir en grand">' + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M15 3h6v6"/> <path d="m21 3-7 7"/> <path d="m3 21 7-7"/> <path d="M9 21H3v-6"/></svg>' + '</button>' +
+             '<button class="phX" type="button" id="phX" aria-label="Retirer">' + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M18 6 6 18"/> <path d="m6 6 12 12"/></svg>' + '</button>';
+  var attr = (l && l.photo) ? ' data-ph="' + l.photo + '"' : '';
+  var pid  = (l && l.photo) ? l.photo : '';
+  return '<div class="phZ" id="phZ"' + attr + ' data-pid="' + pid + '">' + holder +
+    '<input type="file" accept="image/*" id="f_ph">' + btns + '</div>';
 }
+
 function bindPhoto(){
+  var z = $('phZ');
+  if(!z) return;
   var inp = $('f_ph');
-  if(!inp) return;
-  inp.onchange = async function(){
-    var f = inp.files[0]; if(!f) return;
-    var b = await shrink(f); if(!b) return;
-    pendingPhoto = b;
-    var z = $('phZ');
-    z.innerHTML = '<img src="' + URL.createObjectURL(b) + '" alt=""><input type="file" accept="image/*" id="f_ph"><button class="phX" id="phX">×</button>';
-    bindPhoto(); bindPhotoX();
-  };
-  bindPhotoX();
-  hydratePhotos();
-}
-function bindPhotoX(){
-  var x = $('phX'); if(!x) return;
-  x.onclick = function(e){
+  if(inp){
+    inp.onchange = async function(){
+      var f = inp.files[0]; if(!f) return;
+      var b = await shrink(f); if(!b) return;
+      pendingPhoto = b;
+      var old = z.querySelector('img');
+      if(old) old.remove();
+      var img = document.createElement('img');
+      img.src = URL.createObjectURL(b); img.alt = '';
+      z.insertBefore(img, z.firstChild);
+      z.classList.add('has');
+      z.setAttribute('data-pid','');
+    };
+  }
+  var x = $('phX');
+  if(x) x.onclick = function(e){
     e.stopPropagation(); e.preventDefault();
     pendingPhoto = 'none';
-    $('phZ').innerHTML = '<span style="font-size:13px">Ajouter la photo Vinted</span><input type="file" accept="image/*" id="f_ph">';
-    bindPhoto();
+    var old = z.querySelector('img');
+    if(old) old.remove();
+    z.classList.remove('has');
+    z.setAttribute('data-pid','');
   };
+  var v = $('phV');
+  if(v) v.onclick = function(e){
+    e.stopPropagation(); e.preventDefault();
+    var img = z.querySelector('img');
+    if(!img) return;
+    var lb = $('lb');
+    lb.classList.add('on');
+    lb.querySelector('img').src = img.src;
+    history.pushState({ d:2 }, '');
+  };
+  hydratePhotos();
 }
 
 /* refaire un lot */
@@ -1107,12 +1201,15 @@ $('btnTags').onclick = sheetTags;
 $('btnAcc').onclick = sheetAcc;
 $('btnSignin').onclick = signIn;
 $('ovl').onclick = function(e){ if(e.target === $('ovl')) closeSheet(); };
+$('lbX').onclick = closeLightbox;
+$('lb').onclick = function(e){ if(e.target !== $('lbX')) closeLightbox(); };
 $('cfmN').onclick = closeCfm;
 $('cfmY').onclick = function(){ var c = cfmCb; closeCfm(); if(c) c(); };
 
 /* back Android : ferme les feuilles avant de quitter */
 history.replaceState({ d:0 }, '');
 window.addEventListener('popstate', function(){
+  if($('lb').classList.contains('on')){ $('lb').classList.remove('on'); history.pushState({d:1},''); return; }
   if($('cfm').classList.contains('on')){ closeCfm(); history.pushState({d:1},''); return; }
   if(sheetOpen){ closeSheet(); history.pushState({d:1},''); return; }
   if(query()){ $('q').value = ''; render(); history.pushState({d:1},''); return; }
