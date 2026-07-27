@@ -70,21 +70,21 @@ main{padding:4px 16px 20px}
 .secH span{background:var(--surf2);color:var(--tx2);border-radius:9px;padding:1px 6px;font-size:9.5px;letter-spacing:0}
 
 /* CARD */
-.card{background:var(--surf);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:9px;overflow:hidden}
-.cIn{display:flex}
-.cPh{width:78px;flex-shrink:0;background:var(--surf2);display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:22px;cursor:pointer;overflow:hidden;position:relative}
-.cPh img{width:100%;height:100%;object-fit:cover;display:block}
-.cBd{flex:1;padding:9px 11px;min-width:0}
+.card{background:var(--surf);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:8px;overflow:hidden}
+.cIn{display:flex;min-height:70px}
+.cPh{width:76px;flex-shrink:0;align-self:stretch;background:var(--surf2);display:flex;align-items:center;justify-content:center;color:var(--tx3);cursor:pointer;overflow:hidden;position:relative}
+.cPh img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.cBd{flex:1;padding:8px 11px;min-width:0}
 .cNm{font-size:14px;font-weight:700;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cSub{font-size:11px;color:var(--tx2);margin-top:2px}
-.chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+.chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
 .chip{font-size:10.5px;padding:2px 7px;border-radius:9px;font-weight:600;white-space:nowrap}
 .cA{background:var(--redS);color:var(--red)}
 .cY{background:var(--yelS);color:var(--yel)}
 .cG{background:var(--grnS);color:var(--grn)}
 .cB{background:var(--bluS);color:var(--blu)}
 .cO{background:var(--bluS);color:var(--blu)}
-.acts{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.acts{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
 .aBtn{font-size:11px;font-weight:700;padding:5px 10px;border-radius:20px;border:0;cursor:pointer;background:var(--surf2);color:var(--tx2)}
 .aBtn.p{background:var(--redS);color:var(--red)}
 .aBtn.g{background:var(--grnS);color:var(--grn)}
@@ -236,7 +236,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '2.05';
+var APP_VERSION = '2.07';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -718,39 +718,69 @@ function closeSheet(){
 
 var pendingPhoto = null;
 
-/* étape 1 : préparation — 3 champs */
+/* création : tout saisissable d'un coup */
 function sheetNew(){
   pendingPhoto = null;
   openSheet(
     '<div class="shT">Nouveau lot</div>' +
-    '<div class="shS">Juste l\'essentiel. Les prix et la photo au moment de la mise en ligne.</div>' +
+    '<div class="shS">Seul le Pokémon est obligatoire. Tout le reste peut être complété plus tard.</div>' +
     '<div class="fld"><label class="lbl">Pokémon</label><input class="inp" id="f_poke" placeholder="Évoli" autocomplete="off"></div>' +
     '<div class="row2"><div class="fld"><label class="lbl">Nombre de cartes</label><input class="inp" id="f_nb" type="number" inputmode="numeric" placeholder="25"></div>' +
     '<div class="fld"><label class="lbl">Boîte</label><input class="inp" id="f_boite" placeholder="3" autocomplete="off"></div></div>' +
     '<div class="fld"><label class="lbl">Séparateur (optionnel)</label><input class="inp" id="f_sep" placeholder="Évoli B" autocomplete="off"></div>' +
-    '<div class="shF"><button class="bS" id="x1">Annuler</button><button class="bP" id="k1">Ajouter à préparer</button></div>' +
-    '<button class="dgr" id="k1b" style="border-color:var(--redS);color:var(--red)">Ajouter et mettre en ligne →</button>'
+    '<div class="row2"><div class="fld"><label class="lbl">Prix affiché</label><input class="inp" id="f_pa" type="number" inputmode="decimal" step="0.5" placeholder="12"></div>' +
+    '<div class="fld"><label class="lbl">Prix mini accepté</label><input class="inp" id="f_pm" type="number" inputmode="decimal" step="0.5" placeholder="9"></div></div>' +
+    '<div class="fld"><label class="lbl">Titre de l\'annonce (optionnel)</label><input class="inp" id="f_nom" placeholder="laisser vide = Pokémon + nb cartes"></div>' +
+    '<div class="fld"><label class="lbl">Photo (optionnel)</label>' + photoZone({ photo:null }) + '</div>' +
+    '<div id="histoHint"></div>' +
+    '<div class="shF"><button class="bS" id="x1">Annuler</button><button class="bP" id="k1">À préparer</button></div>' +
+    '<button class="dgr" id="k1b" style="border-color:var(--redS);color:var(--red)">Créer directement en vitrine</button>'
   );
+  bindPhoto();
   $('x1').onclick = closeSheet;
   $('k1').onclick = function(){ createLot('afaire'); };
-  $('k1b').onclick = function(){ createLot('go'); };
+  $('k1b').onclick = function(){ createLot('vitrine'); };
+  $('f_poke').oninput = function(){ showHistoHint(this.value.trim()); };
   setTimeout(function(){ $('f_poke').focus(); }, 120);
 }
-function createLot(mode){
+
+function showHistoHint(poke){
+  var box = $('histoHint');
+  if(!box) return;
+  if(!poke){ box.innerHTML = ''; return; }
+  var past = lots.filter(function(x){
+    return (x.st === 'vendu' || x.st === 'expedie') &&
+      (x.poke||'').toLowerCase() === poke.toLowerCase() && num(x.pv) != null;
+  });
+  if(!past.length){ box.innerHTML = ''; return; }
+  var s = 0;
+  for(var i=0;i<past.length;i++) s += num(past[i].pv);
+  box.innerHTML = '<div class="hint">Historique ' + esc(poke) + ' : ' + past.length + ' vente' +
+    (past.length>1?'s':'') + ', moyenne <b style="color:var(--grn)">' + eur(s/past.length) + '</b></div>';
+}
+
+async function createLot(mode){
   var poke = $('f_poke').value.trim();
   if(!poke){ toast('Le Pokémon est requis'); return; }
+  var btn = mode === 'vitrine' ? $('k1b') : $('k1');
+  btn.disabled = true; btn.textContent = '…';
+  var photoId = null;
+  if(pendingPhoto && pendingPhoto !== 'none'){
+    try{ photoId = await uploadPhoto(pendingPhoto); }catch(e){}
+  }
   var l = {
-    id: nid(), poke: poke, nom: '',
+    id: nid(), poke: poke,
+    nom: $('f_nom').value.trim(),
     nb: parseInt($('f_nb').value,10) || null,
     boite: $('f_boite').value.trim(), sep: $('f_sep').value.trim(),
-    st: 'afaire', pa: null, pm: null, pv: null,
-    acheteur: '', notes: '', photo: null,
+    st: mode, pa: num($('f_pa').value), pm: num($('f_pm').value), pv: null,
+    acheteur: '', notes: '', photo: photoId,
     dtCree: now(), dtPret: null, dtListe: null, dtVente: null, dtExp: null
   };
+  if(mode === 'vitrine'){ l.dtListe = now(); l.dtPret = now(); }
   closeSheet();
   commit(l);
-  if(mode === 'go') setTimeout(function(){ sheetList(l.id); }, 180);
-  else toast('Lot ajouté à préparer');
+  toast(mode === 'vitrine' ? 'Lot en vitrine' : 'Lot à préparer');
 }
 
 /* étape 2 : mise en ligne — prix + photo */
