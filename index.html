@@ -65,6 +65,10 @@ header{position:sticky;top:0;z-index:60;background:var(--bg);padding:calc(10px +
 
 /* CONTENT */
 main{padding:4px 16px 20px}
+.sortBar{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.sBtn{display:flex;align-items:center;gap:4px;background:var(--surf);border:1px solid var(--bd);color:var(--tx2);font-size:11.5px;font-weight:600;padding:6px 11px;border-radius:20px;cursor:pointer}
+.sBtn.on{background:var(--redS);border-color:transparent;color:var(--red)}
+.sBtn .ar{font-size:9px;opacity:.85;line-height:1}
 .secH{font-size:10.5px;font-weight:800;color:var(--tx3);letter-spacing:.9px;text-transform:uppercase;margin:16px 0 9px;display:flex;align-items:center;gap:7px}
 .secH:first-child{margin-top:4px}
 .secH span{background:var(--surf2);color:var(--tx2);border-radius:9px;padding:1px 6px;font-size:9.5px;letter-spacing:0}
@@ -205,6 +209,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
   #view{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:11px;align-items:start}
   #view>.secH{grid-column:1/-1;margin:14px 0 -1px}
+  #view>.sortBar{grid-column:1/-1}
   #view>.secH:first-child{margin-top:2px}
   #view>.empty{grid-column:1/-1}
   #view>.card,#view>.ord,#view>.hCard{margin-bottom:0}
@@ -291,7 +296,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '2.12';
+var APP_VERSION = '2.14';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -301,6 +306,8 @@ var ST = { afaire:'À préparer', pret:'Préparé', vitrine:'En vitrine', vendu:
 
 var lots = [];
 var tab = 'vitrine';
+var sortKey = 'date', sortDir = -1;
+try{ var _s = JSON.parse(localStorage.getItem('pks_sort') || 'null'); if(_s){ sortKey = _s.k; sortDir = _s.d; } }catch(e){}
 var token = null, tokenExp = 0, tokenClient = null;
 var me = null, myFile = null, myFileId = null;
 var who = null;
@@ -311,12 +318,26 @@ var tagTpl = '#pokemon #cartepokemon #lotpokemon #{poke} #carte{poke} #pokemontc
 
 /* ═══ UTIL ═══ */
 function $(id){ return document.getElementById(id); }
+function norm(s){
+  return String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+}
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function nid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 function now(){ return new Date().toISOString(); }
 function num(v){ var n = parseFloat(v); return isNaN(n) ? null : n; }
 function eur(n){ return (n==null?0:n).toFixed(2).replace('.',',') + '€'; }
 function eur0(n){ return Math.round(n==null?0:n) + '€'; }
+function ageDays(s){
+  if(!s) return null;
+  return Math.floor((Date.now() - new Date(s).getTime()) / 86400000);
+}
+function ageTxt(s){
+  var d = ageDays(s);
+  if(d == null) return '';
+  if(d <= 0) return 'en ligne aujourd\'hui';
+  if(d === 1) return 'en ligne depuis 1 jour';
+  return 'en ligne depuis ' + d + ' jours';
+}
 function dt(s){ if(!s) return '—'; var d=new Date(s); return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'}); }
 function toast(m){ var t=$('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._h); t._h=setTimeout(function(){ t.classList.remove('on'); },1900); }
 function confirmBox(title, text, okLabel, cb){
@@ -600,13 +621,16 @@ function closeLightbox(){
 
 /* ═══ SELECTORS ═══ */
 function byStatus(s){ return lots.filter(function(l){ return l.st === s; }); }
-function query(){ return ($('q').value || '').trim().toLowerCase(); }
+function query(){ return ($('q').value || '').trim(); }
 function matches(l, q){
-  return (l.nom||'').toLowerCase().indexOf(q) >= 0 ||
-         (l.poke||'').toLowerCase().indexOf(q) >= 0 ||
-         (l.boite||'').toLowerCase().indexOf(q) >= 0 ||
-         (l.sep||'').toLowerCase().indexOf(q) >= 0 ||
-         (l.acheteur||'').toLowerCase().indexOf(q) >= 0;
+  var n = norm(q);
+  if(!n) return true;
+  return norm(l.nom).indexOf(n) >= 0 ||
+         norm(l.poke).indexOf(n) >= 0 ||
+         norm(l.boite).indexOf(n) >= 0 ||
+         norm(l.sep).indexOf(n) >= 0 ||
+         norm(l.notes).indexOf(n) >= 0 ||
+         norm(l.acheteur).indexOf(n) >= 0;
 }
 function lotTitle(l){
   if(l.nom) return l.nom;
@@ -656,10 +680,47 @@ function renderSearch(q){
   $('view').innerHTML = h;
 }
 
+var EMPTY_VITRINE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" style="width:54px;height:54px;display:block;margin:0 auto"><path d="M15 21v-5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v5"/> <path d="M17.774 10.31a1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.451 0 1.12 1.12 0 0 0-1.548 0 2.5 2.5 0 0 1-3.452 0 1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.77-3.248l2.889-4.184A2 2 0 0 1 7 2h10a2 2 0 0 1 1.653.873l2.895 4.192a2.5 2.5 0 0 1-3.774 3.244"/> <path d="M4 10.95V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8.05"/></svg>';
+var SORTS = { date:'Ancienneté', alpha:'Nom', prix:'Prix' };
+
+function sortLots(arr){
+  var out = arr.slice();
+  out.sort(function(a,b){
+    var r = 0;
+    if(sortKey === 'alpha'){
+      r = lotTitle(a).localeCompare(lotTitle(b), 'fr', { sensitivity:'base' });
+    } else if(sortKey === 'prix'){
+      var pa = num(a.pa), pb = num(b.pa);
+      if(pa == null && pb == null) r = 0;
+      else if(pa == null) r = -1;
+      else if(pb == null) r = 1;
+      else r = pa - pb;
+    } else {
+      r = String(a.dtListe || a.dtCree || '').localeCompare(String(b.dtListe || b.dtCree || ''));
+    }
+    return r * sortDir;
+  });
+  return out;
+}
+
+function sortBar(){
+  var arrows = { date: sortDir === -1 ? 'Récents d\'abord' : 'Anciens d\'abord',
+                 alpha: sortDir === -1 ? 'Z → A' : 'A → Z',
+                 prix: sortDir === -1 ? 'Prix décroissant' : 'Prix croissant' };
+  var h2 = '<div class="sortBar">';
+  for(var k in SORTS){
+    var on = (k === sortKey);
+    h2 += '<button class="sBtn' + (on ? ' on' : '') + '" data-sort="' + k + '">' + SORTS[k] +
+      (on ? '<span class="ar">' + (sortDir === -1 ? '▼' : '▲') + '</span>' : '') + '</button>';
+  }
+  h2 += '</div>';
+  return h2 + (sortKey ? '<div class="hint" style="padding:0 0 8px;text-align:left;font-size:11px">' + arrows[sortKey] + '</div>' : '');
+}
+
 function renderVitrine(){
   var v = byStatus('vitrine');
-  if(!v.length){ $('view').innerHTML = empty('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" style="width:54px;height:54px;display:block;margin:0 auto"><path d="M15 21v-5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v5"/> <path d="M17.774 10.31a1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.451 0 1.12 1.12 0 0 0-1.548 0 2.5 2.5 0 0 1-3.452 0 1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.77-3.248l2.889-4.184A2 2 0 0 1 7 2h10a2 2 0 0 1 1.653.873l2.895 4.192a2.5 2.5 0 0 1-3.774 3.244"/> <path d="M4 10.95V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8.05"/></svg>','Rien en vitrine.<br>Prépare un lot puis mets-le en ligne.'); return; }
-  $('view').innerHTML = '<div class="secH">En vitrine <span>' + v.length + '</span></div>' + v.map(card).join('');
+  if(!v.length){ $('view').innerHTML = empty(EMPTY_VITRINE,'Rien en vitrine.<br>Prépare un lot puis mets-le en ligne.'); return; }
+  $('view').innerHTML = sortBar() + '<div class="secH">En vitrine <span>' + v.length + '</span></div>' + sortLots(v).map(card).join('');
 }
 
 function renderAfaire(){
@@ -703,7 +764,7 @@ function card(l){
   var sub = [];
   if(l.poke && l.nom) sub.push(esc(l.poke));
   if(l.st === 'vendu' || l.st === 'expedie'){ if(l.acheteur) sub.push(esc(l.acheteur)); }
-  if(l.st === 'vitrine' && l.dtListe) sub.push('en ligne depuis le ' + dt(l.dtListe));
+  if(l.st === 'vitrine' && l.dtListe) sub.push(ageTxt(l.dtListe));
 
   return '<div class="card" data-open="' + l.id + '"><div class="cIn">' + ph + '<div class="cBd">' +
     '<div class="cNm">' + esc(lotTitle(l)) + '</div>' +
@@ -718,7 +779,7 @@ function renderCmd(){
   if(!v.length){ $('view').innerHTML = empty('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" style="width:54px;height:54px;display:block;margin:0 auto"><path d="M12 22V12"/> <path d="m16 17 2 2 4-4"/> <path d="M21 11.127V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.729l7 4a2 2 0 0 0 2 .001l1.32-.753"/> <path d="M3.29 7 12 12l8.71-5"/> <path d="m7.5 4.27 8.997 5.148"/></svg>','Aucune commande à expédier.'); return; }
   var groups = {};
   for(var i=0;i<v.length;i++){
-    var key = (v[i].acheteur || '').trim().toLowerCase() || ('_' + v[i].id);
+    var key = norm(v[i].acheteur) || ('_' + v[i].id);
     if(!groups[key]) groups[key] = { nom: v[i].acheteur || 'Acheteur inconnu', items: [] };
     groups[key].items.push(v[i]);
   }
@@ -753,7 +814,7 @@ function renderHisto(){
   var g = {};
   for(var i=0;i<sold.length;i++){
     var p = (sold[i].poke || '?').trim();
-    var key = p.toLowerCase();
+    var key = norm(p);
     if(!g[key]) g[key] = { nom: p, items: [] };
     g[key].items.push(sold[i]);
   }
@@ -862,7 +923,7 @@ function showHistoHint(poke){
   if(!poke){ box.innerHTML = ''; return; }
   var past = lots.filter(function(x){
     return (x.st === 'vendu' || x.st === 'expedie') &&
-      (x.poke||'').toLowerCase() === poke.toLowerCase() && num(x.pv) != null;
+      norm(x.poke) === norm(poke) && num(x.pv) != null;
   });
   if(!past.length){ box.innerHTML = ''; return; }
   var s = 0;
@@ -902,7 +963,7 @@ function sheetList(id){
   pendingPhoto = null;
   var past = lots.filter(function(x){
     return x.id !== id && (x.st === 'vendu' || x.st === 'expedie') &&
-      (x.poke||'').toLowerCase() === (l.poke||'').toLowerCase() && num(x.pv) != null;
+      norm(x.poke) === norm(l.poke) && num(x.pv) != null;
   });
   var hint = '';
   if(past.length){
@@ -1081,7 +1142,7 @@ function sheetAgain(id){
   if(!src) return;
   var past = lots.filter(function(x){
     return (x.st === 'vendu' || x.st === 'expedie') &&
-      (x.poke||'').toLowerCase() === (src.poke||'').toLowerCase() && num(x.pv) != null;
+      norm(x.poke) === norm(src.poke) && num(x.pv) != null;
   });
   var s = 0;
   for(var i=0;i<past.length;i++) s += num(past[i].pv);
@@ -1184,6 +1245,15 @@ function sheetAcc(){
 
 /* ═══ EVENTS ═══ */
 document.addEventListener('click', function(e){
+  var s = e.target.closest('[data-sort]');
+  if(s){
+    var k = s.getAttribute('data-sort');
+    if(k === sortKey) sortDir = -sortDir;
+    else { sortKey = k; sortDir = (k === 'alpha') ? 1 : -1; }
+    try{ localStorage.setItem('pks_sort', JSON.stringify({ k: sortKey, d: sortDir })); }catch(err){}
+    render();
+    return;
+  }
   var t = e.target.closest('[data-open],[data-mv],[data-list],[data-sell],[data-again],[data-tag],[data-ship]');
   if(!t) return;
   var v;
