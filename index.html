@@ -70,7 +70,7 @@ main{padding:4px 16px 20px}
 .secH span{background:var(--surf2);color:var(--tx2);border-radius:9px;padding:1px 6px;font-size:9.5px;letter-spacing:0}
 
 /* CARD */
-.card{background:var(--surf);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:8px;overflow:hidden}
+.card{background:var(--surf);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:8px;overflow:hidden;cursor:pointer}
 .cIn{display:flex;min-height:70px}
 .cPh{width:76px;flex-shrink:0;align-self:stretch;background:var(--surf2);display:flex;align-items:center;justify-content:center;color:var(--tx3);cursor:pointer;overflow:hidden;position:relative}
 .cPh img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
@@ -289,7 +289,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '2.10';
+var APP_VERSION = '2.11';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -681,6 +681,7 @@ function card(l){
 
   var acts = [];
   if(l.st === 'afaire'){
+    acts.push('<button class="aBtn p" data-open="' + l.id + '">Compléter</button>');
     acts.push('<button class="aBtn y" data-mv="' + l.id + '|pret">Marquer préparé</button>');
     acts.push('<button class="aBtn p" data-list="' + l.id + '">Mettre en ligne</button>');
   } else if(l.st === 'pret'){
@@ -700,7 +701,7 @@ function card(l){
   if(l.st === 'vendu' || l.st === 'expedie'){ if(l.acheteur) sub.push(esc(l.acheteur)); }
   if(l.st === 'vitrine' && l.dtListe) sub.push('en ligne depuis le ' + dt(l.dtListe));
 
-  return '<div class="card"><div class="cIn">' + ph + '<div class="cBd">' +
+  return '<div class="card" data-open="' + l.id + '"><div class="cIn">' + ph + '<div class="cBd">' +
     '<div class="cNm">' + esc(lotTitle(l)) + '</div>' +
     (sub.length ? '<div class="cSub">' + sub.join(' · ') + '</div>' : '') +
     (chips.length ? '<div class="chips">' + chips.join('') + '</div>' : '') +
@@ -816,6 +817,39 @@ function sheetNew(){
   $('k1b').onclick = function(){ createLot('vitrine'); };
   $('f_poke').oninput = function(){ showHistoHint(this.value.trim()); };
   setTimeout(function(){ $('f_poke').focus(); }, 120);
+}
+
+function sheetQuick(){
+  var added = 0;
+  openSheet(
+    '<div class="shT">Lots à préparer</div>' +
+    '<div class="shS">Tape un Pokémon, valide, recommence. Les détails se complètent plus tard en touchant le lot.</div>' +
+    '<div class="fld"><label class="lbl">Pokémon</label><input class="inp" id="q_poke" placeholder="Évoli" autocomplete="off" enterkeyhint="done"></div>' +
+    '<div id="q_list"></div>' +
+    '<div class="shF"><button class="bS" id="qx">Terminé</button><button class="bP" id="qk">Ajouter</button></div>' +
+    '<button class="dgr" id="qf" style="border-color:var(--bd);color:var(--tx2)">Saisie complète avec prix et photo</button>'
+  );
+  var inp = $('q_poke');
+  function add(){
+    var poke = inp.value.trim();
+    if(!poke){ inp.focus(); return; }
+    var l = {
+      id: nid(), poke: poke, nom: '', nb: null, boite: '', sep: '',
+      st: 'afaire', pa: null, pm: null, pv: null,
+      acheteur: '', notes: '', photo: null,
+      dtCree: now(), dtPret: null, dtListe: null, dtVente: null, dtExp: null
+    };
+    commit(l);
+    added++;
+    var box = $('q_list');
+    if(box) box.innerHTML = '<div class="hint">' + added + ' lot' + (added>1?'s':'') + ' ajouté' + (added>1?'s':'') + ' à la liste</div>';
+    inp.value = ''; inp.focus();
+  }
+  $('qk').onclick = add;
+  inp.onkeydown = function(e){ if(e.key === 'Enter'){ e.preventDefault(); add(); } };
+  $('qx').onclick = closeSheet;
+  $('qf').onclick = function(){ closeSheet(); setTimeout(sheetNew, 260); };
+  setTimeout(function(){ inp.focus(); }, 120);
 }
 
 function showHistoHint(poke){
@@ -1196,7 +1230,7 @@ for(var n=0;n<navs.length;n++){
 
 $('q').oninput = render;
 $('qClr').onclick = function(){ $('q').value = ''; $('q').blur(); render(); };
-$('fab').onclick = sheetNew;
+$('fab').onclick = function(){ if(tab === 'afaire' && !query()) sheetQuick(); else sheetNew(); };
 $('btnTags').onclick = sheetTags;
 $('btnAcc').onclick = sheetAcc;
 $('btnSignin').onclick = signIn;
