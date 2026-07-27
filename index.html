@@ -162,9 +162,12 @@ select.inp{appearance:none;background-image:linear-gradient(45deg,transparent 50
 #toast.on{opacity:1;transform:translateX(-50%)}
 
 /* NAV */
-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;background:var(--surf);border-top:1px solid var(--bd);display:flex;padding:7px 0 calc(9px + env(safe-area-inset-bottom));z-index:100}
-.nv{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;color:var(--tx3);font-size:10px;font-weight:600;position:relative}
-.nv.on{color:var(--red)}
+nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;background:var(--surf);border-top:1px solid var(--bd);display:flex;padding:9px 0 calc(9px + env(safe-area-inset-bottom));z-index:100;overflow:hidden}
+.nv{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:var(--tx3);font-size:10px;font-weight:600;position:relative;padding-top:2px;transition:color .15s}
+.nv+.nv::after{content:'';position:absolute;left:0;top:22%;bottom:22%;width:1px;background:var(--bd)}
+.nv::before{content:'';position:absolute;top:-8px;left:22%;right:22%;height:3px;border-radius:0 0 3px 3px;background:transparent;transition:background .15s}
+.nv.on::before{background:var(--gold)}
+.nv.on{color:var(--gold)}
 .nvI{width:21px;height:21px;display:block}
 .nvB{position:absolute;top:-2px;right:50%;margin-right:-20px;background:var(--blu);color:#00071a;font-size:9px;font-weight:800;min-width:15px;height:15px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px}
 .fab{position:fixed;bottom:calc(78px + env(safe-area-inset-bottom));right:max(16px,calc(50% - 264px));width:52px;height:52px;border-radius:50%;background:var(--red);color:#fff;border:0;font-size:27px;font-weight:300;cursor:pointer;z-index:99;box-shadow:0 5px 18px rgba(124,106,247,.42);display:flex;align-items:center;justify-content:center}
@@ -188,11 +191,11 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
       <div class="hRight">
         <div class="sync"><span class="syncDot" id="syncDot"></span><span id="syncTx">—</span></div>
         <button class="iBtn" id="btnTags" title="Hashtags">#</button>
-        <button class="iBtn" id="btnAcc" aria-label="Compte"><span style="width:16px;height:16px;display:block"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><circle cx="12" cy="8" r="3.6"/><path d="M4.6 20a7.6 7.6 0 0 1 14.8 0"/></svg></span></button>
+        <button class="iBtn" id="btnAcc" aria-label="Compte"><span style="width:16px;height:16px;display:block"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><circle cx="12" cy="12" r="10"/> <circle cx="12" cy="10" r="3"/> <path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/></svg></span></button>
       </div>
     </div>
     <div class="srch">
-      <span class="ic" style="width:14px;height:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.7-4.7"/></svg></span>
+      <span class="ic" style="width:14px;height:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="m21 21-4.34-4.34"/> <circle cx="11" cy="11" r="8"/></svg></span>
       <input type="search" id="q" placeholder="Nom, Pokémon, boîte…" autocomplete="off">
       <button class="clr hide" id="qClr">×</button>
     </div>
@@ -209,10 +212,10 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
   <button class="fab" id="fab">+</button>
 
   <nav>
-    <div class="nv on" data-t="vitrine"><svg class="nvI" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16l-1.2 11.2a2 2 0 0 1-2 1.8H7.2a2 2 0 0 1-2-1.8L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>Vitrine</div>
-    <div class="nv" data-t="afaire"><svg class="nvI" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5 12 4l9 4.5v7L12 20l-9-4.5v-7Z"/><path d="m3 8.5 9 4.5 9-4.5"/><path d="M12 13v7"/></svg>À faire<span class="nvB hide" id="nb2"></span></div>
-    <div class="nv" data-t="cmd"><svg class="nvI" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7h11v9H2z"/><path d="M13 10h4l4 3.2V16h-8z"/><circle cx="6" cy="18.5" r="1.8"/><circle cx="17" cy="18.5" r="1.8"/></svg>Commandes<span class="nvB hide" id="nb3"></span></div>
-    <div class="nv" data-t="histo"><svg class="nvI" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20V4"/><path d="M3 20h18"/><path d="m6.5 15 4-4.5 3.5 3 5-6"/></svg>Historique</div>
+    <div class="nv on" data-t="vitrine"><svg class="nvI" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v5"/> <path d="M17.774 10.31a1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.451 0 1.12 1.12 0 0 0-1.548 0 2.5 2.5 0 0 1-3.452 0 1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.77-3.248l2.889-4.184A2 2 0 0 1 7 2h10a2 2 0 0 1 1.653.873l2.895 4.192a2.5 2.5 0 0 1-3.774 3.244"/> <path d="M4 10.95V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8.05"/></svg>Vitrine</div>
+    <div class="nv" data-t="afaire"><svg class="nvI" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 5h8"/> <path d="M13 12h8"/> <path d="M13 19h8"/> <path d="m3 17 2 2 4-4"/> <rect x="3" y="4" width="6" height="6" rx="1"/></svg>À faire<span class="nvB hide" id="nb2"></span></div>
+    <div class="nv" data-t="cmd"><svg class="nvI" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V12"/> <path d="m16 17 2 2 4-4"/> <path d="M21 11.127V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.729l7 4a2 2 0 0 0 2 .001l1.32-.753"/> <path d="M3.29 7 12 12l8.71-5"/> <path d="m7.5 4.27 8.997 5.148"/></svg>Commandes<span class="nvB hide" id="nb3"></span></div>
+    <div class="nv" data-t="histo"><svg class="nvI" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/> <path d="M3 3v5h5"/> <path d="M12 7v5l4 2"/></svg>Historique</div>
   </nav>
 </div>
 
@@ -233,7 +236,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '2.03';
+var APP_VERSION = '2.05';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -569,7 +572,7 @@ function empty(icon, txt){
 
 function renderSearch(q){
   var res = lots.filter(function(l){ return matches(l, q); });
-  if(!res.length){ $('view').innerHTML = empty('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:54px;height:54px;display:block;margin:0 auto"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.7-4.7"/></svg>','Aucun lot ne correspond à « ' + esc(q) + ' »'); return; }
+  if(!res.length){ $('view').innerHTML = empty('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" style="width:54px;height:54px;display:block;margin:0 auto"><path d="m21 21-4.34-4.34"/> <circle cx="11" cy="11" r="8"/></svg>','Aucun lot ne correspond à « ' + esc(q) + ' »'); return; }
   var h = '<div class="secH">Résultats <span>' + res.length + '</span></div>';
   h += res.map(card).join('');
   $('view').innerHTML = h;
@@ -577,13 +580,13 @@ function renderSearch(q){
 
 function renderVitrine(){
   var v = byStatus('vitrine');
-  if(!v.length){ $('view').innerHTML = empty('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:54px;height:54px;display:block;margin:0 auto"><path d="M4 8h16l-1.2 11.2a2 2 0 0 1-2 1.8H7.2a2 2 0 0 1-2-1.8L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>','Rien en vitrine.<br>Prépare un lot puis mets-le en ligne.'); return; }
+  if(!v.length){ $('view').innerHTML = empty('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" style="width:54px;height:54px;display:block;margin:0 auto"><path d="M15 21v-5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v5"/> <path d="M17.774 10.31a1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.451 0 1.12 1.12 0 0 0-1.548 0 2.5 2.5 0 0 1-3.452 0 1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.77-3.248l2.889-4.184A2 2 0 0 1 7 2h10a2 2 0 0 1 1.653.873l2.895 4.192a2.5 2.5 0 0 1-3.774 3.244"/> <path d="M4 10.95V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8.05"/></svg>','Rien en vitrine.<br>Prépare un lot puis mets-le en ligne.'); return; }
   $('view').innerHTML = '<div class="secH">En vitrine <span>' + v.length + '</span></div>' + v.map(card).join('');
 }
 
 function renderAfaire(){
   var a = byStatus('afaire'), p = byStatus('pret');
-  if(!a.length && !p.length){ $('view').innerHTML = empty('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:54px;height:54px;display:block;margin:0 auto"><path d="M3 8.5 12 4l9 4.5v7L12 20l-9-4.5v-7Z"/><path d="m3 8.5 9 4.5 9-4.5"/><path d="M12 13v7"/></svg>','Rien à préparer.<br>Ajoute un lot avec le bouton +'); return; }
+  if(!a.length && !p.length){ $('view').innerHTML = empty('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" style="width:54px;height:54px;display:block;margin:0 auto"><path d="M13 5h8"/> <path d="M13 12h8"/> <path d="M13 19h8"/> <path d="m3 17 2 2 4-4"/> <rect x="3" y="4" width="6" height="6" rx="1"/></svg>','Rien à préparer.<br>Ajoute un lot avec le bouton +'); return; }
   var h = '';
   if(a.length) h += '<div class="secH">À préparer <span>' + a.length + '</span></div>' + a.map(card).join('');
   if(p.length) h += '<div class="secH">Prêts, pas encore en ligne <span>' + p.length + '</span></div>' + p.map(card).join('');
@@ -593,7 +596,7 @@ function renderAfaire(){
 function card(l){
   var ph = l.photo
     ? '<div class="cPh" data-ph="' + l.photo + '" data-open="' + l.id + '"></div>'
-    : '<div class="cPh" data-open="' + l.id + '"><span style="width:26px;height:26px;display:block"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M3 8.5 12 4l9 4.5v7L12 20l-9-4.5v-7Z"/><path d="m3 8.5 9 4.5 9-4.5"/></svg></span></div>';
+    : '<div class="cPh" data-open="' + l.id + '"><span style="width:26px;height:26px;display:block"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/> <path d="M12 22V12"/> <polyline points="3.29 7 12 12 20.71 7"/> <path d="m7.5 4.27 9 5.15"/></svg></span></div>';
 
   var chips = [];
   if(l.nb) chips.push('<span class="chip cB">' + l.nb + ' cartes</span>');
@@ -616,7 +619,7 @@ function card(l){
   } else if(l.st === 'expedie'){
     acts.push('<button class="aBtn p" data-again="' + l.id + '">Refaire</button>');
   }
-  acts.push('<button class="aBtn" data-open="' + l.id + '" aria-label="Modifier"><span style="width:13px;height:13px;display:inline-block;vertical-align:-2px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3Z"/><path d="m14.5 6.5 3 3"/></svg></span></button>');
+  acts.push('<button class="aBtn" data-open="' + l.id + '" aria-label="Modifier"><span style="width:13px;height:13px;display:inline-block;vertical-align:-2px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/> <path d="m15 5 4 4"/></svg></span></button>');
 
   var sub = [];
   if(l.poke && l.nom) sub.push(esc(l.poke));
@@ -633,7 +636,7 @@ function card(l){
 
 function renderCmd(){
   var v = lots.filter(function(l){ return l.st === 'vendu'; });
-  if(!v.length){ $('view').innerHTML = empty('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:54px;height:54px;display:block;margin:0 auto"><path d="M2 7h11v9H2z"/><path d="M13 10h4l4 3.2V16h-8z"/><circle cx="6" cy="18.5" r="1.8"/><circle cx="17" cy="18.5" r="1.8"/></svg>','Aucune commande à expédier.'); return; }
+  if(!v.length){ $('view').innerHTML = empty('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" style="width:54px;height:54px;display:block;margin:0 auto"><path d="M12 22V12"/> <path d="m16 17 2 2 4-4"/> <path d="M21 11.127V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.729l7 4a2 2 0 0 0 2 .001l1.32-.753"/> <path d="M3.29 7 12 12l8.71-5"/> <path d="m7.5 4.27 8.997 5.148"/></svg>','Aucune commande à expédier.'); return; }
   var groups = {};
   for(var i=0;i<v.length;i++){
     var key = (v[i].acheteur || '').trim().toLowerCase() || ('_' + v[i].id);
@@ -651,7 +654,7 @@ function renderCmd(){
     var tot = 0, ids = [];
     var rows = g.items.map(function(l){
       tot += (num(l.pv) || 0); ids.push(l.id);
-      var th = l.photo ? '<div class="th" data-ph="' + l.photo + '"></div>' : '<div class="th"><span style="width:17px;height:17px;display:block"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M3 8.5 12 4l9 4.5v7L12 20l-9-4.5v-7Z"/><path d="m3 8.5 9 4.5 9-4.5"/></svg></span></div>';
+      var th = l.photo ? '<div class="th" data-ph="' + l.photo + '"></div>' : '<div class="th"><span style="width:17px;height:17px;display:block"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/> <path d="M12 22V12"/> <polyline points="3.29 7 12 12 20.71 7"/> <path d="m7.5 4.27 9 5.15"/></svg></span></div>';
       return '<div class="ordI">' + th + '<div class="nm">' + esc(lotTitle(l)) +
         (l.boite ? '<div style="font-size:11px;color:var(--tx3)">Boîte ' + esc(l.boite) + (l.sep?' · '+esc(l.sep):'') + '</div>' : '') +
         '</div><div class="pr">' + eur(num(l.pv)) + '</div></div>';
@@ -667,7 +670,7 @@ function renderCmd(){
 
 function renderHisto(){
   var sold = lots.filter(function(l){ return l.st === 'vendu' || l.st === 'expedie'; });
-  if(!sold.length){ $('view').innerHTML = empty('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:54px;height:54px;display:block;margin:0 auto"><path d="M3 20V4"/><path d="M3 20h18"/><path d="m6.5 15 4-4.5 3.5 3 5-6"/></svg>','Aucune vente enregistrée.'); return; }
+  if(!sold.length){ $('view').innerHTML = empty('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" style="width:54px;height:54px;display:block;margin:0 auto"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/> <path d="M3 3v5h5"/> <path d="M12 7v5l4 2"/></svg>','Aucune vente enregistrée.'); return; }
   var g = {};
   for(var i=0;i<sold.length;i++){
     var p = (sold[i].poke || '?').trim();
