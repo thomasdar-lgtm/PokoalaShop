@@ -302,7 +302,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '2.18';
+var APP_VERSION = '2.19';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -818,8 +818,8 @@ function renderAfaire(){
   var a = byStatus('afaire'), p = byStatus('pret');
   if(!a.length && !p.length){ $('view').innerHTML = empty('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" style="width:54px;height:54px;display:block;margin:0 auto"><path d="M13 5h8"/> <path d="M13 12h8"/> <path d="M13 19h8"/> <path d="m3 17 2 2 4-4"/> <rect x="3" y="4" width="6" height="6" rx="1"/></svg>','Rien à préparer.<br>Ajoute un lot avec le bouton +'); return; }
   var h = '';
-  if(a.length) h += '<div class="secH">À préparer <span>' + a.length + '</span></div>' + a.map(card).join('');
   if(p.length) h += '<div class="secH">Prêts, pas encore en ligne <span>' + p.length + '</span></div>' + p.map(card).join('');
+  if(a.length) h += '<div class="secH">À préparer <span>' + a.length + '</span></div>' + a.map(card).join('');
   $('view').innerHTML = h;
 }
 
