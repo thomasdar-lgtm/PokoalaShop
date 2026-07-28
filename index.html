@@ -302,7 +302,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '2.17';
+var APP_VERSION = '2.18';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -950,8 +950,11 @@ function closeSheet(){
 var pendingPhoto = null;
 
 /* création : tout saisissable d'un coup */
-function sheetNew(){
+function sheetNew(defMode){
   pendingPhoto = null;
+  var main = defMode || (tab === 'afaire' ? 'afaire' : 'vitrine');
+  var alt  = main === 'vitrine' ? 'afaire' : 'vitrine';
+  var lbl  = { vitrine:'Mettre en vitrine', afaire:'Ajouter à préparer' };
   openSheet(
     '<div class="shT">Nouveau lot</div>' +
     '<div class="shS">Seul le Pokémon est obligatoire. Tout le reste peut être complété plus tard.</div>' +
@@ -965,13 +968,13 @@ function sheetNew(){
     '<div class="fld"><label class="lbl">En ligne sur Vinted depuis le (si déjà publié)</label><input class="inp" id="f_dl" type="date" max="' + toDateInput(now()) + '"></div>' +
     '<div class="fld"><label class="lbl">Photo (optionnel)</label>' + photoZone({ photo:null }) + '</div>' +
     '<div id="histoHint"></div>' +
-    '<div class="shF"><button class="bS" id="x1">Annuler</button><button class="bP" id="k1">À préparer</button></div>' +
-    '<button class="dgr" id="k1b" style="border-color:var(--redS);color:var(--red)">Créer directement en vitrine</button>'
+    '<div class="shF"><button class="bS" id="x1">Annuler</button><button class="bP" id="k1">' + lbl[main] + '</button></div>' +
+    '<button class="dgr" id="k1b" style="border-color:var(--bd);color:var(--tx2)">' + lbl[alt] + '</button>'
   );
   bindPhoto();
   $('x1').onclick = closeSheet;
-  $('k1').onclick = function(){ createLot('afaire'); };
-  $('k1b').onclick = function(){ createLot('vitrine'); };
+  $('k1').onclick = function(){ createLot(main, 'k1'); };
+  $('k1b').onclick = function(){ createLot(alt, 'k1b'); };
   $('f_poke').oninput = function(){ showHistoHint(this.value.trim()); };
   setTimeout(function(){ $('f_poke').focus(); }, 120);
 }
@@ -1005,7 +1008,7 @@ function sheetQuick(){
   $('qk').onclick = add;
   inp.onkeydown = function(e){ if(e.key === 'Enter'){ e.preventDefault(); add(); } };
   $('qx').onclick = closeSheet;
-  $('qf').onclick = function(){ closeSheet(); setTimeout(sheetNew, 260); };
+  $('qf').onclick = function(){ closeSheet(); setTimeout(function(){ sheetNew('afaire'); }, 260); };
   setTimeout(function(){ inp.focus(); }, 120);
 }
 
@@ -1024,10 +1027,10 @@ function showHistoHint(poke){
     (past.length>1?'s':'') + ', moyenne <b style="color:var(--grn)">' + eur(s/past.length) + '</b></div>';
 }
 
-async function createLot(mode){
+async function createLot(mode, btnId){
   var poke = $('f_poke').value.trim();
   if(!poke){ toast('Le Pokémon est requis'); return; }
-  var btn = mode === 'vitrine' ? $('k1b') : $('k1');
+  var btn = $(btnId) || $('k1');
   btn.disabled = true; btn.textContent = '…';
   var photoId = null;
   if(pendingPhoto && pendingPhoto !== 'none'){
