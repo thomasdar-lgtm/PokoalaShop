@@ -302,7 +302,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '2.15';
+var APP_VERSION = '2.16';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -334,6 +334,21 @@ function now(){ return new Date().toISOString(); }
 function num(v){ var n = parseFloat(v); return isNaN(n) ? null : n; }
 function eur(n){ return (n==null?0:n).toFixed(2).replace('.',',') + '€'; }
 function eur0(n){ return Math.round(n==null?0:n) + '€'; }
+function toDateInput(iso){
+  if(!iso) return '';
+  var d = new Date(iso);
+  if(isNaN(d.getTime())) return '';
+  var m = String(d.getMonth()+1).padStart(2,'0'), j = String(d.getDate()).padStart(2,'0');
+  return d.getFullYear() + '-' + m + '-' + j;
+}
+function fromDateInput(v){
+  if(!v) return null;
+  var p2 = v.split('-');
+  if(p2.length !== 3) return null;
+  var d = new Date(parseInt(p2[0],10), parseInt(p2[1],10)-1, parseInt(p2[2],10), 12, 0, 0);
+  if(isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
 function ageDays(s){
   if(!s) return null;
   return Math.floor((Date.now() - new Date(s).getTime()) / 86400000);
@@ -942,6 +957,7 @@ function sheetNew(){
     '<div class="row2"><div class="fld"><label class="lbl">Prix affiché</label><input class="inp" id="f_pa" type="number" inputmode="decimal" step="0.5" placeholder="12"></div>' +
     '<div class="fld"><label class="lbl">Prix mini accepté</label><input class="inp" id="f_pm" type="number" inputmode="decimal" step="0.5" placeholder="9"></div></div>' +
     '<div class="fld"><label class="lbl">Titre de l\'annonce (optionnel)</label><input class="inp" id="f_nom" placeholder="laisser vide = Pokémon + nb cartes"></div>' +
+    '<div class="fld"><label class="lbl">En ligne sur Vinted depuis le (si déjà publié)</label><input class="inp" id="f_dl" type="date" max="' + toDateInput(now()) + '"></div>' +
     '<div class="fld"><label class="lbl">Photo (optionnel)</label>' + photoZone({ photo:null }) + '</div>' +
     '<div id="histoHint"></div>' +
     '<div class="shF"><button class="bS" id="x1">Annuler</button><button class="bP" id="k1">À préparer</button></div>' +
@@ -1021,7 +1037,9 @@ async function createLot(mode){
     acheteur: '', notes: '', photo: photoId,
     dtCree: now(), dtPret: null, dtListe: null, dtVente: null, dtExp: null
   };
-  if(mode === 'vitrine'){ l.dtListe = now(); l.dtPret = now(); }
+  var dl = $('f_dl') ? fromDateInput($('f_dl').value) : null;
+  if(dl){ l.st = 'vitrine'; l.dtListe = dl; l.dtPret = dl; }
+  else if(mode === 'vitrine'){ l.dtListe = now(); l.dtPret = now(); }
   closeSheet();
   commit(l);
   toast(mode === 'vitrine' ? 'Lot en vitrine' : 'Lot à préparer');
@@ -1050,6 +1068,7 @@ function sheetList(id){
     '<div class="fld"><label class="lbl">Titre de l\'annonce (optionnel)</label><input class="inp" id="f_nom" value="' + esc(l.nom) + '" placeholder="' + esc(lotTitle(l)) + '"></div>' +
     '<div class="row2"><div class="fld"><label class="lbl">Prix affiché</label><input class="inp" id="f_pa" type="number" inputmode="decimal" step="0.5" value="' + (l.pa==null?'':l.pa) + '" placeholder="12"></div>' +
     '<div class="fld"><label class="lbl">Prix mini accepté</label><input class="inp" id="f_pm" type="number" inputmode="decimal" step="0.5" value="' + (l.pm==null?'':l.pm) + '" placeholder="9"></div></div>' +
+    '<div class="fld"><label class="lbl">En ligne depuis le</label><input class="inp" id="f_dl" type="date" value="' + toDateInput(l.dtListe || now()) + '" max="' + toDateInput(now()) + '"></div>' +
     hint +
     '<div class="shF"><button class="bS" id="x2">Annuler</button><button class="bP" id="k2">Mettre en vitrine</button></div>' +
     '<button class="dgr" id="k2b" style="border-color:var(--bd);color:var(--tx2)">Copier les hashtags</button>'
@@ -1062,7 +1081,7 @@ function sheetList(id){
     if(pendingPhoto){ try{ l.photo = await uploadPhoto(pendingPhoto); }catch(e){} }
     l.nom = $('f_nom').value.trim();
     l.pa = num($('f_pa').value); l.pm = num($('f_pm').value);
-    l.st = 'vitrine'; l.dtListe = now();
+    l.st = 'vitrine'; l.dtListe = fromDateInput($('f_dl').value) || now();
     if(!l.dtPret) l.dtPret = now();
     closeSheet(); commit(l); toast('En vitrine');
   };
@@ -1123,6 +1142,8 @@ function sheetEdit(id){
       opt('afaire', l.st) + opt('pret', l.st) + opt('vitrine', l.st) + opt('vendu', l.st) + opt('expedie', l.st) +
     '</select></div>' +
     '<div class="fld"><label class="lbl">Acheteur</label><input class="inp" id="f_ach" value="' + esc(l.acheteur) + '"></div></div>' +
+    '<div class="row2"><div class="fld"><label class="lbl">En ligne depuis le</label><input class="inp" id="f_dl" type="date" value="' + toDateInput(l.dtListe) + '" max="' + toDateInput(now()) + '"></div>' +
+    '<div class="fld"><label class="lbl">Date de vente</label><input class="inp" id="f_dv" type="date" value="' + toDateInput(l.dtVente) + '" max="' + toDateInput(now()) + '"></div></div>' +
     '<div class="fld"><label class="lbl">Notes</label><textarea class="inp" id="f_notes" placeholder="Contenu, état, remarques…">' + esc(l.notes) + '</textarea></div>' +
     '<div class="shF"><button class="bS" id="x4">Annuler</button><button class="bP" id="k4">Enregistrer</button></div>' +
     '<button class="dgr" id="k4t" style="border-color:var(--bd);color:var(--tx2)">Copier les hashtags</button>' +
@@ -1148,6 +1169,10 @@ function sheetEdit(id){
     l.pa = num($('f_pa').value); l.pm = num($('f_pm').value); l.pv = num($('f_pv').value);
     l.acheteur = $('f_ach').value.trim();
     l.notes = $('f_notes').value.trim();
+    var dl2 = fromDateInput($('f_dl').value);
+    if(dl2 || $('f_dl').value === '') l.dtListe = dl2;
+    var dv2 = fromDateInput($('f_dv').value);
+    if(dv2 || $('f_dv').value === '') l.dtVente = dv2;
     var ns = $('f_st').value;
     if(ns !== l.st){
       l.st = ns;
