@@ -302,7 +302,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '2.16';
+var APP_VERSION = '2.17';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -351,14 +351,19 @@ function fromDateInput(v){
 }
 function ageDays(s){
   if(!s) return null;
-  return Math.floor((Date.now() - new Date(s).getTime()) / 86400000);
+  var d = new Date(s);
+  if(isNaN(d.getTime())) return null;
+  var a = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  var n = new Date();
+  var b = new Date(n.getFullYear(), n.getMonth(), n.getDate());
+  return Math.round((b - a) / 86400000);
 }
 function ageTxt(s){
   var d = ageDays(s);
   if(d == null) return '';
-  if(d <= 0) return 'en ligne aujourd\'hui';
-  if(d === 1) return 'en ligne depuis 1 jour';
-  return 'en ligne depuis ' + d + ' jours';
+  if(d <= 0) return 'mis en ligne aujourd\'hui';
+  if(d === 1) return 'mis en ligne hier';
+  return 'mis en ligne il y a ' + d + ' jours';
 }
 function dt(s){ if(!s) return '—'; var d=new Date(s); return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'}); }
 function toast(m){ var t=$('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._h); t._h=setTimeout(function(){ t.classList.remove('on'); },1900); }
