@@ -26,6 +26,9 @@
 --bd:rgba(255,255,255,.08);--r:14px;--r2:9px;
 }
 html{overscroll-behavior-y:none;height:100%}
+body,body *{-webkit-user-select:none;-ms-user-select:none;user-select:none;-webkit-touch-callout:none}
+input:not([type=file]),textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+.card,.aBtn,.nv,.sBtn,.st,.selBar,.bxRow,.hvRow{touch-action:manipulation}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--tx);max-width:560px;margin:0 auto;padding-bottom:calc(70px + env(safe-area-inset-bottom));overscroll-behavior-y:none;overscroll-behavior-x:none}
 input,select,textarea,button{font-family:inherit}
@@ -332,7 +335,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '2.21';
+var APP_VERSION = '2.23';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -344,7 +347,7 @@ var lots = [];
 var tab = 'vitrine';
 var sortKey = 'date', sortDir = -1;
 var boxFilter = null;
-var selMode = false, sel = {}, suppressClick = false, lpTimer = null;
+var selMode = false, sel = {}, suppressClick = false, lpTimer = null, lpX = 0, lpY = 0;
 try{ var _s = JSON.parse(localStorage.getItem('pks_sort') || 'null'); if(_s){ sortKey = _s.k; sortDir = _s.d; } }catch(e){}
 var token = null, tokenExp = 0, tokenClient = null;
 var me = null, myFile = null, myFileId = null;
@@ -1541,10 +1544,22 @@ function sheetAcc(){
 }
 
 /* ═══ EVENTS ═══ */
+document.addEventListener('contextmenu', function(e){
+  var t = e.target;
+  if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+  e.preventDefault();
+});
+document.addEventListener('selectstart', function(e){
+  var t = e.target;
+  if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+  e.preventDefault();
+});
+
 document.addEventListener('pointerdown', function(e){
   var b = e.target.closest('[data-sell]');
   if(!b || selMode) return;
   var id = b.getAttribute('data-sell');
+  lpX = e.clientX; lpY = e.clientY;
   clearTimeout(lpTimer);
   lpTimer = setTimeout(function(){
     suppressClick = true;
@@ -1552,8 +1567,12 @@ document.addEventListener('pointerdown', function(e){
     enterSel(id);
   }, 480);
 });
-['pointerup','pointercancel','pointermove','scroll'].forEach(function(ev){
-  document.addEventListener(ev, function(){ clearTimeout(lpTimer); }, true);
+document.addEventListener('pointermove', function(e){
+  if(lpTimer === null) return;
+  if(Math.abs(e.clientX - lpX) > 12 || Math.abs(e.clientY - lpY) > 12){ clearTimeout(lpTimer); lpTimer = null; }
+}, true);
+['pointerup','pointercancel','scroll'].forEach(function(ev){
+  document.addEventListener(ev, function(){ clearTimeout(lpTimer); lpTimer = null; }, true);
 });
 
 document.addEventListener('click', function(e){
