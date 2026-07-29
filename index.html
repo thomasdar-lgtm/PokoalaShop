@@ -132,6 +132,14 @@ main{padding:4px 16px 20px}
 .hList{margin-top:10px;border-top:1px solid var(--bd);padding-top:8px}
 .hRow{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:4px 0;color:var(--tx2)}
 .hRow b{color:var(--grn);font-weight:700}
+.hCard{cursor:pointer}
+.hvList{padding:0 18px}
+.hvRow{background:var(--surf2);border-radius:var(--r2);padding:10px 12px;margin-bottom:8px}
+.hvTop{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.hvDate{font-size:13px;font-weight:600}
+.hvPrice{font-size:15px;font-weight:800;color:var(--grn)}
+.hvMeta{font-size:11.5px;color:var(--tx2);margin-top:3px}
+.hvActs{display:flex;gap:6px;margin-top:9px}
 
 /* EMPTY */
 .empty{text-align:center;padding:52px 22px;color:var(--tx3)}
@@ -254,7 +262,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
     <div class="hTop">
       <div class="brand"><img src="icons/logo.png" alt=""><div class="wm"><span class="p">Po</span><span class="k">Koala</span><span class="s">Shop</span></div></div>
       <div class="hRight">
-        <div class="sync"><span class="syncDot" id="syncDot"></span><span id="syncTx">—</span></div>
+        <div class="sync"><span class="syncDot" id="syncDot"></span><span id="syncTx"></span></div>
         <button class="iBtn" id="btnTags" title="Hashtags">#</button>
         <button class="iBtn" id="btnAcc" aria-label="Compte"><span style="width:16px;height:16px;display:block"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><circle cx="12" cy="12" r="10"/> <circle cx="12" cy="10" r="3"/> <path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/></svg></span></button>
       </div>
@@ -302,7 +310,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '2.19';
+var APP_VERSION = '2.20';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -475,9 +483,9 @@ async function boot(){
 }
 
 /* ═══ DRIVE ═══ */
-function setSync(state, txt){
+function setSync(state){
   var d = $('syncDot'); d.className = 'syncDot' + (state ? ' ' + state : '');
-  $('syncTx').textContent = txt;
+  $('syncTx').textContent = 'v' + APP_VERSION;
 }
 
 async function listFiles(){
@@ -500,7 +508,7 @@ function mergeInto(map, arr){
 
 async function sync(full){
   if(saving) return;
-  setSync('busy','sync…');
+  setSync('busy');
   try{
     var files = await listFiles();
     var map = {};
@@ -524,17 +532,17 @@ async function sync(full){
     for(var k in map){ if(!map[k].deleted) out.push(map[k]); }
     out.sort(function(a,b){ return String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')); });
     lots = out;
-    setSync('', 'à jour');
+    setSync('');
     render();
   }catch(e){
-    if(e.message !== 'auth') setSync('err','hors ligne');
+    if(e.message !== 'auth') setSync('err');
   }
 }
 
 var savedLots = {};
 async function save(){
   if(saving){ dirty = true; return; }
-  saving = true; setSync('busy','sync…');
+  saving = true; setSync('busy');
   try{
     var body = { v: APP_VERSION, tagTpl: tagTpl, updated: now(), lots: [] };
     for(var k in savedLots) body.lots.push(savedLots[k]);
@@ -549,9 +557,9 @@ async function save(){
     await api('https://www.googleapis.com/upload/drive/v3/files/' + myFileId + '?uploadType=media', {
       method:'PATCH', headers:{'Content-Type':'application/json'}, body: json
     });
-    setSync('','à jour');
+    setSync('');
   }catch(e){
-    if(e.message !== 'auth') setSync('err','non sauvé');
+    if(e.message !== 'auth') setSync('err');
   }
   saving = false;
   if(dirty){ dirty = false; save(); }
@@ -707,6 +715,7 @@ function renderSearch(q){
   $('view').innerHTML = h;
 }
 
+var EMPTY_HISTO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" style="width:54px;height:54px;display:block;margin:0 auto"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/> <path d="M3 3v5h5"/> <path d="M12 7v5l4 2"/></svg>';
 var EMPTY_VITRINE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" style="width:54px;height:54px;display:block;margin:0 auto"><path d="M15 21v-5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v5"/> <path d="M17.774 10.31a1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.451 0 1.12 1.12 0 0 0-1.548 0 2.5 2.5 0 0 1-3.452 0 1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.77-3.248l2.889-4.184A2 2 0 0 1 7 2h10a2 2 0 0 1 1.653.873l2.895 4.192a2.5 2.5 0 0 1-3.774 3.244"/> <path d="M4 10.95V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8.05"/></svg>';
 var SORTS = { date:'Ancienneté', alpha:'Nom', prix:'Prix' };
 
@@ -756,6 +765,49 @@ function boxCount(b){
   }
   return n;
 }
+function sheetHistoPoke(key){
+  var g = histoGroups();
+  var o = null;
+  for(var i=0;i<g.length;i++){ if(g[i].key === key){ o = g[i]; break; } }
+  if(!o) return;
+  var rows = o.items.map(function(l){
+    var meta = [];
+    if(l.nb) meta.push(l.nb + ' cartes');
+    if(l.acheteur) meta.push(esc(l.acheteur));
+    if(num(l.pa) != null) meta.push('affiché ' + eur(num(l.pa)));
+    return '<div class="hvRow">' +
+      '<div class="hvMain"><div class="hvTop"><span class="hvDate">' + dt(l.dtVente) + '</span>' +
+      '<b class="hvPrice">' + eur(num(l.pv)) + '</b></div>' +
+      (meta.length ? '<div class="hvMeta">' + meta.join(' · ') + '</div>' : '') + '</div>' +
+      '<div class="hvActs"><button class="aBtn p" data-hedit="' + l.id + '">Modifier</button>' +
+      '<button class="aBtn d" data-hdel="' + l.id + '">Supprimer</button></div></div>';
+  }).join('');
+  openSheet('<div class="shT">' + esc(o.nom) + '</div>' +
+    '<div class="shS">' + o.items.length + ' vente' + (o.items.length>1?'s':'') +
+    ' · total ' + eur(o.sum) + ' · moyenne ' + eur(o.avg) + '</div>' +
+    '<div class="hvList">' + rows + '</div>' +
+    '<div class="shF"><button class="bS" style="flex:1" id="hvc">Fermer</button></div>');
+  $('hvc').onclick = closeSheet;
+  var eds = document.querySelectorAll('[data-hedit]');
+  for(var j=0;j<eds.length;j++){
+    eds[j].onclick = function(){
+      var id = this.getAttribute('data-hedit');
+      closeSheet(); setTimeout(function(){ sheetEdit(id); }, 260);
+    };
+  }
+  var dls = document.querySelectorAll('[data-hdel]');
+  for(var k=0;k<dls.length;k++){
+    dls[k].onclick = function(){
+      var id = this.getAttribute('data-hdel');
+      var lot = lots.filter(function(x){ return x.id === id; })[0];
+      if(!lot) return;
+      confirmBox('Supprimer cette vente ?', lotTitle(lot) + ' — ' + eur(num(lot.pv)) + '. Le lot sera retiré définitivement.', 'Supprimer', function(){
+        lot.deleted = true; commit(lot); closeSheet(); toast('Vente supprimée');
+      });
+    };
+  }
+}
+
 function sheetBoxes(){
   var boxes = allBoxes();
   var rows = '<button class="bxRow' + (boxFilter === null ? ' on' : '') + '" data-box="">Toutes les boîtes' +
@@ -784,7 +836,7 @@ function sheetBoxes(){
   }
 }
 
-function sortBar(){
+function sortBar(showBox){
   var arrows = { date: sortDir === -1 ? 'Récents d\'abord' : 'Anciens d\'abord',
                  alpha: sortDir === -1 ? 'Z → A' : 'A → Z',
                  prix: sortDir === -1 ? 'Prix décroissant' : 'Prix croissant' };
@@ -794,8 +846,10 @@ function sortBar(){
     h2 += '<button class="sBtn' + (on ? ' on' : '') + '" data-sort="' + k + '">' + SORTS[k] +
       (on ? '<span class="ar">' + (sortDir === -1 ? '▼' : '▲') + '</span>' : '') + '</button>';
   }
-  h2 += '<button class="sBtn bx' + (boxFilter !== null ? ' on' : '') + '" data-boxpick="1">' +
-    (boxFilter !== null ? 'Boîte ' + esc(boxFilter) + '<span class="ar">×</span>' : 'Boîte') + '</button>';
+  if(showBox !== false){
+    h2 += '<button class="sBtn bx' + (boxFilter !== null ? ' on' : '') + '" data-boxpick="1">' +
+      (boxFilter !== null ? 'Boîte ' + esc(boxFilter) + '<span class="ar">×</span>' : 'Boîte') + '</button>';
+  }
   h2 += '</div>';
   return h2 + '<div class="hint" style="padding:0 0 8px;text-align:left;font-size:11px">' + arrows[sortKey] + '</div>';
 }
@@ -805,7 +859,7 @@ function renderVitrine(){
   if(!all.length){ $('view').innerHTML = empty(EMPTY_VITRINE,'Rien en vitrine.<br>Prépare un lot puis mets-le en ligne.'); return; }
   var v = all;
   if(boxFilter !== null) v = all.filter(function(l){ return norm(l.boite) === norm(boxFilter); });
-  var head = sortBar();
+  var head = sortBar(true);
   if(!v.length){
     $('view').innerHTML = head + empty(EMPTY_VITRINE, 'Aucun lot en vitrine dans la boîte ' + esc(boxFilter) + '.');
     return;
@@ -899,40 +953,61 @@ function renderCmd(){
   $('view').innerHTML = h;
 }
 
-function renderHisto(){
+function histoGroups(){
   var sold = lots.filter(function(l){ return l.st === 'vendu' || l.st === 'expedie'; });
-  if(!sold.length){ $('view').innerHTML = empty('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" style="width:54px;height:54px;display:block;margin:0 auto"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/> <path d="M3 3v5h5"/> <path d="M12 7v5l4 2"/></svg>','Aucune vente enregistrée.'); return; }
   var g = {};
   for(var i=0;i<sold.length;i++){
-    var p = (sold[i].poke || '?').trim();
-    var key = norm(p);
-    if(!g[key]) g[key] = { nom: p, items: [] };
+    var p2 = (sold[i].poke || '?').trim();
+    var key = norm(p2);
+    if(!g[key]) g[key] = { key: key, nom: p2, items: [] };
     g[key].items.push(sold[i]);
   }
-  var keys = Object.keys(g);
-  keys.sort(function(a,b){ return g[b].items.length - g[a].items.length; });
-  var total = 0;
-  for(var s=0;s<sold.length;s++) total += (num(sold[s].pv) || 0);
-  var h = '<div class="secH">Ventes <span>' + sold.length + ' lots · ' + eur(total) + '</span></div>';
+  var keys = Object.keys(g), out = [];
   for(var k=0;k<keys.length;k++){
-    var it = g[keys[k]].items.slice();
-    it.sort(function(a,b){ return String(b.dtVente||'').localeCompare(String(a.dtVente||'')); });
-    var sum = 0, mx = 0, mn = null;
-    for(var j=0;j<it.length;j++){
-      var pv = num(it[j].pv) || 0; sum += pv;
+    var o = g[keys[k]];
+    o.items.sort(function(a,b){ return String(b.dtVente||'').localeCompare(String(a.dtVente||'')); });
+    var sum = 0, mx = 0, mn = null, last = '';
+    for(var j=0;j<o.items.length;j++){
+      var pv = num(o.items[j].pv) || 0;
+      sum += pv;
       if(pv > mx) mx = pv;
       if(mn === null || (pv > 0 && pv < mn)) mn = pv;
+      var dv = String(o.items[j].dtVente || '');
+      if(dv > last) last = dv;
     }
-    var avg = it.length ? sum / it.length : 0;
-    var rows = it.map(function(l){
+    o.sum = sum; o.max = mx; o.min = mn || 0;
+    o.avg = o.items.length ? sum / o.items.length : 0;
+    o.last = last;
+    out.push(o);
+  }
+  out.sort(function(a,b){
+    var r = 0;
+    if(sortKey === 'alpha') r = a.nom.localeCompare(b.nom, 'fr', { sensitivity:'base' });
+    else if(sortKey === 'prix') r = a.avg - b.avg;
+    else r = String(a.last).localeCompare(String(b.last));
+    return r * sortDir;
+  });
+  return out;
+}
+
+function renderHisto(){
+  var groups = histoGroups();
+  if(!groups.length){ $('view').innerHTML = empty(EMPTY_HISTO,'Aucune vente enregistrée.'); return; }
+  var total = 0, n = 0;
+  for(var i=0;i<groups.length;i++){ total += groups[i].sum; n += groups[i].items.length; }
+  var h2 = sortBar(false) + '<div class="secH">Ventes <span>' + n + ' lots · ' + eur(total) + '</span></div>';
+  for(var k=0;k<groups.length;k++){
+    var o = groups[k];
+    var rows = o.items.slice(0,3).map(function(l){
       return '<div class="hRow"><span>' + dt(l.dtVente) + (l.nb ? ' · ' + l.nb + ' cartes' : '') + '</span><b>' + eur(num(l.pv)) + '</b></div>';
     }).join('');
-    h += '<div class="hCard"><div class="hTitle"><div class="hName">' + esc(g[keys[k]].nom) + '</div>' +
-      '<div class="hCnt">' + it.length + ' vendu' + (it.length>1?'s':'') + '</div></div>' +
-      '<div class="hStats"><div>Moyenne<b>' + eur(avg) + '</b></div><div>Max<b>' + eur(mx) + '</b></div><div>Min<b>' + eur(mn||0) + '</b></div><div>Total<b>' + eur(sum) + '</b></div></div>' +
-      '<div class="hList">' + rows + '</div></div>';
+    var more = o.items.length > 3 ? '<div class="hRow" style="color:var(--red)"><span>Voir les ' + o.items.length + ' ventes</span><span>›</span></div>' : '';
+    h2 += '<div class="hCard" data-histo="' + esc(o.key) + '"><div class="hTitle"><div class="hName">' + esc(o.nom) + '</div>' +
+      '<div class="hCnt">' + o.items.length + ' vendu' + (o.items.length>1?'s':'') + '</div></div>' +
+      '<div class="hStats"><div>Moyenne<b>' + eur(o.avg) + '</b></div><div>Max<b>' + eur(o.max) + '</b></div><div>Min<b>' + eur(o.min) + '</b></div><div>Total<b>' + eur(o.sum) + '</b></div></div>' +
+      '<div class="hList">' + rows + more + '</div></div>';
   }
-  $('view').innerHTML = h;
+  $('view').innerHTML = h2;
 }
 
 /* ═══ SHEETS ═══ */
@@ -1143,9 +1218,9 @@ function sheetEdit(id){
     '<div class="fld"><label class="lbl">Nb cartes</label><input class="inp" id="f_nb" type="number" inputmode="numeric" value="' + (l.nb==null?'':l.nb) + '"></div></div>' +
     '<div class="row2"><div class="fld"><label class="lbl">Boîte</label><input class="inp" id="f_boite" value="' + esc(l.boite) + '"></div>' +
     '<div class="fld"><label class="lbl">Séparateur</label><input class="inp" id="f_sep" value="' + esc(l.sep) + '"></div></div>' +
-    '<div class="row3"><div class="fld"><label class="lbl">Affiché</label><input class="inp" id="f_pa" type="number" inputmode="decimal" step="0.5" value="' + (l.pa==null?'':l.pa) + '"></div>' +
-    '<div class="fld"><label class="lbl">Mini</label><input class="inp" id="f_pm" type="number" inputmode="decimal" step="0.5" value="' + (l.pm==null?'':l.pm) + '"></div>' +
-    '<div class="fld"><label class="lbl">Vendu</label><input class="inp" id="f_pv" type="number" inputmode="decimal" step="0.5" value="' + (l.pv==null?'':l.pv) + '"></div></div>' +
+    '<div class="row2"><div class="fld"><label class="lbl">Prix affiché</label><input class="inp" id="f_pa" type="number" inputmode="decimal" step="0.5" value="' + (l.pa==null?'':l.pa) + '"></div>' +
+    '<div class="fld"><label class="lbl">Prix mini accepté</label><input class="inp" id="f_pm" type="number" inputmode="decimal" step="0.5" value="' + (l.pm==null?'':l.pm) + '"></div></div>' +
+    (num(l.pv) != null ? '<div class="fld"><label class="lbl">Prix de vente réel</label><input class="inp" id="f_pv" type="number" inputmode="decimal" step="0.5" value="' + l.pv + '"></div>' : '') +
     '<div class="row2"><div class="fld"><label class="lbl">Statut</label><select class="inp" id="f_st">' +
       opt('afaire', l.st) + opt('pret', l.st) + opt('vitrine', l.st) + opt('vendu', l.st) + opt('expedie', l.st) +
     '</select></div>' +
@@ -1174,7 +1249,8 @@ function sheetEdit(id){
     l.nb = parseInt($('f_nb').value,10) || null;
     l.boite = $('f_boite').value.trim();
     l.sep = $('f_sep').value.trim();
-    l.pa = num($('f_pa').value); l.pm = num($('f_pm').value); l.pv = num($('f_pv').value);
+    l.pa = num($('f_pa').value); l.pm = num($('f_pm').value);
+    if($('f_pv')) l.pv = num($('f_pv').value);
     l.acheteur = $('f_ach').value.trim();
     l.notes = $('f_notes').value.trim();
     var dl2 = fromDateInput($('f_dl').value);
@@ -1188,7 +1264,10 @@ function sheetEdit(id){
       if(ns === 'vendu' && !l.dtVente) l.dtVente = now();
       if(ns === 'expedie' && !l.dtExp) l.dtExp = now();
     }
-    closeSheet(); commit(l); toast('Enregistré');
+    var needSell = (l.st === 'vendu' || l.st === 'expedie') && num(l.pv) == null;
+    closeSheet(); commit(l);
+    if(needSell){ setTimeout(function(){ sheetSell(l.id); }, 260); }
+    else toast('Enregistré');
   };
 }
 function opt(v, cur){ return '<option value="' + v + '"' + (v === cur ? ' selected' : '') + '>' + ST[v] + '</option>'; }
@@ -1349,6 +1428,8 @@ function sheetAcc(){
 
 /* ═══ EVENTS ═══ */
 document.addEventListener('click', function(e){
+  var hg = e.target.closest('[data-histo]');
+  if(hg && !e.target.closest('[data-hedit],[data-hdel]')){ sheetHistoPoke(hg.getAttribute('data-histo')); return; }
   var bp = e.target.closest('[data-boxpick]');
   if(bp){
     if(boxFilter !== null){ boxFilter = null; render(); }
@@ -1404,6 +1485,7 @@ for(var n=0;n<navs.length;n++){
     this.classList.add('on');
     tab = this.getAttribute('data-t');
     boxFilter = null;
+    $('fab').classList.toggle('hide', tab !== 'vitrine' && tab !== 'afaire');
     $('q').value = '';
     window.scrollTo(0,0);
     render();
@@ -1412,7 +1494,7 @@ for(var n=0;n<navs.length;n++){
 
 $('q').oninput = render;
 $('qClr').onclick = function(){ $('q').value = ''; $('q').blur(); render(); };
-$('fab').onclick = function(){ if(tab === 'afaire' && !query()) sheetQuick(); else sheetNew(); };
+$('fab').onclick = function(){ if(tab === 'afaire') sheetQuick(); else sheetNew('vitrine'); };
 $('btnTags').onclick = sheetTags;
 $('btnAcc').onclick = sheetAcc;
 $('btnSignin').onclick = signIn;
