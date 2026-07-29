@@ -335,7 +335,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '2.23';
+var APP_VERSION = '2.24';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -347,7 +347,7 @@ var lots = [];
 var tab = 'vitrine';
 var sortKey = 'date', sortDir = -1;
 var boxFilter = null;
-var selMode = false, sel = {}, suppressClick = false, lpTimer = null, lpX = 0, lpY = 0;
+var selMode = false, sel = {}, suppressClick = false, lpTimer = null, lpX = 0, lpY = 0, lpId = null, lpFired = false;
 try{ var _s = JSON.parse(localStorage.getItem('pks_sort') || 'null'); if(_s){ sortKey = _s.k; sortDir = _s.d; } }catch(e){}
 var token = null, tokenExp = 0, tokenClient = null;
 var me = null, myFile = null, myFileId = null;
@@ -924,7 +924,7 @@ function card(l){
   } else if(l.st === 'pret'){
     acts.push('<button class="aBtn p" data-list="' + l.id + '">Mettre en ligne</button>');
   } else if(l.st === 'vitrine'){
-    acts.push('<button class="aBtn g" data-sell="' + l.id + '">Marquer vendu</button>');
+    acts.push('<button class="aBtn g" data-sell="' + l.id + '" draggable="false" style="-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none">Marquer vendu</button>');
     acts.push('<button class="aBtn" data-tag="' + l.id + '">Hashtags</button>');
   } else if(l.st === 'vendu'){
     acts.push('<button class="aBtn o" data-mv="' + l.id + '|expedie">Marquer expédié</button>');
@@ -1555,25 +1555,58 @@ document.addEventListener('selectstart', function(e){
   e.preventDefault();
 });
 
-document.addEventListener('pointerdown', function(e){
+document.addEventListener('touchstart', function(e){
   var b = e.target.closest('[data-sell]');
   if(!b || selMode) return;
-  var id = b.getAttribute('data-sell');
-  lpX = e.clientX; lpY = e.clientY;
+  e.preventDefault();
+  var t = e.touches[0];
+  lpId = b.getAttribute('data-sell');
+  lpX = t.clientX; lpY = t.clientY; lpFired = false;
   clearTimeout(lpTimer);
   lpTimer = setTimeout(function(){
-    suppressClick = true;
+    lpFired = true; lpTimer = null;
     if(navigator.vibrate) navigator.vibrate(18);
-    enterSel(id);
-  }, 480);
+    enterSel(lpId);
+  }, 420);
+}, { passive:false });
+
+document.addEventListener('touchmove', function(e){
+  if(lpTimer === null && !lpFired) return;
+  var t = e.touches[0];
+  if(!t) return;
+  if(Math.abs(t.clientX - lpX) > 14 || Math.abs(t.clientY - lpY) > 14){
+    clearTimeout(lpTimer); lpTimer = null;
+  }
+}, { passive:true });
+
+document.addEventListener('touchend', function(e){
+  if(!lpId) return;
+  var fired = lpFired, id = lpId;
+  clearTimeout(lpTimer); lpTimer = null; lpId = null; lpFired = false;
+  e.preventDefault();
+  suppressClick = true;
+  setTimeout(function(){ suppressClick = false; }, 400);
+  if(fired) return;
+  if(selMode) toggleSel(id);
+  else sheetSell(id);
+}, { passive:false });
+
+document.addEventListener('touchcancel', function(){
+  clearTimeout(lpTimer); lpTimer = null; lpId = null; lpFired = false;
 });
-document.addEventListener('pointermove', function(e){
-  if(lpTimer === null) return;
-  if(Math.abs(e.clientX - lpX) > 12 || Math.abs(e.clientY - lpY) > 12){ clearTimeout(lpTimer); lpTimer = null; }
-}, true);
-['pointerup','pointercancel','scroll'].forEach(function(ev){
-  document.addEventListener(ev, function(){ clearTimeout(lpTimer); lpTimer = null; }, true);
+
+/* souris : appui long classique */
+document.addEventListener('mousedown', function(e){
+  var b = e.target.closest('[data-sell]');
+  if(!b || selMode) return;
+  clearTimeout(lpTimer);
+  lpTimer = setTimeout(function(){
+    suppressClick = true; lpTimer = null;
+    enterSel(b.getAttribute('data-sell'));
+  }, 420);
 });
+document.addEventListener('mouseup', function(){ clearTimeout(lpTimer); lpTimer = null; });
+document.addEventListener('scroll', function(){ clearTimeout(lpTimer); lpTimer = null; }, true);
 
 document.addEventListener('click', function(e){
   if(suppressClick){ suppressClick = false; e.preventDefault(); e.stopPropagation(); return; }
