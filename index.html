@@ -68,6 +68,8 @@ header{position:sticky;top:0;z-index:60;background:var(--bg);padding:calc(10px +
 
 /* CONTENT */
 main{padding:4px 16px 20px}
+#view{animation:fade .16s ease}
+@keyframes fade{from{opacity:.35}to{opacity:1}}
 .sortBar{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
 .sBtn{display:flex;align-items:center;gap:4px;background:var(--surf);border:1px solid var(--bd);color:var(--tx2);font-size:11.5px;font-weight:600;padding:6px 11px;border-radius:20px;cursor:pointer}
 .sBtn.on{background:var(--redS);border-color:transparent;color:var(--red)}
@@ -335,7 +337,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '2.24';
+var APP_VERSION = '2.25';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -1665,19 +1667,54 @@ document.addEventListener('click', function(e){
   }
 });
 
+var TABS = ['vitrine','afaire','cmd','histo'];
 var navs = document.querySelectorAll('.nv');
-for(var n=0;n<navs.length;n++){
-  navs[n].onclick = function(){
-    for(var i=0;i<navs.length;i++) navs[i].classList.remove('on');
-    this.classList.add('on');
-    tab = this.getAttribute('data-t');
-    boxFilter = null;
-    $('fab').classList.toggle('hide', tab !== 'vitrine' && tab !== 'afaire');
-    $('q').value = '';
-    window.scrollTo(0,0);
-    render();
-  };
+
+function goTab(t){
+  if(!t || t === tab) return;
+  tab = t;
+  for(var i=0;i<navs.length;i++) navs[i].classList.toggle('on', navs[i].getAttribute('data-t') === t);
+  boxFilter = null;
+  $('fab').classList.toggle('hide', tab !== 'vitrine' && tab !== 'afaire');
+  $('q').value = '';
+  window.scrollTo(0,0);
+  render();
 }
+
+for(var n=0;n<navs.length;n++){
+  navs[n].onclick = function(){ goTab(this.getAttribute('data-t')); };
+}
+
+/* balayage horizontal pour changer d'onglet */
+var swX = 0, swY = 0, swT = 0, swOk = false;
+var EDGE = 44;
+
+document.addEventListener('touchstart', function(e){
+  swOk = false;
+  if(e.touches.length !== 1) return;
+  if(sheetOpen || selMode) return;
+  if($('lb').classList.contains('on') || $('cfm').classList.contains('on')) return;
+  var t = e.touches[0];
+  if(t.clientX < EDGE || t.clientX > window.innerWidth - EDGE) return;
+  var tg = e.target;
+  if(tg.closest('input, textarea, select, nav, .selBar, .sortBar')) return;
+  swX = t.clientX; swY = t.clientY; swT = Date.now(); swOk = true;
+}, { passive:true });
+
+document.addEventListener('touchend', function(e){
+  if(!swOk) return;
+  swOk = false;
+  var t = e.changedTouches[0];
+  if(!t) return;
+  var dx = t.clientX - swX, dy = t.clientY - swY;
+  if(Date.now() - swT > 700) return;
+  if(Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 2) return;
+  var i = TABS.indexOf(tab);
+  if(i < 0) return;
+  var j = dx < 0 ? i + 1 : i - 1;
+  if(j < 0 || j >= TABS.length) return;
+  goTab(TABS[j]);
+}, { passive:true });
 
 $('q').oninput = render;
 $('qClr').onclick = function(){ $('q').value = ''; $('q').blur(); render(); };
