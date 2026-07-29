@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2.27';
+const CACHE_VERSION = '2.28';
 const CACHE_NAME = 'pokoalashop-v' + CACHE_VERSION;
 const ASSETS = ['./', './index.html', './manifest.json', './icons/logo.png', './icons/icon-192.png', './icons/icon-512.png'];
 
