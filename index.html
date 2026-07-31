@@ -336,7 +336,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '2.30';
+var APP_VERSION = '2.31';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -364,6 +364,15 @@ function norm(s){
   return String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function noAuto(){
+  return ' name="f' + Math.random().toString(36).slice(2,9) + '" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"';
+}
+function clearInputs(ids){
+  for(var i=0;i<ids.length;i++){
+    var el = $(ids[i]);
+    if(el && el.tagName === 'INPUT' && el.type !== 'file') el.value = '';
+  }
+}
 function nid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 function now(){ return new Date().toISOString(); }
 function num(v){ var n = parseFloat(v); return isNaN(n) ? null : n; }
@@ -1172,19 +1181,20 @@ function sheetNew(defMode){
   openSheet(
     '<div class="shT">Nouveau lot</div>' +
     '<div class="shS">Seul le Pokémon est obligatoire. Tout le reste peut être complété plus tard.</div>' +
-    '<div class="fld"><label class="lbl">Pokémon</label><input class="inp" id="f_poke" placeholder="Évoli" autocomplete="off"></div>' +
-    '<div class="row2"><div class="fld"><label class="lbl">Nombre de cartes</label><input class="inp" id="f_nb" type="number" inputmode="numeric" placeholder="25"></div>' +
-    '<div class="fld"><label class="lbl">Boîte</label><input class="inp" id="f_boite" placeholder="3" autocomplete="off"></div></div>' +
-    '<div class="fld"><label class="lbl">Séparateur (optionnel)</label><input class="inp" id="f_sep" placeholder="Évoli B" autocomplete="off"></div>' +
-    '<div class="row2"><div class="fld"><label class="lbl">Prix affiché</label><input class="inp" id="f_pa" type="number" inputmode="decimal" step="0.5" placeholder="12"></div>' +
-    '<div class="fld"><label class="lbl">Prix mini accepté</label><input class="inp" id="f_pm" type="number" inputmode="decimal" step="0.5" placeholder="9"></div></div>' +
-    '<div class="fld"><label class="lbl">Titre de l\'annonce (optionnel)</label><input class="inp" id="f_nom" placeholder="laisser vide = Pokémon + nb cartes"></div>' +
+    '<div class="fld"><label class="lbl">Pokémon</label><input class="inp" id="f_poke" placeholder="Évoli"' + noAuto() + '></div>' +
+    '<div class="row2"><div class="fld"><label class="lbl">Nombre de cartes</label><input class="inp" id="f_nb" type="number" inputmode="numeric" placeholder="25"' + noAuto() + '></div>' +
+    '<div class="fld"><label class="lbl">Boîte</label><input class="inp" id="f_boite" placeholder="3"' + noAuto() + '></div></div>' +
+    '<div class="fld"><label class="lbl">Séparateur (optionnel)</label><input class="inp" id="f_sep" placeholder="Évoli B"' + noAuto() + '></div>' +
+    '<div class="row2"><div class="fld"><label class="lbl">Prix affiché</label><input class="inp" id="f_pa" type="number" inputmode="decimal" step="0.5" placeholder="12"' + noAuto() + '></div>' +
+    '<div class="fld"><label class="lbl">Prix mini accepté</label><input class="inp" id="f_pm" type="number" inputmode="decimal" step="0.5" placeholder="9"' + noAuto() + '></div></div>' +
+    '<div class="fld"><label class="lbl">Titre de l\'annonce (optionnel)</label><input class="inp" id="f_nom" placeholder="laisser vide = Pokémon + nb cartes"' + noAuto() + '></div>' +
     '<div class="fld"><label class="lbl">En ligne sur Vinted depuis le (si déjà publié)</label><input class="inp" id="f_dl" type="date" max="' + toDateInput(now()) + '"></div>' +
     '<div class="fld"><label class="lbl">Photo (optionnel)</label>' + photoZone({ photo:null }) + '</div>' +
     '<div id="histoHint"></div>' +
     '<div class="shF"><button class="bS" id="x1">Annuler</button><button class="bP" id="k1">' + lbl[main] + '</button></div>' +
     '<button class="dgr" id="k1b" style="border-color:var(--bd);color:var(--tx2)">' + lbl[alt] + '</button>'
   );
+  clearInputs(['f_poke','f_nb','f_boite','f_sep','f_pa','f_pm','f_nom','f_dl']);
   bindPhoto();
   $('x1').onclick = closeSheet;
   $('k1').onclick = function(){ createLot(main, 'k1'); };
@@ -1198,11 +1208,12 @@ function sheetQuick(){
   openSheet(
     '<div class="shT">Lots à préparer</div>' +
     '<div class="shS">Tape un Pokémon, valide, recommence. Les détails se complètent plus tard en touchant le lot.</div>' +
-    '<div class="fld"><label class="lbl">Pokémon</label><input class="inp" id="q_poke" placeholder="Évoli" autocomplete="off" enterkeyhint="done"></div>' +
+    '<div class="fld"><label class="lbl">Pokémon</label><input class="inp" id="q_poke" placeholder="Évoli" enterkeyhint="done"' + noAuto() + '></div>' +
     '<div id="q_list"></div>' +
     '<div class="shF"><button class="bS" id="qx">Terminé</button><button class="bP" id="qk">Ajouter</button></div>' +
     '<button class="dgr" id="qf" style="border-color:var(--bd);color:var(--tx2)">Saisie complète avec prix et photo</button>'
   );
+  clearInputs(['q_poke']);
   var inp = $('q_poke');
   function add(){
     var poke = inp.value.trim();
