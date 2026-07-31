@@ -77,6 +77,11 @@ main{padding:4px 16px 20px}
 .bxRow.on{border-color:var(--blu);color:var(--blu)}
 .bxRow .n{font-size:11.5px;color:var(--tx2);font-weight:500}
 .bxRow.on .n{color:var(--blu);opacity:.8}
+.accSec{font-size:10.5px;font-weight:800;color:var(--tx3);letter-spacing:.8px;text-transform:uppercase;padding:0 18px;margin:18px 0 8px}
+.accBtn{width:calc(100% - 36px);margin:0 18px 8px;background:var(--surf2);border:1px solid transparent;border-radius:var(--r2);padding:12px 13px;color:var(--tx);font-size:14px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.accBtn span{font-size:11.5px;color:var(--tx2);font-weight:500;text-align:right}
+.bakRow{display:flex;align-items:center;justify-content:space-between;gap:10px;width:calc(100% - 36px);margin:0 18px 7px;background:var(--surf2);border:1px solid transparent;border-radius:var(--r2);padding:11px 13px;color:var(--tx);font-size:13.5px;font-weight:600;cursor:pointer;text-align:left}
+.bakRow .n{font-size:11.5px;color:var(--tx2);font-weight:500}
 .sBtn .ar{font-size:9px;opacity:.85;line-height:1}
 .secH{font-size:10.5px;font-weight:800;color:var(--tx3);letter-spacing:.9px;text-transform:uppercase;margin:16px 0 9px;display:flex;align-items:center;gap:7px}
 .secH:first-child{margin-top:4px}
@@ -336,11 +341,14 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '2.31';
+var APP_VERSION = '2.32';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
 var POLL_MS = 12000;
+var BAK_PREFIX = 'bak_';
+var BAK_KEEP = 10;
+var BAK_EVERY = 6 * 3600 * 1000;
 
 var ST = { afaire:'À préparer', pret:'Préparé', vitrine:'En vitrine', vendu:'Vendu', expedie:'Expédié' };
 
@@ -594,6 +602,7 @@ async function save(){
       method:'PATCH', headers:{'Content-Type':'application/json'}, body: json
     });
     setSync('');
+    makeBackup(false).catch(function(){});
   }catch(e){
     if(e.message !== 'auth') setSync('err');
   }
@@ -707,6 +716,105 @@ function lotTitle(l){
   if(l.nom) return l.nom;
   var p = l.poke || 'Lot';
   return l.nb ? (p + ' — ' + l.nb + ' cartes') : p;
+}
+
+/* ═══ SAUVEGARDES ═══ */
+
+async function listBackups(){
+  var url = 'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&pageSize=100' +
+    '&fields=files(id,name,size,createdTime)&orderBy=createdTime desc&q=' +
+    encodeURIComponent("name contains '" + BAK_PREFIX + "' and trashed=false");
+  var r = await api(url);
+  var j = await r.json();
+  return (j.files || []).map(function(f){
+    var parts = f.name.replace(/\.json$/,'').split('_');
+    return { id: f.id, name: f.name, who: parts[1] || '?', at: f.createdTime, size: parseInt(f.size || 0, 10) };
+  });
+}
+
+async function makeBackup(force){
+  if(!lots.length) return;
+  var last = 0;
+  try{ last = parseInt(localStorage.getItem('pks_lastbak') || '0', 10); }catch(e){}
+  if(!force && Date.now() - last < BAK_EVERY) return;
+  var body = JSON.stringify({ v: APP_VERSION, who: who, at: now(), count: lots.length, lots: lots });
+  var meta = { name: BAK_PREFIX + who + '_' + Date.now() + '.json', parents: ['appDataFolder'] };
+  var fd = new FormData();
+  fd.append('metadata', new Blob([JSON.stringify(meta)], { type:'application/json' }));
+  fd.append('file', new Blob([body], { type:'application/json' }));
+  await api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method:'POST', body: fd });
+  try{ localStorage.setItem('pks_lastbak', String(Date.now())); }catch(e){}
+  await pruneBackups();
+}
+
+async function pruneBackups(){
+  var all = await listBackups();
+  var mine = all.filter(function(b){ return b.who === who; });
+  for(var i=BAK_KEEP;i<mine.length;i++){
+    try{ await api('https://www.googleapis.com/drive/v3/files/' + mine[i].id, { method:'DELETE' }); }catch(e){}
+  }
+}
+
+async function restoreBackup(id){
+  var r = await api('https://www.googleapis.com/drive/v3/files/' + id + '?alt=media');
+  var data = await r.json();
+  if(!data || !data.lots) { toast('Sauvegarde illisible'); return; }
+  var stamp = now();
+  var seen = {};
+  for(var i=0;i<data.lots.length;i++){
+    var l = data.lots[i];
+    if(!l || !l.id) continue;
+    l.updatedAt = stamp; l.by = who; delete l.deleted;
+    savedLots[l.id] = l;
+    seen[l.id] = true;
+  }
+  for(var j=0;j<lots.length;j++){
+    if(!seen[lots[j].id]){
+      savedLots[lots[j].id] = { id: lots[j].id, deleted: true, updatedAt: stamp, by: who };
+    }
+  }
+  await save();
+  await sync(true);
+  toast(data.lots.length + ' lots restaurés');
+}
+
+function download(name, text, type){
+  var b = new Blob([text], { type: type || 'application/json' });
+  var u = URL.createObjectURL(b);
+  var a = document.createElement('a');
+  a.href = u; a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(u); }, 1500);
+}
+
+function exportJson(){
+  var stamp = toDateInput(now());
+  download('pokoalashop_' + stamp + '.json',
+    JSON.stringify({ v: APP_VERSION, at: now(), count: lots.length, lots: lots }, null, 1));
+  toast('Fichier téléchargé');
+}
+
+function csvCell(v){
+  var s = String(v == null ? '' : v);
+  return '"' + s.replace(/"/g,'""') + '"';
+}
+function exportCsv(){
+  var sold = lots.filter(function(l){ return l.st === 'vendu' || l.st === 'expedie'; });
+  sold.sort(function(a,b){ return String(a.dtVente||'').localeCompare(String(b.dtVente||'')); });
+  var head = ['Date de vente','Pokemon','Titre','Nb cartes','Prix affiche','Prix mini','Prix vendu','Acheteur','Boite','Date mise en ligne','Jours en ligne'];
+  var rows = [head.map(csvCell).join(';')];
+  var tot = 0;
+  for(var i=0;i<sold.length;i++){
+    var l = sold[i];
+    var jours = (l.dtListe && l.dtVente)
+      ? Math.max(0, Math.round((new Date(l.dtVente) - new Date(l.dtListe)) / 86400000)) : '';
+    tot += (num(l.pv) || 0);
+    rows.push([dt(l.dtVente), l.poke, lotTitle(l), l.nb, l.pa, l.pm, l.pv, l.acheteur, l.boite, dt(l.dtListe), jours].map(csvCell).join(';'));
+  }
+  rows.push('');
+  rows.push([csvCell('Total'),'','','','','',csvCell(tot.toFixed(2))].join(';'));
+  download('ventes_pokoalashop_' + toDateInput(now()) + '.csv', '\ufeff' + rows.join('\r\n'), 'text/csv;charset=utf-8');
+  toast(sold.length + ' ventes exportées');
 }
 
 /* ═══ RENDER ═══ */
@@ -1541,15 +1649,26 @@ function sheetTags(){
 function sheetAcc(){
   openSheet(
     '<div class="shT">Cet appareil : ' + esc(WHOS[who] || '?') + '</div>' +
-    '<div class="shS">' + esc((me && (me.name || me.email)) || '') + '</div>' +
+    '<div class="shS">' + esc((me && (me.name || me.email)) || '') + ' · v' + APP_VERSION + '</div>' +
+
+    '<div class="accSec">Synchronisation</div>' +
+    '<button class="accBtn" id="a_ref">Rafraîchir maintenant<span>' + lots.length + ' lots</span></button>' +
     '<div class="fld"><div class="tagBox" style="margin:0">Fichier d\'écriture : <b>' + esc(myFile) + '</b><br>' +
-    'Lots visibles : <b>' + lots.length + '</b><br>Version : <b>' + APP_VERSION + '</b><br><br>' +
-    'Chaque appareil écrit dans son propre fichier Drive. Aucune modification ne peut écraser celle de l\'autre.</div></div>' +
-    '<div class="fld"><label class="lbl">Changer d\'identité sur cet appareil</label><div style="display:flex;gap:9px">' +
-    '<button class="aBtn ' + (who==='thomas'?'p':'') + '" style="flex:1;padding:10px" data-sw="thomas">Thomas</button>' +
-    '<button class="aBtn ' + (who==='cindy'?'o':'') + '" style="flex:1;padding:10px" data-sw="cindy">Cindy</button>' +
+    'Chaque appareil écrit dans son propre fichier. Aucune modification ne peut écraser celle de l\'autre.</div></div>' +
+
+    '<div class="accSec">Identité de cet appareil</div>' +
+    '<div class="fld"><div style="display:flex;gap:9px">' +
+    '<button class="aBtn ' + (who==='thomas'?'p':'') + '" style="flex:1;padding:11px" data-sw="thomas">Thomas</button>' +
+    '<button class="aBtn ' + (who==='cindy'?'o':'') + '" style="flex:1;padding:11px" data-sw="cindy">Cindy</button>' +
     '</div></div>' +
-    '<div class="shF"><button class="bS" id="x7">Fermer</button><button class="bP" id="k7r">Rafraîchir</button></div>' +
+
+    '<div class="accSec">Données</div>' +
+    '<button class="accBtn" id="a_bak">Sauvegarder maintenant<span>automatique toutes les 6 h</span></button>' +
+    '<button class="accBtn" id="a_res">Restaurer une sauvegarde<span>revenir en arrière</span></button>' +
+    '<button class="accBtn" id="a_js">Télécharger mes données<span>fichier JSON complet</span></button>' +
+    '<button class="accBtn" id="a_cs">Exporter les ventes<span>CSV pour la déclaration</span></button>' +
+
+    '<div class="shF"><button class="bS" style="flex:1" id="x7">Fermer</button></div>' +
     '<button class="dgr" id="k7">Se déconnecter</button>'
   );
   var sw = document.querySelectorAll('[data-sw]');
@@ -1557,13 +1676,23 @@ function sheetAcc(){
     sw[i].onclick = function(){
       var w = this.getAttribute('data-sw');
       if(w === who) return;
-      who = w; localStorage.setItem('pks_who', w);
+      who = w;
+      try{ localStorage.setItem('pks_who', w); }catch(e){}
       savedLots = {}; myFileId = null;
       closeSheet(); boot(); toast('Identité : ' + WHOS[w]);
     };
   }
   $('x7').onclick = closeSheet;
-  $('k7r').onclick = function(){ closeSheet(); sync(true); toast('Synchronisation…'); };
+  $('a_ref').onclick = function(){ closeSheet(); sync(true); toast('Synchronisation…'); };
+  $('a_js').onclick = exportJson;
+  $('a_cs').onclick = exportCsv;
+  $('a_bak').onclick = async function(){
+    this.disabled = true; this.innerHTML = 'Sauvegarde en cours…';
+    try{ await makeBackup(true); toast('Sauvegarde créée'); }
+    catch(e){ toast('Échec de la sauvegarde'); }
+    closeSheet();
+  };
+  $('a_res').onclick = function(){ closeSheet(); setTimeout(sheetRestore, 260); };
   $('k7').onclick = function(){
     confirmBox('Se déconnecter ?', 'Tes données restent sur Drive.', 'Déconnexion', function(){
       if(token) google.accounts.oauth2.revoke(token, function(){});
@@ -1574,6 +1703,41 @@ function sheetAcc(){
       $('app').classList.add('hide'); $('auth').classList.remove('hide');
     });
   };
+}
+
+async function sheetRestore(){
+  openSheet('<div class="shT">Restaurer une sauvegarde</div>' +
+    '<div class="shS">Chargement…</div>');
+  var list = [];
+  try{ list = await listBackups(); }catch(e){}
+  var rows = '';
+  if(!list.length){
+    rows = '<div class="hint">Aucune sauvegarde pour l\'instant. Elles se créent automatiquement toutes les 6 heures dès que tu modifies un lot.</div>';
+  }
+  for(var i=0;i<list.length;i++){
+    var b = list[i];
+    var d = new Date(b.at);
+    var quand = d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'}) + ' à ' +
+      d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    rows += '<button class="bakRow" data-bak="' + b.id + '" data-when="' + esc(quand) + '">' + quand +
+      '<span class="n">' + esc(WHOS[b.who] || b.who) + '</span></button>';
+  }
+  openSheet('<div class="shT">Restaurer une sauvegarde</div>' +
+    '<div class="shS">La restauration remplace l\'ensemble des lots par ceux de la sauvegarde choisie, pour toi comme pour l\'autre appareil.</div>' +
+    rows +
+    '<div class="shF"><button class="bS" style="flex:1" id="rsx">Fermer</button></div>');
+  $('rsx').onclick = closeSheet;
+  var bs = document.querySelectorAll('[data-bak]');
+  for(var j=0;j<bs.length;j++){
+    bs[j].onclick = function(){
+      var id = this.getAttribute('data-bak'), quand = this.getAttribute('data-when');
+      confirmBox('Restaurer cette sauvegarde ?', 'État du ' + quand + '. Les lots créés depuis seront supprimés.', 'Restaurer', async function(){
+        closeSheet();
+        toast('Restauration…');
+        try{ await restoreBackup(id); }catch(e){ toast('Échec de la restauration'); }
+      });
+    };
+  }
 }
 
 /* ═══ EVENTS ═══ */
