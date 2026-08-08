@@ -160,7 +160,22 @@ main{padding:4px 16px 20px}
 .hRow b{color:var(--grn);font-weight:700}
 .hCard{cursor:pointer}
 .hvList{padding:0 18px}
-.hvRow{background:var(--surf2);border-radius:var(--r2);padding:10px 12px;margin-bottom:8px}
+.hvRow{display:flex;gap:10px;background:var(--surf2);border-radius:var(--r2);padding:10px 12px;margin-bottom:8px;cursor:pointer}
+.hvRow:active{opacity:.65}
+.hvPh{width:52px;height:52px;flex:none;border-radius:8px;background:var(--surf3);overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;color:var(--tx3)}
+.hvPh img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.hvPh.has .ph-holder{display:none}
+.hvMain{flex:1;min-width:0}
+.roRow{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--bd);font-size:13.5px}
+.roRow:last-child{border-bottom:0}
+.roRow i{color:var(--tx2);font-style:normal;flex:none}
+.roRow b{text-align:right;font-weight:600;word-break:break-word}
+.roPh{width:100%;height:190px;border-radius:var(--r2);background:var(--surf2);overflow:hidden;position:relative;cursor:zoom-in;display:flex;align-items:center;justify-content:center;color:var(--tx3)}
+.roPh img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#00040f}
+.roPh.has .ph-holder{display:none}
+.gToggle{display:flex;gap:6px;margin-bottom:10px}
+.gToggle button{flex:1;background:var(--surf);border:1px solid var(--bd);color:var(--tx2);font-size:12px;font-weight:700;padding:8px;border-radius:20px;cursor:pointer}
+.gToggle button.on{background:var(--redS);border-color:transparent;color:var(--red)}
 .hvTop{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .hvDate{font-size:13px;font-weight:600}
 .hvPrice{font-size:15px;font-weight:800;color:var(--grn)}
@@ -341,7 +356,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '2.32';
+var APP_VERSION = '2.33';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -356,6 +371,8 @@ var lots = [];
 var tab = 'vitrine';
 var sortKey = 'date', sortDir = -1;
 var boxFilter = null;
+var groupBy = 'poke';
+try{ var _g = localStorage.getItem('pks_group'); if(_g === 'ach' || _g === 'poke') groupBy = _g; }catch(e){}
 var selMode = false, sel = {}, suppressClick = false, lpTimer = null, lpX = 0, lpY = 0, lpId = null, lpFired = false;
 try{ var _s = JSON.parse(localStorage.getItem('pks_sort') || 'null'); if(_s){ sortKey = _s.k; sortDir = _s.d; } }catch(e){}
 var token = null, tokenExp = 0, tokenClient = null;
@@ -1047,11 +1064,13 @@ function renderCmd(){
 
 function histoGroups(){
   var sold = lots.filter(function(l){ return l.st === 'vendu' || l.st === 'expedie'; });
+  var byAch = groupBy === 'ach';
   var g = {};
   for(var i=0;i<sold.length;i++){
-    var p2 = (sold[i].poke || '?').trim();
-    var key = norm(p2);
-    if(!g[key]) g[key] = { key: key, nom: p2, items: [] };
+    var raw = byAch ? (sold[i].acheteur || '').trim() : (sold[i].poke || '').trim();
+    var lbl = raw || (byAch ? 'Acheteur non renseigné' : '?');
+    var key = norm(raw) || (byAch ? '_noach' : '_nopoke');
+    if(!g[key]) g[key] = { key: key, nom: lbl, items: [] };
     g[key].items.push(sold[i]);
   }
   var keys = Object.keys(g), out = [];
@@ -1059,12 +1078,12 @@ function histoGroups(){
     var o = g[keys[k]];
     o.items.sort(function(a,b){ return String(b.dtVente||'').localeCompare(String(a.dtVente||'')); });
     var sum = 0, mx = 0, mn = null, last = '';
-    for(var j=0;j<o.items.length;j++){
-      var pv = num(o.items[j].pv) || 0;
+    for(var j2=0;j2<o.items.length;j2++){
+      var pv = num(o.items[j2].pv) || 0;
       sum += pv;
       if(pv > mx) mx = pv;
       if(mn === null || (pv > 0 && pv < mn)) mn = pv;
-      var dv = String(o.items[j].dtVente || '');
+      var dv = String(o.items[j2].dtVente || '');
       if(dv > last) last = dv;
     }
     o.sum = sum; o.max = mx; o.min = mn || 0;
@@ -1082,36 +1101,45 @@ function histoGroups(){
   return out;
 }
 
+function groupToggle(){
+  return '<div class="gToggle">' +
+    '<button data-gb="poke"' + (groupBy === 'poke' ? ' class="on"' : '') + '>Par Pokémon</button>' +
+    '<button data-gb="ach"' + (groupBy === 'ach' ? ' class="on"' : '') + '>Par acheteur</button></div>';
+}
+
 function renderHisto(){
   var groups = histoGroups();
   var q = query();
+  if(!groups.length){ $('view').innerHTML = groupToggle() + empty(EMPTY_HISTO,'Aucune vente enregistrée.'); return; }
   if(q){
     groups = groups.filter(function(o){
       if(norm(o.nom).indexOf(norm(q)) >= 0) return true;
       for(var i=0;i<o.items.length;i++){ if(matches(o.items[i], q)) return true; }
       return false;
     });
-    if(!groups.length){ $('view').innerHTML = sortBar(false) + noHit(EMPTY_HISTO,'l\'historique des ventes'); return; }
+    if(!groups.length){
+      $('view').innerHTML = groupToggle() + sortBar(false) + noHit(EMPTY_HISTO, groupBy === 'ach' ? 'les acheteurs' : 'l\'historique des ventes');
+      return;
+    }
   }
-  if(!groups.length){ $('view').innerHTML = empty(EMPTY_HISTO,'Aucune vente enregistrée.'); return; }
   var total = 0, n = 0;
   for(var i=0;i<groups.length;i++){ total += groups[i].sum; n += groups[i].items.length; }
-  var h2 = sortBar(false) + '<div class="secH">Ventes <span>' + n + ' lots · ' + eur(total) + '</span></div>';
+  var h2 = groupToggle() + sortBar(false) + '<div class="secH">Ventes <span>' + n + ' lots · ' + eur(total) + '</span></div>';
   for(var k=0;k<groups.length;k++){
     var o = groups[k];
     var rows = o.items.slice(0,3).map(function(l){
-      return '<div class="hRow"><span>' + dt(l.dtVente) + (l.nb ? ' · ' + l.nb + ' cartes' : '') + '</span><b>' + eur(num(l.pv)) + '</b></div>';
+      var quoi = groupBy === 'ach' ? esc(l.poke || '?') : (l.nb ? l.nb + ' cartes' : '');
+      return '<div class="hRow"><span>' + dt(l.dtVente) + (quoi ? ' · ' + quoi : '') + '</span><b>' + eur(num(l.pv)) + '</b></div>';
     }).join('');
     var more = o.items.length > 3 ? '<div class="hRow" style="color:var(--red)"><span>Voir les ' + o.items.length + ' ventes</span><span>›</span></div>' : '';
     h2 += '<div class="hCard" data-histo="' + esc(o.key) + '"><div class="hTitle"><div class="hName">' + esc(o.nom) + '</div>' +
-      '<div class="hCnt">' + o.items.length + ' vendu' + (o.items.length>1?'s':'') + '</div></div>' +
+      '<div class="hCnt">' + o.items.length + (groupBy === 'ach' ? ' achat' : ' vendu') + (o.items.length>1?'s':'') + '</div></div>' +
       '<div class="hStats"><div>Moyenne<b>' + eur(o.avg) + '</b></div><div>Max<b>' + eur(o.max) + '</b></div><div>Min<b>' + eur(o.min) + '</b></div><div>Total<b>' + eur(o.sum) + '</b></div></div>' +
       '<div class="hList">' + rows + more + '</div></div>';
   }
   $('view').innerHTML = h2;
 }
 
-/* ═══ SÉLECTION MULTIPLE ═══ */
 function selCount(){ var n = 0; for(var k in sel) if(sel[k]) n++; return n; }
 function selIds(){ var o = []; for(var k in sel) if(sel[k]) o.push(k); return o; }
 
@@ -1164,7 +1192,7 @@ function sheetMultiSell(){
     '<div class="shS">Ajuste le prix réel de chaque lot si l\'acheteur a négocié.</div>' +
     '<div class="fld">' + rows + '</div>' +
     '<div class="msTot"><span>Total de la commande</span><b id="msTot">—</b></div>' +
-    '<div class="fld" style="margin-top:14px"><label class="lbl">Acheteur (optionnel)</label>' +
+    '<div class="fld" style="margin-top:14px"><label class="lbl">Acheteur — pseudo Vinted</label>' +
     '<input class="inp" id="ms_ach" placeholder="pseudo Vinted" autocomplete="off"></div>' +
     '<div class="shF"><button class="bS" id="msx">Annuler</button>' +
     '<button class="bP g" id="msk">Enregistrer la commande</button></div>');
@@ -1237,39 +1265,43 @@ function sheetBoxes(){
   }
 }
 
-function sheetHistoPoke(key){
-  var g = histoGroups();
-  var o = null;
-  for(var i=0;i<g.length;i++){ if(g[i].key === key){ o = g[i]; break; } }
-  if(!o) return;
-  var rows = o.items.map(function(l){
-    var meta = [];
-    if(l.nb) meta.push(l.nb + ' cartes');
-    if(l.acheteur) meta.push(esc(l.acheteur));
-    if(num(l.pa) != null) meta.push('affiché ' + eur(num(l.pa)));
-    return '<div class="hvRow">' +
-      '<div class="hvMain"><div class="hvTop"><span class="hvDate">' + dt(l.dtVente) + '</span>' +
-      '<b class="hvPrice">' + eur(num(l.pv)) + '</b></div>' +
-      (meta.length ? '<div class="hvMeta">' + meta.join(' · ') + '</div>' : '') + '</div>' +
-      '<div class="hvActs"><button class="aBtn p" data-hedit="' + l.id + '">Modifier</button>' +
-      '<button class="aBtn d" data-hdel="' + l.id + '">Supprimer</button></div></div>';
-  }).join('');
-  openSheet('<div class="shT">' + esc(o.nom) + '</div>' +
-    '<div class="shS">' + o.items.length + ' vente' + (o.items.length>1?'s':'') +
-    ' · total ' + eur(o.sum) + ' · moyenne ' + eur(o.avg) + '</div>' +
-    '<div class="hvList">' + rows + '</div>' +
-    '<div class="shF"><button class="bS" style="flex:1" id="hvc">Fermer</button></div>');
-  $('hvc').onclick = closeSheet;
+function histoRow(l, byPoke){
+  var meta = [];
+  if(l.nb) meta.push(l.nb + ' cartes');
+  if(byPoke){ if(l.acheteur) meta.push(esc(l.acheteur)); }
+  else meta.push(esc(l.poke || '?'));
+  if(num(l.pa) != null) meta.push('affiché ' + eur(num(l.pa)));
+  var att = l.photo ? ' data-ph="' + l.photo + '"' : '';
+  return '<div class="hvRow" data-hview="' + l.id + '"><div class="hvPh"' + att + '>' +
+    '<span class="ph-holder" style="width:22px;height:22px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/> <path d="M12 22V12"/> <polyline points="3.29 7 12 12 20.71 7"/> <path d="m7.5 4.27 9 5.15"/></svg></span></div>' +
+    '<div class="hvMain"><div class="hvTop"><span class="hvDate">' + dt(l.dtVente) + '</span>' +
+    '<b class="hvPrice">' + eur(num(l.pv)) + '</b></div>' +
+    (meta.length ? '<div class="hvMeta">' + meta.join(' · ') + '</div>' : '') +
+    '<div class="hvActs"><button class="aBtn p" data-hedit="' + l.id + '">Modifier</button>' +
+    '<button class="aBtn d" data-hdel="' + l.id + '">Supprimer</button></div></div></div>';
+}
+
+function bindHistoRows(){
+  var vs = document.querySelectorAll('[data-hview]');
+  for(var i=0;i<vs.length;i++){
+    vs[i].onclick = function(e){
+      if(e.target.closest('[data-hedit],[data-hdel]')) return;
+      var id = this.getAttribute('data-hview');
+      closeSheet(); setTimeout(function(){ sheetView(id); }, 240);
+    };
+  }
   var eds = document.querySelectorAll('[data-hedit]');
   for(var j=0;j<eds.length;j++){
-    eds[j].onclick = function(){
+    eds[j].onclick = function(e){
+      e.stopPropagation();
       var id = this.getAttribute('data-hedit');
       closeSheet(); setTimeout(function(){ sheetEdit(id); }, 260);
     };
   }
   var dls = document.querySelectorAll('[data-hdel]');
   for(var k=0;k<dls.length;k++){
-    dls[k].onclick = function(){
+    dls[k].onclick = function(e){
+      e.stopPropagation();
       var id = this.getAttribute('data-hdel');
       var lot = lots.filter(function(x){ return x.id === id; })[0];
       if(!lot) return;
@@ -1278,9 +1310,64 @@ function sheetHistoPoke(key){
       });
     };
   }
+  hydratePhotos();
 }
 
-/* création : tout saisissable d'un coup */
+function sheetView(id){
+  var l = lots.filter(function(x){ return x.id === id; })[0];
+  if(!l) return;
+  function row(k, v){
+    if(v == null || v === '') return '';
+    return '<div class="roRow"><i>' + k + '</i><b>' + v + '</b></div>';
+  }
+  var jours = (l.dtListe && l.dtVente)
+    ? Math.max(0, Math.round((new Date(l.dtVente) - new Date(l.dtListe)) / 86400000)) : null;
+  var ph = l.photo
+    ? '<div class="fld"><div class="roPh" id="roPh" data-ph="' + l.photo + '"><span class="ph-holder" style="width:34px;height:34px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/> <path d="M12 22V12"/> <polyline points="3.29 7 12 12 20.71 7"/> <path d="m7.5 4.27 9 5.15"/></svg></span></div></div>'
+    : '';
+  var rows =
+    row('Pokémon', esc(l.poke)) +
+    row('Nombre de cartes', l.nb) +
+    row('Statut', ST[l.st]) +
+    row('Prix affiché', num(l.pa) != null ? eur(num(l.pa)) : '') +
+    row('Prix mini accepté', num(l.pm) != null ? eur(num(l.pm)) : '') +
+    row('Prix de vente', num(l.pv) != null ? '<span style="color:var(--grn)">' + eur(num(l.pv)) + '</span>' : '') +
+    row('Acheteur', esc(l.acheteur)) +
+    row('Rangement', l.boite ? 'Boîte ' + esc(l.boite) + (l.sep ? ' · ' + esc(l.sep) : '') : '') +
+    row('Mis en ligne le', l.dtListe ? dt(l.dtListe) : '') +
+    row('Vendu le', l.dtVente ? dt(l.dtVente) : '') +
+    row('Expédié le', l.dtExp ? dt(l.dtExp) : '') +
+    row('Durée en ligne', jours != null ? (jours === 0 ? 'moins d’un jour' : jours + ' jour' + (jours>1?'s':'')) : '') +
+    row('Notes', esc(l.notes));
+  openSheet('<div class="shT">' + esc(lotTitle(l)) + '</div>' + ph +
+    '<div class="fld">' + rows + '</div>' +
+    '<div class="shF"><button class="bS" id="rox">Fermer</button>' +
+    '<button class="bP" id="roe">Modifier</button></div>');
+  $('rox').onclick = closeSheet;
+  $('roe').onclick = function(){ closeSheet(); setTimeout(function(){ sheetEdit(id); }, 260); };
+  var pz = $('roPh');
+  if(pz) pz.onclick = function(){
+    var img = pz.querySelector('img');
+    if(img) showLightbox(img.src);
+  };
+  hydratePhotos();
+}
+
+function sheetHistoPoke(key){
+  var g = histoGroups();
+  var o = null;
+  for(var i=0;i<g.length;i++){ if(g[i].key === key){ o = g[i]; break; } }
+  if(!o) return;
+  var rows = o.items.map(function(l){ return histoRow(l, groupBy === 'poke'); }).join('');
+  openSheet('<div class="shT">' + esc(o.nom) + '</div>' +
+    '<div class="shS">' + o.items.length + ' vente' + (o.items.length>1?'s':'') +
+    ' · total ' + eur(o.sum) + ' · moyenne ' + eur(o.avg) + '</div>' +
+    '<div class="hvList">' + rows + '</div>' +
+    '<div class="shF"><button class="bS" style="flex:1" id="hvc">Fermer</button></div>');
+  $('hvc').onclick = closeSheet;
+  bindHistoRows();
+}
+
 function sheetNew(defMode){
   pendingPhoto = null;
   var main = defMode || (tab === 'afaire' ? 'afaire' : 'vitrine');
@@ -1444,7 +1531,7 @@ function sheetSell(id){
     '<div class="shT">Lot vendu</div>' +
     '<div class="shS">' + esc(lotTitle(l)) + (num(l.pa)!=null ? ' · affiché ' + eur(num(l.pa)) : '') + '</div>' +
     '<div class="fld"><label class="lbl">Prix de vente réel</label><input class="inp" id="f_pv" type="number" inputmode="decimal" step="0.5" value="' + (l.pa==null?'':l.pa) + '"></div>' +
-    '<div class="fld"><label class="lbl">Acheteur (pour grouper la commande)</label><input class="inp" id="f_ach" placeholder="pseudo Vinted" autocomplete="off" value="' + esc(l.acheteur) + '"></div>' +
+    '<div class="fld"><label class="lbl">Acheteur — pseudo Vinted</label><input class="inp" id="f_ach" placeholder="pseudo Vinted" autocomplete="off" value="' + esc(l.acheteur) + '"></div>' +
     quick +
     '<div class="shF"><button class="bS" id="x3">Annuler</button><button class="bP g" id="k3">Enregistrer la vente</button></div>'
   );
@@ -1564,10 +1651,12 @@ function bindPhoto(){
   var x = $('phX');
   if(x) x.onclick = function(ev){
     ev.stopPropagation(); ev.preventDefault();
-    pendingPhoto = 'none';
-    var old = z.querySelector('img');
-    if(old) old.remove();
-    z.classList.remove('has');
+    confirmBox('Retirer la photo ?', 'Elle sera détachée du lot à l\'enregistrement.', 'Retirer', function(){
+      pendingPhoto = 'none';
+      var old = z.querySelector('img');
+      if(old) old.remove();
+      z.classList.remove('has');
+    });
   };
   z.onclick = function(ev){
     if(ev.target === e2 || ev.target === x || (e2 && e2.contains(ev.target)) || (x && x.contains(ev.target))) return;
@@ -1810,6 +1899,16 @@ document.addEventListener('click', function(e){
   if(selMode){
     var c = e.target.closest('.card');
     if(c){ e.preventDefault(); e.stopPropagation(); toggleSel(c.getAttribute('data-open')); }
+    return;
+  }
+  var gb = e.target.closest('[data-gb]');
+  if(gb){
+    var v2 = gb.getAttribute('data-gb');
+    if(v2 !== groupBy){
+      groupBy = v2;
+      try{ localStorage.setItem('pks_group', v2); }catch(err){}
+      render();
+    }
     return;
   }
   var hg = e.target.closest('[data-histo]');
