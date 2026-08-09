@@ -356,7 +356,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '2.33';
+var APP_VERSION = '2.34';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -364,6 +364,7 @@ var POLL_MS = 12000;
 var BAK_PREFIX = 'bak_';
 var BAK_KEEP = 10;
 var BAK_EVERY = 6 * 3600 * 1000;
+var REFRESH_MARGIN = 5 * 60 * 1000;
 
 var ST = { afaire:'À préparer', pret:'Préparé', vitrine:'En vitrine', vendu:'Vendu', expedie:'Expédié' };
 
@@ -380,6 +381,7 @@ var me = null, myFile = null, myFileId = null;
 var who = null;
 var WHOS = { thomas:'Thomas', cindy:'Cindy' };
 var dirty = false, saving = false, pollTimer = null, sheetOpen = false;
+var refreshTimer = null, booted = false, offline = false;
 var cfmCb = null;
 var tagTpl = '#pokemon #cartepokemon #lotpokemon #{poke} #carte{poke} #pokemontcg #collectionpokemon #cartesapokemon #dracaufeu #pikachu #evoli #boosterpokemon #lotcartes';
 
@@ -471,6 +473,19 @@ function idbPut(k, v){
   });
 }
 
+/* ═══ CACHE LOCAL ═══ */
+function cacheKey(){ return 'pks_cache_' + (who || 'x'); }
+function saveCache(){
+  try{ localStorage.setItem(cacheKey(), JSON.stringify({ at: Date.now(), lots: lots })); }catch(e){}
+}
+function loadCache(){
+  try{
+    var c = JSON.parse(localStorage.getItem(cacheKey()) || 'null');
+    if(c && c.lots && c.lots.length){ lots = c.lots; return true; }
+  }catch(e){}
+  return false;
+}
+
 /* ═══ AUTH ═══ */
 function initGis(){
   tokenClient = google.accounts.oauth2.initTokenClient({
@@ -480,12 +495,33 @@ function initGis(){
       token = r.access_token;
       tokenExp = Date.now() + (parseInt(r.expires_in,10) || 3500) * 1000;
       try{ localStorage.setItem('pks_tk', JSON.stringify({ t: token, e: tokenExp })); }catch(e){}
-      start();
+      offline = false;
+      scheduleRefresh();
+      if(booted){ setSync('busy'); sync(false); }
+      else start();
     }
   });
 }
 function signIn(){ tokenClient.requestAccessToken({ prompt: '' }); }
-function reauth(){ tokenClient.requestAccessToken({ prompt: '' }); }
+
+var reauthAt = 0;
+function reauth(){
+  if(Date.now() - reauthAt < 4000) return;
+  reauthAt = Date.now();
+  try{ tokenClient.requestAccessToken({ prompt: '' }); }catch(e){ offline = true; setSync('err'); }
+}
+
+function scheduleRefresh(){
+  clearTimeout(refreshTimer);
+  var wait = tokenExp - Date.now() - REFRESH_MARGIN;
+  if(wait < 30000) wait = 30000;
+  refreshTimer = setTimeout(function(){
+    if(document.hidden) return;
+    reauth();
+  }, wait);
+}
+
+function tokenValid(){ return !!token && Date.now() < tokenExp - 10000; }
 
 function api(url, opts){
   opts = opts || {};
@@ -498,18 +534,30 @@ function api(url, opts){
       reauth(); throw new Error('auth');
     }
     return r;
+  }, function(err){
+    offline = true; setSync('err');
+    throw err;
   });
 }
 
 async function start(){
   await openIdb();
-  try{
-    var r = await api('https://www.googleapis.com/oauth2/v3/userinfo');
-    me = await r.json();
-  }catch(e){ me = {}; }
-  who = localStorage.getItem('pks_who');
-  if(!who || !WHOS[who]){ askWho(); return; }
+  who = null;
+  try{ who = localStorage.getItem('pks_who'); }catch(e){}
+  if(!who || !WHOS[who]){
+    if(tokenValid()){
+      try{ var r = await api('https://www.googleapis.com/oauth2/v3/userinfo'); me = await r.json(); }catch(e){}
+    }
+    askWho();
+    return;
+  }
   boot();
+  if(tokenValid()){
+    api('https://www.googleapis.com/oauth2/v3/userinfo')
+      .then(function(r){ return r.json(); })
+      .then(function(u){ me = u; })
+      .catch(function(){});
+  }
 }
 
 function askWho(){
@@ -535,18 +583,34 @@ function askWho(){
 }
 
 async function boot(){
+  booted = true;
   myFile = PREFIX + who + '.json';
   $('auth').classList.add('hide');
   $('app').classList.remove('hide');
-  await sync(true);
+
+  var hadCache = loadCache();
+  if(hadCache){ setSync('busy'); render(); }
+
+  if(!tokenValid()){
+    if(!hadCache) setSync('busy');
+    reauth();
+  } else {
+    scheduleRefresh();
+    await sync(true);
+  }
+
   if(pollTimer) clearInterval(pollTimer);
-  pollTimer = setInterval(function(){ if(!sheetOpen && !saving) sync(false); }, POLL_MS);
+  pollTimer = setInterval(function(){
+    if(sheetOpen || saving || document.hidden) return;
+    if(tokenValid()) sync(false);
+    else reauth();
+  }, POLL_MS);
 }
 
 /* ═══ DRIVE ═══ */
 function setSync(state){
   var d = $('syncDot'); d.className = 'syncDot' + (state ? ' ' + state : '');
-  $('syncTx').textContent = 'v' + APP_VERSION;
+  $('syncTx').textContent = (state === 'err' ? 'hors ligne · v' : 'v') + APP_VERSION;
 }
 
 async function listFiles(){
@@ -593,6 +657,8 @@ async function sync(full){
     for(var k in map){ if(!map[k].deleted) out.push(map[k]); }
     out.sort(function(a,b){ return String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')); });
     lots = out;
+    offline = false;
+    saveCache();
     setSync('');
     render();
   }catch(e){
@@ -638,6 +704,7 @@ function commit(lot){
   else if(i>=0) lots[i] = lot;
   else lots.unshift(lot);
   render();
+  saveCache();
   save();
 }
 
@@ -1785,8 +1852,9 @@ function sheetAcc(){
   $('k7').onclick = function(){
     confirmBox('Se déconnecter ?', 'Tes données restent sur Drive.', 'Déconnexion', function(){
       if(token) google.accounts.oauth2.revoke(token, function(){});
-      try{ localStorage.removeItem('pks_tk'); }catch(e){}
-      clearInterval(pollTimer);
+      try{ localStorage.removeItem('pks_tk'); localStorage.removeItem(cacheKey()); }catch(e){}
+      clearInterval(pollTimer); clearTimeout(refreshTimer);
+      booted = false;
       token = null; lots = []; savedLots = {};
       closeSheet(); closeCfm();
       $('app').classList.add('hide'); $('auth').classList.remove('hide');
@@ -2002,7 +2070,13 @@ var _open = openSheet;
 openSheet = function(h){ _open(h); history.pushState({ d:1 }, ''); };
 
 document.addEventListener('visibilitychange', function(){
-  if(!document.hidden && token && !sheetOpen) sync(false);
+  if(document.hidden || sheetOpen || !booted) return;
+  if(tokenValid()){ scheduleRefresh(); sync(false); }
+  else reauth();
+});
+window.addEventListener('online', function(){
+  if(!booted) return;
+  if(tokenValid()) sync(false); else reauth();
 });
 
 /* ═══ BOOT ═══ */
@@ -2011,12 +2085,19 @@ window.addEventListener('load', function(){
   s.src = 'https://accounts.google.com/gsi/client';
   s.onload = function(){
     initGis();
-    try{
-      var st = JSON.parse(localStorage.getItem('pks_tk') || 'null');
-      if(st && st.t && st.e > Date.now() + 60000){
-        token = st.t; tokenExp = st.e; start();
-      }
-    }catch(e){}
+    var st = null;
+    try{ st = JSON.parse(localStorage.getItem('pks_tk') || 'null'); }catch(e){}
+    if(st && st.t && st.e > Date.now() + 60000){
+      token = st.t; tokenExp = st.e;
+      start();
+      return;
+    }
+    var w = null;
+    try{ w = localStorage.getItem('pks_who'); }catch(e){}
+    if(w && WHOS[w]){
+      start();
+      setTimeout(reauth, 150);
+    }
   };
   document.head.appendChild(s);
   if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
