@@ -486,7 +486,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '3.06';
+var APP_VERSION = '3.07';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -1556,6 +1556,7 @@ function sheetNew(defMode){
   openSheet(
     '<div class="shHd"><div class="shT">Nouveau lot</div><button class="shC" id="x1t" aria-label="Annuler">×</button></div>' +
     '<div class="fld"><label class="lbl">Pokémon</label><input class="inp" id="f_poke" placeholder="Évoli"' + noAuto() + '></div>' +
+    '<div class="fld"><label class="lbl">Nombre de cartes (optionnel)</label><input class="inp" id="f_nb" type="number" inputmode="numeric" placeholder="vide = choisir les cartes ensuite"' + noAuto() + '></div>' +
     '<div class="row2"><div class="fld"><label class="lbl">Prix affiché</label><input class="inp" id="f_pa" type="number" inputmode="decimal" step="0.5" placeholder="12"' + noAuto() + '></div>' +
     '<div class="fld"><label class="lbl">Prix mini accepté</label><input class="inp" id="f_pm" type="number" inputmode="decimal" step="0.5" placeholder="9"' + noAuto() + '></div></div>' +
     '<div class="fld"><label class="lbl">En ligne sur Vinted depuis le (si déjà publié)</label><input class="inp" id="f_dl" type="date" max="' + toDateInput(now()) + '"></div>' +
@@ -1564,7 +1565,7 @@ function sheetNew(defMode){
     '<div class="shF"><button class="bS" id="x1">Annuler</button><button class="bP" id="k1">' + lbl[main] + '</button></div>' +
     '<button class="dgr" id="k1b" style="border-color:var(--bd);color:var(--tx2)">' + lbl[alt] + '</button>'
   );
-  clearInputs(['f_poke','f_pa','f_pm','f_dl']);
+  clearInputs(['f_poke','f_nb','f_pa','f_pm','f_dl']);
   bindPhoto();
   $('x1').onclick = closeSheet;
   $('x1t').onclick = closeSheet;
@@ -1635,7 +1636,7 @@ async function createLot(mode, btnId){
   var l = {
     id: nid(), poke: poke,
     nom: '',
-    nb: null, cards: {},
+    nb: parseInt($('f_nb').value, 10) || null, cards: {},
     boite: '', sep: '',
     st: mode, pa: num($('f_pa').value), pm: num($('f_pm').value), pv: null,
     acheteur: '', notes: '', photo: photoId,
@@ -1647,7 +1648,9 @@ async function createLot(mode, btnId){
   closeSheet();
   commit(l);
   toast(mode === 'vitrine' ? 'Lot en vitrine' : 'Lot à préparer');
-  setTimeout(function(){ sheetPick(l.id); }, 280);   /* enchainer sur le choix des cartes */
+  /* un nombre saisi a la main signifie qu'on ne detaille pas les cartes :
+     inutile d'imposer le selecteur. Champ vide = on veut les choisir. */
+  if(l.nb == null) setTimeout(function(){ sheetPick(l.id); }, 280);
 }
 
 /* étape 2 : mise en ligne — prix + photo */
@@ -1737,7 +1740,7 @@ function sheetEdit(id){
     '<div class="fld"><label class="lbl">Photo</label>' + photoZone(l) + '</div>' +
     '<div class="fld"><label class="lbl">Titre de l\'annonce</label><input class="inp" id="f_nom" value="' + esc(l.nom) + '" placeholder="' + esc(lotTitle(l)) + '"></div>' +
     '<div class="row2"><div class="fld"><label class="lbl">Pokémon</label><input class="inp" id="f_poke" value="' + esc(l.poke) + '"></div>' +
-    '<div class="fld"><label class="lbl">Nb cartes</label><input class="inp" id="f_nb" type="number" inputmode="numeric" value="' + (l.nb==null?'':l.nb) + '"></div></div>' +
+    '<div class="fld"><label class="lbl">Nb cartes</label><input class="inp" id="f_nb" type="number" inputmode="numeric" value="' + (l.nb==null?'':l.nb) + '" placeholder="vide = compté"></div></div>' +
     '<div class="row2"><div class="fld"><label class="lbl">Prix affiché</label><input class="inp" id="f_pa" type="number" inputmode="decimal" step="0.5" value="' + (l.pa==null?'':l.pa) + '"></div>' +
     '<div class="fld"><label class="lbl">Prix mini accepté</label><input class="inp" id="f_pm" type="number" inputmode="decimal" step="0.5" value="' + (l.pm==null?'':l.pm) + '"></div></div>' +
     (num(l.pv) != null ? '<div class="fld"><label class="lbl">Prix de vente réel</label><input class="inp" id="f_pv" type="number" inputmode="decimal" step="0.5" value="' + l.pv + '"></div>' : '') +
