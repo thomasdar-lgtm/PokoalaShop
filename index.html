@@ -327,6 +327,11 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 .stkC.has{border-color:var(--blu)}
 .stkC .im{position:relative;background:#0c1428;aspect-ratio:245/342}
 .stkC .im img{width:100%;height:100%;object-fit:cover;display:block}
+.stkC .rar{position:absolute;bottom:4px;left:4px;width:19px;height:19px;background:rgba(0,7,26,.85);border-radius:5px;display:flex;align-items:center;justify-content:center}
+.stkC .rar svg{width:11px;height:11px;display:block;color:#fff}
+.stkC .cmk{position:absolute;bottom:3px;right:3px;width:22px;height:22px;background:#fff;border-radius:5px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;border:0}
+.stkC .cmk img{width:16px;height:16px;display:block}
+.stkC .cmk:active{opacity:.6}
 .stkC .nu{position:absolute;top:4px;left:4px;background:rgba(0,7,26,.88);color:#fff;font-size:13px;font-weight:900;letter-spacing:-.2px;padding:2px 7px;border-radius:6px;line-height:1.15}
 .stkC .na{font-size:10px;font-weight:700;padding:4px 5px 4px;line-height:1.15;height:28px;overflow:hidden}
 .stkC .vs{display:flex;gap:4px;padding:0 4px 6px}
@@ -486,7 +491,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '3.08';
+var APP_VERSION = '3.09';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2620,6 +2625,33 @@ function stkRenderSets(){
 }
 
 /* compteurs de variantes, partages entre la grille et les resultats de recherche */
+/* Symbole de rarete : rond pour commune, losange pour peu commune,
+   etoile pour rare. Les autres raretes n'ont pas de symbole normalise. */
+var RAR_SVG = {
+  'Common':   '<circle cx="12" cy="12" r="7"/>',
+  'Uncommon': '<path d="M12 4 20 12 12 20 4 12Z"/>',
+  'Rare':     '<path d="m12 3 2.6 6.3 6.8.5-5.2 4.4 1.6 6.6L12 17.3 6.2 20.8l1.6-6.6L2.6 9.8l6.8-.5Z"/>'
+};
+function rarHtml(c){
+  var s = RAR_SVG[c.r];
+  if(!s) return '';
+  return '<span class="rar" title="' + esc(c.r) + '">' +
+         '<svg viewBox="0 0 24 24" fill="currentColor">' + s + '</svg></span>';
+}
+
+/* Lien Cardmarket, meme format que PoKoala :
+   recherche par nom + numero, langue francaise, etat Near Mint minimum. */
+var CM_LOGO = 'data:image/png;base64,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';
+function cmHtml(c){
+  return '<button class="cmk" data-cm="' + esc(c.n) + '|' + esc(c.u) + '" aria-label="Voir sur Cardmarket">' +
+         '<img src="' + CM_LOGO + '" alt=""></button>';
+}
+function openCM(nom, num){
+  var q = encodeURIComponent((nom + ' ' + (num || '')).trim());
+  window.open('https://www.cardmarket.com/fr/Pokemon/Products/Search?searchString=' + q +
+              '&language=2&minCondition=2', '_blank');
+}
+
 function stkChips(c){
   var vs = stkVars(c), solo = vs.length === 1, out = '';
   for(var i=0;i<vs.length;i++){
@@ -2634,7 +2666,8 @@ function stkTile(c){
   var vs = stkVars(c), h = '';
   h += '<div class="stkC' + (stkCardQ(c.i) ? ' has' : '') + '" data-stkid="' + esc(c.i) + '">';
   h += '<div class="im">' + cardImg(c, '') +
-       '<span class="nu">' + esc(c.u) + '</span>' + (c.d ? '<span class="stkDot" title="variante déduite"></span>' : '') + '</div>';
+       '<span class="nu">' + esc(c.u) + '</span>' + (c.d ? '<span class="stkDot" title="variante déduite"></span>' : '') +
+       rarHtml(c) + cmHtml(c) + '</div>';
   h += '<div class="na">' + esc(c.n) + '</div><div class="vs">' + stkChips(c);
   return h + '</div></div>';
 }
@@ -3201,6 +3234,11 @@ function stkBind(){
       var g2 = t.closest('.stkFB');
       if(g2){ var bt = g2.querySelectorAll('[data-stkt]'); for(var z2=0;z2<bt.length;z2++) bt[z2].classList.toggle('on', bt[z2].getAttribute('data-stkt') === stkTri); }
       stkGridFill(); return;
+    }
+    if((t = e.target.closest('[data-cm]'))){
+      var cm = t.getAttribute('data-cm').split('|');
+      openCM(cm[0], cm[1]);
+      return;
     }
     if((t = e.target.closest('[data-stkv]'))){
       if(stkLpFired){ stkLpFired = false; return; }
