@@ -368,10 +368,20 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 .shE button{width:31px;height:31px;border-radius:8px;border:1px solid var(--bd);background:#0c1428;color:var(--tx);font-size:16px;font-weight:800;cursor:pointer;flex:none;line-height:1}
 .shE .qv{width:30px;text-align:center;font-size:15px;font-weight:900;flex:none}
 .stkWarn{background:rgba(210,153,34,.11);border:1px solid rgba(210,153,34,.34);color:#d29922;border-radius:9px;padding:8px 11px;font-size:11px;font-weight:600;margin-bottom:11px;line-height:1.4}
-.stkTot.clic{cursor:pointer}
-.stkTot.clic:active{background:var(--surf2)}
-.stkTot .go{position:absolute;right:11px;top:11px;color:var(--tx3);font-size:15px;line-height:1}
-.stkTot{position:relative}
+.stkTot{gap:0;padding:0}
+.stkTot .cell{flex:1;min-width:0;position:relative;padding:11px 13px;cursor:pointer;text-align:left}
+.stkTot .cell:active{background:var(--surf2)}
+.stkTot .cell+.cell{border-left:1px solid var(--bd)}
+.stkTot .cell .go{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--tx3);font-size:16px;line-height:1}
+.nvRow{display:flex;align-items:center;gap:10px;background:var(--surf);border:1px solid var(--bd);border-radius:11px;padding:9px 11px;margin-bottom:7px}
+.nvRow img{width:32px;height:44px;object-fit:cover;border-radius:5px;background:#0c1428;flex:none}
+.nvRow .nt{flex:1;min-width:0}
+.nvRow .nt b{display:block;font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nvRow .nt small{display:block;color:var(--tx3);font-size:11px}
+.nvOk{flex:none;background:#0c1428;border:1px solid var(--bd);color:var(--tx2);border-radius:9px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.nvOk:active{color:var(--grn);border-color:rgba(63,185,80,.5)}
+.nvRow.fait{opacity:.55}
+.nvRow.fait .nvOk{color:var(--grn)}
 .stkJB{display:flex;align-items:center;gap:8px;background:var(--surf);border:1px solid var(--bd);border-radius:11px;padding:10px 13px;margin-bottom:10px;cursor:pointer;font-size:13px;font-weight:700}
 .stkJB svg{width:17px;height:17px;flex:none;color:var(--tx3)}
 .stkJB .jc{margin-left:auto;color:var(--tx3);font-weight:700;font-size:12px}
@@ -476,7 +486,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '3.04';
+var APP_VERSION = '3.05';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -1052,7 +1062,7 @@ function render(){
   $('s4').textContent = eur0(rev);
   setBadge('nb2', afaire);
   $('stats').classList.toggle('hide', tab !== 'vitrine' && tab !== 'histo');
-  $('srch').classList.toggle('hide', tab === 'stock' && (!!stkSet || stkJournal || stkInv));
+  $('srch').classList.toggle('hide', tab === 'stock' && (!!stkSet || stkJournal || stkInv || stkNever));
   $('qClr').classList.toggle('hide', !query());
 
   if(selMode) updateSelBar();
@@ -2132,7 +2142,7 @@ for(var n=0;n<navs.length;n++){
     for(var i=0;i<navs.length;i++) navs[i].classList.remove('on');
     this.classList.add('on');
     tab = this.getAttribute('data-t');
-    if(tab !== 'stock'){ stkJournal = false; stkInv = false; }
+    if(tab !== 'stock'){ stkJournal = false; stkInv = false; stkNever = false; }
     if(tab !== 'stock' && stkSet){ stkSet = null; stkQry = ''; if(history.state && history.state.d === 3) history.back(); }
     $('fab').classList.toggle('hide', tab !== 'vitrine' && tab !== 'afaire');
     $('q').value = '';
@@ -2164,6 +2174,7 @@ window.addEventListener('popstate', function(){
   if(sheetOpen){ closeSheet(); history.pushState({d:1},''); return; }
   if(query()){ $('q').value = ''; render(); history.pushState({d:1},''); return; }
   if(history.state && history.state.d === 3) return;           /* retour sur la grille depuis un panneau */
+  if(tab === 'stock' && stkNever){ stkNever = false; window.scrollTo(0,0); render(); return; }
   if(tab === 'stock' && stkInv){ stkInv = false; window.scrollTo(0,0); render(); return; }
   if(tab === 'stock' && stkJournal){ stkJournal = false; window.scrollTo(0,0); render(); return; }
   if(tab === 'stock' && stkSet){ stkSet = null; stkQry = ''; window.scrollTo(0,0); render(); return; }
@@ -2239,7 +2250,10 @@ var mvNew = [], mvCount = 0, mvFileId = null, mvLoaded = false, mvTimer = null, 
 var stkFileId = null, stkBaseRev = 0, stkPending = [];
 var stkTimer = null, stkSaving = false, stkLoaded = false;
 var stkSet = null, stkLp = null, stkLpFired = false;
-var stkArr = [], stkQry = '', stkJournal = false, stkInv = false;
+var stkArr = [], stkQry = '', stkJournal = false, stkInv = false, stkNever = false;
+var stkDone = {}, doneDirty = {};
+var invDir = parseInt(localStorage.getItem(LS + 'invdir') || '-1', 10);   /* -1 decroissant, 1 croissant */
+var nvTri  = localStorage.getItem(LS + 'nvtri') || 'az';                 /* az | qty */
 var mvFilt = localStorage.getItem(LS + 'mvf') || 'lot';   /* all | lot */
 var stkFilt = localStorage.getItem(LS + 'filt') || 'all';   /* all | has | none */
 var stkTri  = localStorage.getItem(LS + 'tri')  || 'num';   /* num | qty */
@@ -2380,6 +2394,8 @@ async function stkFind(){
 function stkApply(data){
   stock = (data && data.stock) || {};
   stkOv = (data && data.ov) || {};
+  stkDone = (data && data.done) || {};
+  for(var dk in doneDirty){ stkDone[dk] = doneDirty[dk]; }   /* nos marquages priment sur le distant */
   stkRev = (data && data.rev) || 0;
   mvCount = (data && data.mvCount) || 0;
   stkBaseRev = stkRev;
@@ -2402,7 +2418,7 @@ async function stkLoad(){
   }catch(e){ toast('Stock : lecture impossible'); }
 }
 function stkBody(){
-  return JSON.stringify({ rev: stkRev, stock: stock, ov: stkOv, mvCount: mvCount, at: now(), v: APP_VERSION });
+  return JSON.stringify({ rev: stkRev, stock: stock, ov: stkOv, done: stkDone, mvCount: mvCount, at: now(), v: APP_VERSION });
 }
 async function stkWrite(){
   var meta = { name: STK_FILE, parents: ['appDataFolder'] };
@@ -2441,6 +2457,7 @@ async function stkSave(){
     await stkWrite();
     stkBaseRev = stkRev;
     stkPending = [];
+    doneDirty = {};
     setSync('ok');
   }catch(e){ setSync('err'); toast('Stock non sauvegardé'); }
   stkSaving = false;
@@ -2544,6 +2561,7 @@ async function renderStock(){
     try{ await cdbLoad(); }catch(e){ $('view').innerHTML = empty(EMPTY_CMD, 'Liste des extensions indisponible.'); return; }
   }
   if(!stkLoaded) await stkLoad();
+  if(stkNever) return stkRenderNever();
   if(stkInv) return stkRenderInv();
   if(stkJournal) return stkRenderJournal();
   if(stkSet) return stkRenderGrid();      /* la recherche se fait dans l'extension */
@@ -2561,28 +2579,11 @@ function stkRenderSets(){
     var sid = dash > 0 ? p.slice(0, dash) : p;
     per[sid] = (per[sid] || 0) + stock[k2];
   }
-  /* cartes distinctes possedees, et extensions concernees */
-  var vus = {}, exts = {};
-  for(var k3 in stock){
-    if(!stock[k3]) continue;
-    var id3 = k3.split('|')[0];
-    vus[id3] = 1;
-    var d3 = id3.lastIndexOf('-');
-    exts[rootSet(d3 > 0 ? id3.slice(0, d3) : id3)] = 1;
-  }
-  /* cartes actuellement engagees dans des lots non vendus */
-  var enLot = 0;
-  for(var li=0;li<lots.length;li++){
-    var lt = lots[li];
-    if(lt.st === 'vendu' || lt.st === 'expedie') continue;
-    enLot += lotCardCount(lt);
-  }
-
-  var h = '<div class="stkTot clic" data-stkinv="1"><span class="go">›</span>' +
-          '<div><span>Exemplaires</span><b>' + tot + '</b></div>' +
-          '<div><span>Différentes</span><b>' + Object.keys(vus).length + '</b></div>' +
-          '<div><span>Extensions</span><b>' + Object.keys(exts).length + '</b></div>' +
-          '<div><span>En lots</span><b>' + enLot + '</b></div></div>';
+  var h = '<div class="stkTot">' +
+          '<div class="cell" data-stkinv="1"><span class="go">›</span>' +
+          '<span>Exemplaires</span><b>' + tot + '</b></div>' +
+          '<div class="cell" data-stknv="1"><span class="go">›</span>' +
+          '<span>Jamais fait</span><b id="nvCount">—</b></div></div>';
   h += '<div class="stkJB" data-stkj="1">' +
        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
        '<path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>' +
@@ -2603,6 +2604,7 @@ function stkRenderSets(){
          '<span class="sc' + (n ? '' : ' z') + '">' + (n ? n : '—') + '</span></div>';
   }
   $('view').innerHTML = h;
+  nvCountFill();
 }
 
 /* compteurs de variantes, partages entre la grille et les resultats de recherche */
@@ -2830,15 +2832,18 @@ async function stkRenderInv(){
   var cards = [];
   for(var i=0;i<keys.length;i++){ var c = cdbById[keys[i]]; if(c) cards.push(c); }
 
+  var fl = (invDir === 1 ? ' ↑' : ' ↓');
   var bar = '<div class="stkFB"><div class="sg">' +
     '<button class="' + (stkTri === 'num' ? 'on' : '') + '" data-stkt="num">Par extension</button>' +
-    '<button class="' + (stkTri === 'qty' ? 'on' : '') + '" data-stkt="qty">Par quantité</button>' +
+    '<button class="' + (stkTri === 'qty' ? 'on' : '') + '" data-stkt="qty">Par quantité' + (stkTri === 'qty' ? fl : '') + '</button>' +
     '</div></div>';
 
   var h = head(cards.length + ' cartes différentes · ' + tot + ' exemplaires') + bar;
 
   if(stkTri === 'qty'){
-    cards.sort(function(a, b){ return stkCardQ(b.i) - stkCardQ(a.i) || a.n.localeCompare(b.n, 'fr'); });
+    cards.sort(function(a, b){
+      return invDir * (stkCardQ(a.i) - stkCardQ(b.i)) || a.n.localeCompare(b.n, 'fr');
+    });
     h += invRows(cards);
   } else {
     var grp = {};
@@ -2872,6 +2877,118 @@ function invRows(arr){
          '<div class="rq">' + stkCardQ(c.i) + '</div></div>';
   }
   return h;
+}
+
+/* Le compte des Pokemon jamais faits a besoin des noms de cartes, donc des
+   fichiers d'extension. On ne bloque pas l'affichage de la liste pour ca :
+   la valeur arrive apres coup. */
+async function nvCountFill(){
+  var keys = [];
+  for(var k in stock) if(stock[k]) keys.push(k);
+  var el = document.getElementById('nvCount');
+  if(!el) return;
+  if(!keys.length){ el.textContent = '0'; return; }
+  try{ await ensureCards(keys); }catch(e){ return; }
+  el = document.getElementById('nvCount');
+  if(el) el.textContent = neverList().length;
+}
+
+/* ---- Pokemon en stock jamais mis en lot ----
+   Un Pokemon est considere comme fait s'il apparait dans le champ Pokemon
+   d'un lot, si l'une de ses cartes est rattachee a un lot, ou s'il a ete
+   marque a la main (cas des lots realises avant l'arrivee du module). */
+function lotPokes(){
+  var s = {};
+  for(var i=0;i<lots.length;i++){
+    var l = lots[i];
+    if(l.poke) s[norm(l.poke)] = 1;
+    var m = lotCards(l);
+    for(var k in m){
+      var c = cdbById[k.split('|')[0]];
+      if(c) s[norm(c.n)] = 1;
+    }
+  }
+  return s;
+}
+/* regroupe le stock par nom de Pokemon */
+function stockPokes(){
+  var g = {};
+  for(var k in stock){
+    if(!stock[k]) continue;
+    var c = cdbById[k.split('|')[0]];
+    if(!c) continue;
+    var n = norm(c.n);
+    if(!g[n]) g[n] = { n: n, nom: c.n, cartes: {}, ex: 0, img: c };
+    g[n].cartes[c.i] = 1;
+    g[n].ex += stock[k];
+  }
+  return g;
+}
+function neverList(){
+  var g = stockPokes(), faits = lotPokes(), out = [];
+  for(var n in g){
+    if(faits[n] || stkDone[n]) continue;
+    out.push(g[n]);
+  }
+  return out;
+}
+
+async function stkRenderNever(){
+  var ico = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>';
+  function head(sub){
+    return '<div class="stkBar"><button class="stkBack" data-stknb="1" aria-label="Retour">' + ico + '</button>' +
+           '<div class="stkTit">Jamais fait<small>' + sub + '</small></div></div>';
+  }
+  var keys = [];
+  for(var k in stock) if(stock[k]) keys.push(k);
+  if(!keys.length){
+    $('view').innerHTML = head('vide') + '<div class="pkE">Aucune carte en stock pour l\'instant.</div>';
+    return;
+  }
+  $('view').innerHTML = head('chargement…');
+  try{ await ensureCards(keys); }catch(e){}
+  if(!stkNever || tab !== 'stock') return;
+
+  var liste = neverList();
+  var nFaits = 0;
+  for(var d in stkDone) if(stkDone[d]) nFaits++;
+
+  liste.sort(nvTri === 'qty'
+    ? function(a, b){ return b.ex - a.ex || a.nom.localeCompare(b.nom, 'fr'); }
+    : function(a, b){ return a.nom.localeCompare(b.nom, 'fr'); });
+
+  var bar = '<div class="stkFB"><div class="sg">' +
+    '<button class="' + (nvTri === 'az'  ? 'on' : '') + '" data-nvt="az">A → Z</button>' +
+    '<button class="' + (nvTri === 'qty' ? 'on' : '') + '" data-nvt="qty">Quantité</button>' +
+    '</div></div>';
+
+  var h = head(liste.length + ' Pokémon jamais mis en lot') + bar;
+  if(!liste.length){
+    h += '<div class="pkE">Tous les Pokémon de ton stock ont déjà fait l\'objet d\'un lot.</div>';
+  }
+  for(var i=0;i<liste.length;i++){
+    var p = liste[i], nc = Object.keys(p.cartes).length;
+    h += '<div class="nvRow">' + cardImg(p.img, '') +
+         '<div class="nt"><b>' + esc(p.nom) + '</b><small>' + nc + ' carte' + (nc > 1 ? 's' : '') +
+         ' · ' + p.ex + ' exemplaire' + (p.ex > 1 ? 's' : '') + '</small></div>' +
+         '<button class="nvOk" data-nvd="' + esc(p.n) + '">Déjà fait</button></div>';
+  }
+
+  if(nFaits){
+    h += '<div class="pkH">Marqués comme faits (' + nFaits + ')</div>';
+    var g = stockPokes();
+    var noms = [];
+    for(var d2 in stkDone) if(stkDone[d2]) noms.push(d2);
+    noms.sort(function(a, b){ return (g[a] ? g[a].nom : a).localeCompare(g[b] ? g[b].nom : b, 'fr'); });
+    for(var j=0;j<noms.length;j++){
+      var q = g[noms[j]];
+      h += '<div class="nvRow fait">' + (q ? cardImg(q.img, '') : '') +
+           '<div class="nt"><b>' + esc(q ? q.nom : noms[j]) + '</b>' +
+           '<small>marqué à la main</small></div>' +
+           '<button class="nvOk" data-nvu="' + esc(noms[j]) + '">Annuler</button></div>';
+    }
+  }
+  $('view').innerHTML = h;
 }
 
 /* ---- journal des mouvements ---- */
@@ -2999,9 +3116,35 @@ function stkBind(){
     }
     if((t = e.target.closest('[data-stkset]'))){
       stkSet = t.getAttribute('data-stkset');
-      stkQry = ''; stkJournal = false; stkInv = false;
+      stkQry = ''; stkJournal = false; stkInv = false; stkNever = false;
       history.pushState({ d:3 }, '');
       window.scrollTo(0,0); render(); return;
+    }
+    if((t = e.target.closest('[data-stknv]'))){
+      stkNever = true; history.pushState({ d:3 }, '');
+      window.scrollTo(0,0); render(); return;
+    }
+    if((t = e.target.closest('[data-stknb]'))){
+      if(history.state && history.state.d === 3){ history.back(); }
+      else { stkNever = false; window.scrollTo(0,0); render(); }
+      return;
+    }
+    if((t = e.target.closest('[data-nvt]'))){
+      nvTri = t.getAttribute('data-nvt');
+      localStorage.setItem(LS + 'nvtri', nvTri);
+      window.scrollTo(0,0); render(); return;
+    }
+    if((t = e.target.closest('[data-nvd]'))){
+      var nd = t.getAttribute('data-nvd');
+      stkDone[nd] = 1; doneDirty[nd] = 1;
+      stkPending.push({ t: now(), c: nd, v:'-', e:'-', d:0, w: who || '', s:'marque' });
+      stkQueue(); render(); return;
+    }
+    if((t = e.target.closest('[data-nvu]'))){
+      var nu = t.getAttribute('data-nvu');
+      delete stkDone[nu]; doneDirty[nu] = 0;
+      stkPending.push({ t: now(), c: nu, v:'-', e:'-', d:0, w: who || '', s:'marque' });
+      stkQueue(); render(); return;
     }
     if((t = e.target.closest('[data-stkinv]'))){
       stkInv = true; history.pushState({ d:3 }, '');
@@ -3036,7 +3179,13 @@ function stkBind(){
     if((t = e.target.closest('[data-stkt]'))){
       stkTri = t.getAttribute('data-stkt');
       localStorage.setItem(LS + 'tri', stkTri);
-      if(stkInv){ window.scrollTo(0,0); render(); return; }
+      if(stkInv){
+        if(stkTri === 'qty' && t.getAttribute('data-stkt') === 'qty'){
+          invDir = -invDir;
+          localStorage.setItem(LS + 'invdir', String(invDir));
+        }
+        window.scrollTo(0,0); render(); return;
+      }
       var g2 = t.closest('.stkFB');
       if(g2){ var bt = g2.querySelectorAll('[data-stkt]'); for(var z2=0;z2<bt.length;z2++) bt[z2].classList.toggle('on', bt[z2].getAttribute('data-stkt') === stkTri); }
       stkGridFill(); return;
