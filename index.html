@@ -486,7 +486,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '3.07';
+var APP_VERSION = '3.08';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -809,6 +809,21 @@ async function save(){
   if(saving){ dirty = true; return; }
   saving = true; setSync('busy');
   try{
+    /* Relire le distant avant d'ecrire : l'app ecrit le fichier entier depuis
+       sa memoire, et la synchro automatique est suspendue tant qu'un panneau
+       est ouvert. Sans cette fusion, un enregistrement fait apres une longue
+       saisie effacerait les lots crees entre-temps sur l'autre appareil. */
+    if(myFileId){
+      try{
+        var rr0 = await api('https://www.googleapis.com/drive/v3/files/' + myFileId + '?alt=media');
+        var rem0 = await rr0.json();
+        var rl0 = (rem0 && rem0.lots) || [];
+        for(var q0=0;q0<rl0.length;q0++){
+          var cur0 = savedLots[rl0[q0].id];
+          if(!cur0 || String(rl0[q0].updatedAt || '') > String(cur0.updatedAt || '')) savedLots[rl0[q0].id] = rl0[q0];
+        }
+      }catch(e0){ /* distant illisible : on ecrit ce qu'on a */ }
+    }
     var body = { v: APP_VERSION, tagTpl: tagTpl, updated: now(), lots: [] };
     for(var k in savedLots) body.lots.push(savedLots[k]);
     var json = JSON.stringify(body);
