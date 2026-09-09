@@ -57,10 +57,13 @@ header{position:sticky;top:0;z-index:60;background:var(--bg);padding:calc(10px +
 .iBtn{background:var(--surf2);border:0;color:var(--tx2);width:32px;height:32px;border-radius:9px;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .srch{position:relative;margin-bottom:10px}
 .srch input{width:100%;background:var(--surf);border:1px solid var(--bd);border-radius:11px;padding:10px 34px 10px 34px;color:var(--tx);font-size:14px;outline:none}
+.srch input::-webkit-search-cancel-button,
+.srch input::-webkit-search-decoration,
+.srch input::-webkit-search-results-button{-webkit-appearance:none;appearance:none;display:none}
 .srch input:focus{border-color:var(--red)}
 .srch .ic{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--tx3);font-size:13px}
 .srch .clr{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--surf2);border:0;color:var(--tx2);width:22px;height:22px;border-radius:50%;font-size:13px;cursor:pointer}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;padding-bottom:10px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;padding-bottom:10px}
 .st{background:var(--surf);border-radius:10px;padding:7px 4px;text-align:center}
 .stV{font-size:17px;font-weight:800;line-height:1.1}
 .stL{font-size:9.5px;color:var(--tx2);margin-top:2px}
@@ -134,11 +137,11 @@ main{padding:4px 16px 20px}
 
 /* ORDER */
 .ord{background:var(--surf);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
-.ordH{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--surf2)}
+
 .ordN{font-size:14px;font-weight:700}
 .ordM{font-size:11px;color:var(--tx2);margin-top:2px}
 .ordT{font-size:16px;font-weight:800;color:var(--grn)}
-.ordL{padding:4px 13px 10px}
+
 .ordI{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--bd);font-size:13px;cursor:pointer}
 .ordI:active{opacity:.62}
 .ordI:last-child{border-bottom:0}
@@ -146,7 +149,7 @@ main{padding:4px 16px 20px}
 .ordI .th img{width:100%;height:100%;object-fit:cover}
 .ordI .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ordI .pr{color:var(--grn);font-weight:700;font-size:12.5px}
-.ordF{padding:0 13px 12px}
+
 
 /* HISTO */
 .hCard{background:var(--surf);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:9px;padding:12px 13px}
@@ -194,6 +197,10 @@ main{padding:4px 16px 20px}
 @keyframes up{from{transform:translateY(30px);opacity:.4}to{transform:none;opacity:1}}
 .grab{width:36px;height:4px;background:var(--surf3);border-radius:3px;margin:11px auto 4px}
 .shT{font-size:16px;font-weight:800;padding:6px 18px 4px}
+.shHd{position:relative;display:flex;align-items:center;justify-content:center;padding:2px 0 10px}
+.shHd .shT{padding:0;text-align:center}
+.shHd .shC{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:9px;border:1px solid var(--bd);background:var(--surf);color:var(--tx2);font-size:17px;font-weight:700;line-height:1;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center}
+.shHd .shC:active{color:var(--tx)}
 .shS{font-size:12px;color:var(--tx2);padding:0 18px 12px}
 .fld{padding:0 18px;margin-bottom:13px}
 .lbl{font-size:11.5px;color:var(--tx2);font-weight:600;margin-bottom:5px;display:block}
@@ -287,6 +294,107 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
   #view{grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}
 }
 .tagBox{background:var(--surf2);border-radius:var(--r2);padding:11px 12px;font-size:12px;color:var(--tx2);line-height:1.55;margin:0 18px 12px;word-break:break-word;max-height:130px;overflow-y:auto}
+
+/* ===== MODULE STOCK ===== */
+.stkBar{display:flex;align-items:center;gap:10px;margin:0 0 11px;padding:2px 0}
+.stkBack{background:var(--surf);border:1px solid var(--bd);color:var(--tx);border-radius:11px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;padding:0}
+.stkBack svg{width:22px;height:22px;display:block}
+.stkBack:active{background:#0c1428}
+.stkTit{font-weight:800;font-size:17px;line-height:1.25;flex:1;min-width:0}
+.stkTit small{display:block;color:var(--tx3);font-weight:600;font-size:11.5px;margin-top:3px}
+.stkSet{display:flex;align-items:center;gap:10px;background:var(--surf);border:1px solid var(--bd);border-radius:11px;padding:11px 13px;margin-bottom:7px;cursor:pointer}
+.ssym{width:24px;height:24px;object-fit:contain;flex:none}
+.ssym.gone{display:none}
+.sfb{width:24px;height:24px;flex:none;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;color:var(--tx3);border:1px solid var(--bd);border-radius:5px;letter-spacing:.2px}
+.sinfo{flex:1;min-width:0;display:flex;align-items:center;gap:6px}
+.sinfo b{font-size:14px;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scode{font-size:9px;font-weight:900;letter-spacing:.6px;color:var(--tx3);background:#0c1428;border:1px solid var(--bd);border-radius:4px;padding:2px 5px;flex:none}
+.stkTit .th{display:flex;align-items:center;gap:7px;min-width:0}
+.stkTit .th .ssym,.stkTit .th .sfb{width:24px;height:24px}
+.stkSet .sc{font-size:12px;font-weight:800;color:var(--blu);flex:none}
+.stkSet .sc.z{color:var(--tx3);font-weight:600}
+.stkSerie{color:var(--tx3);font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;margin:15px 0 7px}
+.stkSrch{position:relative;margin:0 0 10px}
+.stkSrch input{width:100%;background:var(--surf);border:1px solid var(--bd);border-radius:11px;padding:10px 34px 10px 13px;color:var(--tx);font-size:14px;outline:none}
+.stkSrch input::-webkit-search-cancel-button,.stkSrch input::-webkit-search-decoration{-webkit-appearance:none;appearance:none;display:none}
+.stkSrch .sx{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--surf2);border:0;color:var(--tx2);width:22px;height:22px;border-radius:50%;font-size:13px;cursor:pointer}
+.stkFB{display:flex;gap:6px;margin:0 0 11px}
+.stkFB .sg{display:flex;background:var(--surf);border:1px solid var(--bd);border-radius:9px;padding:2px;gap:2px;flex:1;min-width:0}
+.stkFB button{flex:1;min-width:0;background:none;border:0;color:var(--tx3);font-size:11px;font-weight:700;padding:6px 2px;border-radius:7px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stkFB button.on{background:var(--surf2);color:var(--tx)}
+.stkGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.stkC{background:var(--surf);border:1px solid var(--bd);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.stkC.has{border-color:var(--blu)}
+.stkC .im{position:relative;background:#0c1428;aspect-ratio:245/342}
+.stkC .im img{width:100%;height:100%;object-fit:cover;display:block}
+.stkC .nu{position:absolute;top:4px;left:4px;background:rgba(0,7,26,.88);color:#fff;font-size:13px;font-weight:900;letter-spacing:-.2px;padding:2px 7px;border-radius:6px;line-height:1.15}
+.stkC .na{font-size:10px;font-weight:700;padding:4px 5px 4px;line-height:1.15;height:28px;overflow:hidden}
+.stkC .vs{display:flex;gap:4px;padding:0 4px 6px}
+.stkV{flex:1;border:1px solid var(--bd);background:#0c1428;border-radius:7px;padding:8px 0 7px;text-align:center;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+.stkV .vl{display:block;font-size:8px;font-weight:800;color:var(--tx3);letter-spacing:.3px}
+.stkV.solo{padding:11px 0 10px}
+.stkV.solo .vq{font-size:16px}
+.stkV .vq{display:block;font-size:13px;font-weight:900;line-height:1.1}
+.stkV.q0 .vq{color:var(--tx3);opacity:.45}
+.stkV.on{border-color:var(--blu);background:rgba(56,139,253,.13)}
+.stkV.on .vq{color:var(--blu)}
+.stkDot{position:absolute;top:3px;right:3px;width:6px;height:6px;border-radius:50%;background:#d29922;opacity:.85}
+.stkTot{background:var(--surf);border:1px solid var(--bd);border-radius:11px;padding:11px 11px;margin-bottom:12px;display:flex;gap:9px}
+.stkTot div{flex:1;min-width:0}
+.stkTot span{display:block;font-size:9px;color:var(--tx3);font-weight:700;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stkTot b{font-size:19px;font-weight:900;line-height:1.15}
+.stkRow{display:flex;align-items:center;gap:10px;background:var(--surf);border:1px solid var(--bd);border-radius:11px;padding:9px 11px;margin-bottom:7px;cursor:pointer}
+.stkRow img{width:36px;height:50px;object-fit:cover;border-radius:5px;background:#0c1428;flex:none}
+.stkRow .rt{flex:1;min-width:0}
+.stkRow .rt b{display:block;font-size:13px;font-weight:700}
+.stkRow .rt small{color:var(--tx3);font-size:11px;font-weight:600}
+.stkRow .rq{font-size:15px;font-weight:900;color:var(--blu);flex:none}
+.stkRow{align-items:flex-start}
+.stkRow .rt{display:flex;flex-direction:column;gap:5px}
+.stkRow .rvs{display:flex;gap:5px;margin-top:1px}
+.stkRow .rvs .stkV{flex:0 0 auto;min-width:54px;padding:7px 9px 6px}
+.stkRow .rvs .stkV.solo{min-width:46px;padding:9px 9px 8px}
+.stkRow .rvs .stkV .vq{font-size:13px}
+.shImg{display:block;width:100%;max-width:196px;margin:2px auto 12px;border-radius:9px;background:#0c1428;aspect-ratio:245/342;object-fit:cover;box-shadow:0 6px 20px rgba(0,0,0,.42);cursor:zoom-in}
+.shImg.gone{display:none}
+.shV{border:1px solid var(--bd);border-radius:10px;padding:10px 11px;margin-bottom:9px}
+.shV .vh{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:800;margin-bottom:8px}
+.shV .vh em{font-style:normal;color:var(--tx3);font-weight:700;font-size:11px}
+.shV .vh .rr{display:flex;align-items:center;gap:8px}
+.vRm{width:24px;height:24px;border-radius:6px;border:1px solid var(--bd);background:#0c1428;color:var(--tx3);font-size:14px;font-weight:800;line-height:1;cursor:pointer;padding:0;flex:none}
+.vRm:active{color:#f85149;border-color:rgba(248,81,73,.5)}
+.shE{display:flex;align-items:center;gap:9px;margin-top:6px}
+.shE label{flex:1;font-size:12px;font-weight:600;color:var(--tx2)}
+.shE button{width:31px;height:31px;border-radius:8px;border:1px solid var(--bd);background:#0c1428;color:var(--tx);font-size:16px;font-weight:800;cursor:pointer;flex:none;line-height:1}
+.shE .qv{width:30px;text-align:center;font-size:15px;font-weight:900;flex:none}
+.stkWarn{background:rgba(210,153,34,.11);border:1px solid rgba(210,153,34,.34);color:#d29922;border-radius:9px;padding:8px 11px;font-size:11px;font-weight:600;margin-bottom:11px;line-height:1.4}
+.stkJB{display:flex;align-items:center;gap:8px;background:var(--surf);border:1px solid var(--bd);border-radius:11px;padding:10px 13px;margin-bottom:10px;cursor:pointer;font-size:13px;font-weight:700}
+.stkJB svg{width:17px;height:17px;flex:none;color:var(--tx3)}
+.stkJB .jc{margin-left:auto;color:var(--tx3);font-weight:700;font-size:12px}
+.stkJD{color:var(--tx3);font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin:15px 0 4px}
+.stkMv{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--bd);font-size:12px}
+.stkMv .d{font-weight:900;flex:none;width:32px;text-align:center;border-radius:6px;padding:2px 0}
+.stkMv .d.p{color:#3fb950;background:rgba(63,185,80,.12)}
+.stkMv .d.m{color:#f85149;background:rgba(248,81,73,.12)}
+.stkMv .mt{flex:1;min-width:0}
+.stkMv .mt b{display:block;font-weight:700}
+.stkMv .mt small{display:block;color:var(--tx3);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stkMv .mh{color:var(--tx3);font-size:10px;font-weight:700;flex:none}
+
+/* selection de cartes pour un lot */
+.pkH{font-size:11px;font-weight:800;color:var(--tx3);letter-spacing:.5px;text-transform:uppercase;margin:14px 0 7px}
+.pkE{font-size:12px;color:var(--tx3);padding:10px 2px}
+.pkR{display:flex;align-items:center;gap:10px;border:1px solid var(--bd);border-radius:10px;padding:8px 10px;margin-bottom:7px}
+.pkR img,.pkNo{width:34px;height:47px;border-radius:5px;background:#0c1428;object-fit:cover;flex:none}
+.pkT{flex:1;min-width:0}
+.pkT b{display:block;font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pkT small{display:block;color:var(--tx3);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pkT .pkD{color:var(--tx2);font-weight:700}
+.pkC{display:flex;align-items:center;gap:7px;flex:none}
+.pkB{width:30px;height:30px;border-radius:8px;border:1px solid var(--bd);background:#0c1428;color:var(--tx);font-size:16px;font-weight:800;line-height:1;cursor:pointer;padding:0}
+.pkB:disabled{opacity:.3;cursor:default}
+.pkQ{min-width:20px;text-align:center;font-size:15px;font-weight:900}
+.lotCB{background:rgba(56,139,253,.16);color:var(--blu);font-weight:800;border-radius:5px;padding:1px 5px;font-size:10px;margin-left:5px}
 </style>
 </head>
 <body>
@@ -308,15 +416,14 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
         <button class="iBtn" id="btnAcc" aria-label="Compte"><span style="width:16px;height:16px;display:block"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><circle cx="12" cy="12" r="10"/> <circle cx="12" cy="10" r="3"/> <path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/></svg></span></button>
       </div>
     </div>
-    <div class="srch">
+    <div class="srch" id="srch">
       <span class="ic" style="width:14px;height:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="m21 21-4.34-4.34"/> <circle cx="11" cy="11" r="8"/></svg></span>
       <input type="search" id="q" placeholder="Nom, Pokémon, boîte…" autocomplete="off">
       <button class="clr hide" id="qClr">×</button>
     </div>
-    <div class="stats">
+    <div class="stats" id="stats">
       <div class="st a"><div class="stV" id="s1">0</div><div class="stL">Vitrine</div></div>
       <div class="st b"><div class="stV" id="s2">0</div><div class="stL">À faire</div></div>
-      <div class="st c"><div class="stV" id="s3">0</div><div class="stL">À expédier</div></div>
       <div class="st d"><div class="stV" id="s4">0€</div><div class="stL">Revenus</div></div>
     </div>
   </header>
@@ -328,7 +435,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
   <nav>
     <div class="nv on" data-t="vitrine"><svg class="nvI" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v5"/> <path d="M17.774 10.31a1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.451 0 1.12 1.12 0 0 0-1.548 0 2.5 2.5 0 0 1-3.452 0 1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.77-3.248l2.889-4.184A2 2 0 0 1 7 2h10a2 2 0 0 1 1.653.873l2.895 4.192a2.5 2.5 0 0 1-3.774 3.244"/> <path d="M4 10.95V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8.05"/></svg>Vitrine</div>
     <div class="nv" data-t="afaire"><svg class="nvI" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 5h8"/> <path d="M13 12h8"/> <path d="M13 19h8"/> <path d="m3 17 2 2 4-4"/> <rect x="3" y="4" width="6" height="6" rx="1"/></svg>À faire<span class="nvB hide" id="nb2"></span></div>
-    <div class="nv" data-t="cmd"><svg class="nvI" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V12"/> <path d="m16 17 2 2 4-4"/> <path d="M21 11.127V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.729l7 4a2 2 0 0 0 2 .001l1.32-.753"/> <path d="M3.29 7 12 12l8.71-5"/> <path d="m7.5 4.27 8.997 5.148"/></svg>Commandes<span class="nvB hide" id="nb3"></span></div>
+    <div class="nv" data-t="stock"><svg class="nvI" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7"/><path d="M2 7h20v4H2z"/><path d="M10 14h4"/></svg>Stock</div>
     <div class="nv" data-t="histo"><svg class="nvI" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/> <path d="M3 3v5h5"/> <path d="M12 7v5l4 2"/></svg>Historique</div>
   </nav>
 </div>
@@ -356,10 +463,11 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '2.34';
+var APP_VERSION = '3.00';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
+var LS = 'pks_';
 var POLL_MS = 12000;
 var BAK_PREFIX = 'bak_';
 var BAK_KEEP = 10;
@@ -373,13 +481,18 @@ var tab = 'vitrine';
 var sortKey = 'date', sortDir = -1;
 var boxFilter = null;
 var groupBy = 'poke';
-try{ var _g = localStorage.getItem('pks_group'); if(_g === 'ach' || _g === 'poke') groupBy = _g; }catch(e){}
+try{ var _g = localStorage.getItem(LS + 'group'); if(_g === 'ach' || _g === 'poke') groupBy = _g; }catch(e){}
 var selMode = false, sel = {}, suppressClick = false, lpTimer = null, lpX = 0, lpY = 0, lpId = null, lpFired = false;
-try{ var _s = JSON.parse(localStorage.getItem('pks_sort') || 'null'); if(_s){ sortKey = _s.k; sortDir = _s.d; } }catch(e){}
+try{ var _s = JSON.parse(localStorage.getItem(LS + 'sort') || 'null'); if(_s){ sortKey = _s.k; sortDir = _s.d; } }catch(e){}
 var token = null, tokenExp = 0, tokenClient = null;
 var me = null, myFile = null, myFileId = null;
 var who = null;
 var WHOS = { thomas:'Thomas', cindy:'Cindy' };
+/* Compte unique : l'app n'ecrit plus que dans un seul fichier.
+   La lecture continue de fusionner TOUS les fichiers du prefixe, donc rien
+   n'est perdu si un ancien fichier existe. Mettre SOLO a null retablit le
+   fonctionnement a deux comptes. */
+var SOLO = 'cindy';
 var dirty = false, saving = false, pollTimer = null, sheetOpen = false;
 var refreshTimer = null, booted = false, offline = false;
 var cfmCb = null;
@@ -474,7 +587,7 @@ function idbPut(k, v){
 }
 
 /* ═══ CACHE LOCAL ═══ */
-function cacheKey(){ return 'pks_cache_' + (who || 'x'); }
+function cacheKey(){ return LS + 'cache_' + (who || 'x'); }
 function saveCache(){
   try{ localStorage.setItem(cacheKey(), JSON.stringify({ at: Date.now(), lots: lots })); }catch(e){}
 }
@@ -494,7 +607,7 @@ function initGis(){
       if(r.error){ toast('Connexion refusée'); return; }
       token = r.access_token;
       tokenExp = Date.now() + (parseInt(r.expires_in,10) || 3500) * 1000;
-      try{ localStorage.setItem('pks_tk', JSON.stringify({ t: token, e: tokenExp })); }catch(e){}
+      try{ localStorage.setItem(LS + 'tk', JSON.stringify({ t: token, e: tokenExp })); }catch(e){}
       offline = false;
       scheduleRefresh();
       if(booted){ setSync('busy'); sync(false); }
@@ -530,7 +643,7 @@ function api(url, opts){
   return fetch(url, opts).then(function(r){
     if(r.status === 401){
       token = null;
-      try{ localStorage.removeItem('pks_tk'); }catch(e){}
+      try{ localStorage.removeItem(LS + 'tk'); }catch(e){}
       reauth(); throw new Error('auth');
     }
     return r;
@@ -543,8 +656,11 @@ function api(url, opts){
 async function start(){
   await openIdb();
   who = null;
-  try{ who = localStorage.getItem('pks_who'); }catch(e){}
-  if(!who || !WHOS[who]){
+  try{ who = localStorage.getItem(LS + 'who'); }catch(e){}
+  if(SOLO){
+    who = SOLO;
+    try{ localStorage.setItem(LS + 'who', who); }catch(e){}
+  } else if(!who || !WHOS[who]){
     if(tokenValid()){
       try{ var r = await api('https://www.googleapis.com/oauth2/v3/userinfo'); me = await r.json(); }catch(e){}
     }
@@ -576,7 +692,7 @@ function askWho(){
   for(var i=0;i<b.length;i++){
     b[i].onclick = function(){
       who = this.getAttribute('data-who');
-      localStorage.setItem('pks_who', who);
+      localStorage.setItem(LS + 'who', who);
       closeSheet(); boot();
     };
   }
@@ -796,10 +912,18 @@ function matches(l, q){
          norm(l.notes).indexOf(n) >= 0 ||
          norm(l.acheteur).indexOf(n) >= 0;
 }
+/* nombre de cartes : valeur saisie pour les anciens lots,
+   compte reel des cartes rattachees pour les nouveaux */
+function lotNb(l){
+  if(l && l.nb != null) return l.nb;
+  var n = (typeof lotCardCount === 'function') ? lotCardCount(l) : 0;
+  return n || null;
+}
 function lotTitle(l){
   if(l.nom) return l.nom;
   var p = l.poke || 'Lot';
-  return l.nb ? (p + ' — ' + l.nb + ' cartes') : p;
+  var n = lotNb(l);
+  return n ? (p + ' — ' + n + ' cartes') : p;
 }
 
 /* ═══ SAUVEGARDES ═══ */
@@ -819,7 +943,7 @@ async function listBackups(){
 async function makeBackup(force){
   if(!lots.length) return;
   var last = 0;
-  try{ last = parseInt(localStorage.getItem('pks_lastbak') || '0', 10); }catch(e){}
+  try{ last = parseInt(localStorage.getItem(LS + 'lastbak') || '0', 10); }catch(e){}
   if(!force && Date.now() - last < BAK_EVERY) return;
   var body = JSON.stringify({ v: APP_VERSION, who: who, at: now(), count: lots.length, lots: lots });
   var meta = { name: BAK_PREFIX + who + '_' + Date.now() + '.json', parents: ['appDataFolder'] };
@@ -827,13 +951,15 @@ async function makeBackup(force){
   fd.append('metadata', new Blob([JSON.stringify(meta)], { type:'application/json' }));
   fd.append('file', new Blob([body], { type:'application/json' }));
   await api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method:'POST', body: fd });
-  try{ localStorage.setItem('pks_lastbak', String(Date.now())); }catch(e){}
+  try{ localStorage.setItem(LS + 'lastbak', String(Date.now())); }catch(e){}
   await pruneBackups();
 }
 
 async function pruneBackups(){
   var all = await listBackups();
-  var mine = all.filter(function(b){ return b.who === who; });
+  /* en compte unique on liste tout : masquer les anciennes sauvegardes
+     de l'autre identite reviendrait a les rendre irrecuperables */
+  var mine = SOLO ? all : all.filter(function(b){ return b.who === who; });
   for(var i=BAK_KEEP;i<mine.length;i++){
     try{ await api('https://www.googleapis.com/drive/v3/files/' + mine[i].id, { method:'DELETE' }); }catch(e){}
   }
@@ -893,7 +1019,7 @@ function exportCsv(){
     var jours = (l.dtListe && l.dtVente)
       ? Math.max(0, Math.round((new Date(l.dtVente) - new Date(l.dtListe)) / 86400000)) : '';
     tot += (num(l.pv) || 0);
-    rows.push([dt(l.dtVente), l.poke, lotTitle(l), l.nb, l.pa, l.pm, l.pv, l.acheteur, l.boite, dt(l.dtListe), jours].map(csvCell).join(';'));
+    rows.push([dt(l.dtVente), l.poke, lotTitle(l), lotNb(l), l.pa, l.pm, l.pv, l.acheteur, l.boite, dt(l.dtListe), jours].map(csvCell).join(';'));
   }
   rows.push('');
   rows.push([csvCell('Total'),'','','','','',csvCell(tot.toFixed(2))].join(';'));
@@ -905,23 +1031,22 @@ function exportCsv(){
 function render(){
   var vitrine = byStatus('vitrine').length;
   var afaire = byStatus('afaire').length + byStatus('pret').length;
-  var vendus = byStatus('vendu').length;
   var rev = 0;
   for(var i=0;i<lots.length;i++){
     if(lots[i].st === 'vendu' || lots[i].st === 'expedie') rev += (num(lots[i].pv) || 0);
   }
   $('s1').textContent = vitrine;
   $('s2').textContent = afaire;
-  $('s3').textContent = vendus;
   $('s4').textContent = eur0(rev);
   setBadge('nb2', afaire);
-  setBadge('nb3', vendus);
+  $('stats').classList.toggle('hide', tab !== 'vitrine' && tab !== 'histo');
+  $('srch').classList.toggle('hide', tab === 'stock' && (!!stkSet || stkJournal));
   $('qClr').classList.toggle('hide', !query());
 
   if(selMode) updateSelBar();
   if(tab === 'vitrine') renderVitrine();
   else if(tab === 'afaire') renderAfaire();
-  else if(tab === 'cmd') renderCmd();
+  else if(tab === 'stock'){ renderStock(); return; }
   else renderHisto();
   hydratePhotos();
 }
@@ -1050,7 +1175,8 @@ function card(l){
     : '<div class="cPh" data-open="' + l.id + '"><span class="ph-holder" style="width:26px;height:26px;display:block"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/> <path d="M12 22V12"/> <polyline points="3.29 7 12 12 20.71 7"/> <path d="m7.5 4.27 9 5.15"/></svg></span></div>';
 
   var chips = [];
-  if(l.nb) chips.push('<span class="chip cB">' + l.nb + ' cartes</span>');
+  var _nb = lotNb(l);
+  if(_nb) chips.push('<span class="chip cB">' + _nb + ' cartes</span>');
   if(l.boite) chips.push('<span class="chip cO">Boîte ' + esc(l.boite) + (l.sep ? ' · ' + esc(l.sep) : '') + '</span>');
   if(num(l.pa) != null) chips.push('<span class="chip cA">' + eur(num(l.pa)) + '</span>');
   if(num(l.pm) != null) chips.push('<span class="chip cY">min ' + eur(num(l.pm)) + '</span>');
@@ -1066,11 +1192,12 @@ function card(l){
   } else if(l.st === 'vitrine'){
     acts.push('<button class="aBtn g" data-sell="' + l.id + '" draggable="false" style="-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none">Marquer vendu</button>');
     acts.push('<button class="aBtn" data-tag="' + l.id + '">Hashtags</button>');
-  } else if(l.st === 'vendu'){
-    acts.push('<button class="aBtn o" data-mv="' + l.id + '|expedie">Marquer expédié</button>');
-  } else if(l.st === 'expedie'){
+  } else if(l.st === 'vendu' || l.st === 'expedie'){
     acts.push('<button class="aBtn p" data-again="' + l.id + '">Refaire ce lot</button>');
   }
+  var nbc = lotCardCount(l);
+  acts.push('<button class="aBtn" data-pk="' + l.id + '">Cartes' +
+            (nbc ? '<span class="lotCB">' + nbc + '</span>' : '') + '</button>');
   acts.push('<button class="aBtn" data-open="' + l.id + '" aria-label="Modifier"><span style="width:13px;height:13px;display:inline-block;vertical-align:-2px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/> <path d="m15 5 4 4"/></svg></span></button>');
 
   var sub = [];
@@ -1089,44 +1216,6 @@ function card(l){
     (chips.length ? '<div class="chips">' + chips.join('') + '</div>' : '') +
     '<div class="acts">' + acts.join('') + '</div>' +
     '</div></div></div>';
-}
-
-function renderCmd(){
-  var v = keep(lots.filter(function(l){ return l.st === 'vendu'; }));
-  if(!v.length){
-    $('view').innerHTML = query() ? noHit(EMPTY_CMD, 'les commandes à expédier') : empty(EMPTY_CMD, 'Aucune commande à expédier.');
-    return;
-  }
-  var groups = {};
-  for(var i=0;i<v.length;i++){
-    var key = v[i].cmdId || norm(v[i].acheteur) || ('_' + v[i].id);
-    if(!groups[key]) groups[key] = { nom: v[i].acheteur || '', items: [] };
-    groups[key].items.push(v[i]);
-  }
-  var keys = Object.keys(groups);
-  keys.sort(function(a,b){
-    var da = groups[a].items[0].dtVente || '', db = groups[b].items[0].dtVente || '';
-    return db.localeCompare(da);
-  });
-  var h = '<div class="secH">À expédier <span>' + keys.length + ' commande' + (keys.length>1?'s':'') + '</span></div>';
-  for(var k=0;k<keys.length;k++){
-    var g = groups[keys[k]];
-    var tot = 0, ids = [];
-    var rows = g.items.map(function(l){
-      tot += (num(l.pv) || 0); ids.push(l.id);
-      var th = l.photo ? '<div class="th" data-ph="' + l.photo + '"></div>' : '<div class="th"><span style="width:17px;height:17px;display:block"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/> <path d="M12 22V12"/> <polyline points="3.29 7 12 12 20.71 7"/> <path d="m7.5 4.27 9 5.15"/></svg></span></div>';
-      return '<div class="ordI" data-open="' + l.id + '">' + th + '<div class="nm">' + esc(lotTitle(l)) +
-        (l.boite ? '<div style="font-size:11px;color:var(--tx3)">Boîte ' + esc(l.boite) + (l.sep?' · '+esc(l.sep):'') + '</div>' : '') +
-        '</div><div class="pr">' + eur(num(l.pv)) + '</div></div>';
-    }).join('');
-    var titre = g.nom ? esc(g.nom) : (g.items.length > 1 ? 'Commande de ' + g.items.length + ' lots' : 'Vente du ' + dt(g.items[0].dtVente));
-    h += '<div class="ord"><div class="ordH"><div><div class="ordN">' + titre + '</div>' +
-      '<div class="ordM">' + g.items.length + ' lot' + (g.items.length>1?'s':'') + ' · ' + dt(g.items[0].dtVente) + '</div></div>' +
-      '<div class="ordT">' + eur(tot) + '</div></div>' +
-      '<div class="ordL">' + rows + '</div>' +
-      '<div class="ordF"><button class="bP g" style="width:100%;padding:11px;font-size:14px" data-ship="' + ids.join(',') + '">Tout marquer expédié</button></div></div>';
-  }
-  $('view').innerHTML = h;
 }
 
 function histoGroups(){
@@ -1195,7 +1284,8 @@ function renderHisto(){
   for(var k=0;k<groups.length;k++){
     var o = groups[k];
     var rows = o.items.slice(0,3).map(function(l){
-      var quoi = groupBy === 'ach' ? esc(l.poke || '?') : (l.nb ? l.nb + ' cartes' : '');
+      var _n2 = lotNb(l);
+      var quoi = groupBy === 'ach' ? esc(l.poke || '?') : (_n2 ? _n2 + ' cartes' : '');
       return '<div class="hRow"><span>' + dt(l.dtVente) + (quoi ? ' · ' + quoi : '') + '</span><b>' + eur(num(l.pv)) + '</b></div>';
     }).join('');
     var more = o.items.length > 3 ? '<div class="hRow" style="color:var(--red)"><span>Voir les ' + o.items.length + ' ventes</span><span>›</span></div>' : '';
@@ -1334,7 +1424,8 @@ function sheetBoxes(){
 
 function histoRow(l, byPoke){
   var meta = [];
-  if(l.nb) meta.push(l.nb + ' cartes');
+  var _n3 = lotNb(l);
+  if(_n3) meta.push(_n3 + ' cartes');
   if(byPoke){ if(l.acheteur) meta.push(esc(l.acheteur)); }
   else meta.push(esc(l.poke || '?'));
   if(num(l.pa) != null) meta.push('affiché ' + eur(num(l.pa)));
@@ -1372,9 +1463,13 @@ function bindHistoRows(){
       var id = this.getAttribute('data-hdel');
       var lot = lots.filter(function(x){ return x.id === id; })[0];
       if(!lot) return;
-      confirmBox('Supprimer cette vente ?', lotTitle(lot) + ' — ' + eur(num(lot.pv)) + '. Le lot sera retiré définitivement.', 'Supprimer', function(){
-        lot.deleted = true; commit(lot); closeSheet(); toast('Vente supprimée');
-      });
+      var nbh = lotCardCount(lot);
+      confirmBox('Supprimer cette vente ?',
+        lotTitle(lot) + ' — ' + eur(num(lot.pv)) + '. Le lot sera retiré définitivement.' +
+        (nbh ? ' Ses ' + nbh + ' carte(s) resteront déduites du stock, puisqu\'elles ont été vendues.' : ''),
+        'Supprimer', function(){
+          lot.deleted = true; commit(lot); closeSheet(); toast('Vente supprimée');
+        });
     };
   }
   hydratePhotos();
@@ -1394,7 +1489,7 @@ function sheetView(id){
     : '';
   var rows =
     row('Pokémon', esc(l.poke)) +
-    row('Nombre de cartes', l.nb) +
+    row('Nombre de cartes', lotNb(l)) +
     row('Statut', ST[l.st]) +
     row('Prix affiché', num(l.pa) != null ? eur(num(l.pa)) : '') +
     row('Prix mini accepté', num(l.pm) != null ? eur(num(l.pm)) : '') +
@@ -1441,24 +1536,20 @@ function sheetNew(defMode){
   var alt  = main === 'vitrine' ? 'afaire' : 'vitrine';
   var lbl  = { vitrine:'Mettre en vitrine', afaire:'Ajouter à préparer' };
   openSheet(
-    '<div class="shT">Nouveau lot</div>' +
-    '<div class="shS">Seul le Pokémon est obligatoire. Tout le reste peut être complété plus tard.</div>' +
+    '<div class="shHd"><div class="shT">Nouveau lot</div><button class="shC" id="x1t" aria-label="Annuler">×</button></div>' +
     '<div class="fld"><label class="lbl">Pokémon</label><input class="inp" id="f_poke" placeholder="Évoli"' + noAuto() + '></div>' +
-    '<div class="row2"><div class="fld"><label class="lbl">Nombre de cartes</label><input class="inp" id="f_nb" type="number" inputmode="numeric" placeholder="25"' + noAuto() + '></div>' +
-    '<div class="fld"><label class="lbl">Boîte</label><input class="inp" id="f_boite" placeholder="3"' + noAuto() + '></div></div>' +
-    '<div class="fld"><label class="lbl">Séparateur (optionnel)</label><input class="inp" id="f_sep" placeholder="Évoli B"' + noAuto() + '></div>' +
     '<div class="row2"><div class="fld"><label class="lbl">Prix affiché</label><input class="inp" id="f_pa" type="number" inputmode="decimal" step="0.5" placeholder="12"' + noAuto() + '></div>' +
     '<div class="fld"><label class="lbl">Prix mini accepté</label><input class="inp" id="f_pm" type="number" inputmode="decimal" step="0.5" placeholder="9"' + noAuto() + '></div></div>' +
-    '<div class="fld"><label class="lbl">Titre de l\'annonce (optionnel)</label><input class="inp" id="f_nom" placeholder="laisser vide = Pokémon + nb cartes"' + noAuto() + '></div>' +
     '<div class="fld"><label class="lbl">En ligne sur Vinted depuis le (si déjà publié)</label><input class="inp" id="f_dl" type="date" max="' + toDateInput(now()) + '"></div>' +
     '<div class="fld"><label class="lbl">Photo (optionnel)</label>' + photoZone({ photo:null }) + '</div>' +
     '<div id="histoHint"></div>' +
     '<div class="shF"><button class="bS" id="x1">Annuler</button><button class="bP" id="k1">' + lbl[main] + '</button></div>' +
     '<button class="dgr" id="k1b" style="border-color:var(--bd);color:var(--tx2)">' + lbl[alt] + '</button>'
   );
-  clearInputs(['f_poke','f_nb','f_boite','f_sep','f_pa','f_pm','f_nom','f_dl']);
+  clearInputs(['f_poke','f_pa','f_pm','f_dl']);
   bindPhoto();
   $('x1').onclick = closeSheet;
+  $('x1t').onclick = closeSheet;
   $('k1').onclick = function(){ createLot(main, 'k1'); };
   $('k1b').onclick = function(){ createLot(alt, 'k1b'); };
   $('f_poke').oninput = function(){ showHistoHint(this.value.trim()); };
@@ -1525,9 +1616,9 @@ async function createLot(mode, btnId){
   }
   var l = {
     id: nid(), poke: poke,
-    nom: $('f_nom').value.trim(),
-    nb: parseInt($('f_nb').value,10) || null,
-    boite: $('f_boite').value.trim(), sep: $('f_sep').value.trim(),
+    nom: '',
+    nb: null, cards: {},
+    boite: '', sep: '',
     st: mode, pa: num($('f_pa').value), pm: num($('f_pm').value), pv: null,
     acheteur: '', notes: '', photo: photoId,
     dtCree: now(), dtPret: null, dtListe: null, dtVente: null, dtExp: null
@@ -1538,6 +1629,7 @@ async function createLot(mode, btnId){
   closeSheet();
   commit(l);
   toast(mode === 'vitrine' ? 'Lot en vitrine' : 'Lot à préparer');
+  setTimeout(function(){ sheetPick(l.id); }, 280);   /* enchainer sur le choix des cartes */
 }
 
 /* étape 2 : mise en ligne — prix + photo */
@@ -1648,8 +1740,16 @@ function sheetEdit(id){
   $('x4').onclick = closeSheet;
   $('k4t').onclick = function(){ copyTags(l); };
   $('k4d').onclick = function(){
-    confirmBox('Supprimer ce lot ?', lotTitle(l) + ' sera retiré pour toi et pour ' + (who === 'thomas' ? 'Cindy' : 'Thomas') + '.', 'Supprimer', function(){
-      l.deleted = true; closeSheet(); commit(l); toast('Lot supprimé');
+    var nbk = lotCardCount(l);
+    var parti = (l.st === 'vendu' || l.st === 'expedie');   /* deja vendu : les cartes sont parties */
+    var txt = lotTitle(l) + ' sera retiré pour toi et pour ' + (who === 'thomas' ? 'Cindy' : 'Thomas') + '.';
+    if(nbk) txt += parti
+      ? ' Ses ' + nbk + ' carte(s) resteront déduites du stock, puisque le lot a été vendu.'
+      : ' Ses ' + nbk + ' carte(s) seront recréditées dans ton stock.';
+    confirmBox('Supprimer ce lot ?', txt, 'Supprimer', function(){
+      if(nbk && !parti) lotRestore(l);
+      l.deleted = true; closeSheet(); commit(l);
+      toast(nbk && !parti ? 'Lot supprimé, ' + nbk + ' carte(s) remise(s) en stock' : 'Lot supprimé');
     });
   };
   $('k4').onclick = async function(){
@@ -1804,19 +1904,22 @@ function sheetTags(){
 
 function sheetAcc(){
   openSheet(
-    '<div class="shT">Cet appareil : ' + esc(WHOS[who] || '?') + '</div>' +
+    '<div class="shT">' + (SOLO ? 'PoKoalaShop' : 'Cet appareil : ' + esc(WHOS[who] || '?')) + '</div>' +
     '<div class="shS">' + esc((me && (me.name || me.email)) || '') + ' · v' + APP_VERSION + '</div>' +
 
     '<div class="accSec">Synchronisation</div>' +
     '<button class="accBtn" id="a_ref">Rafraîchir maintenant<span>' + lots.length + ' lots</span></button>' +
-    '<div class="fld"><div class="tagBox" style="margin:0">Fichier d\'écriture : <b>' + esc(myFile) + '</b><br>' +
-    'Chaque appareil écrit dans son propre fichier. Aucune modification ne peut écraser celle de l\'autre.</div></div>' +
-
-    '<div class="accSec">Identité de cet appareil</div>' +
-    '<div class="fld"><div style="display:flex;gap:9px">' +
-    '<button class="aBtn ' + (who==='thomas'?'p':'') + '" style="flex:1;padding:11px" data-sw="thomas">Thomas</button>' +
-    '<button class="aBtn ' + (who==='cindy'?'o':'') + '" style="flex:1;padding:11px" data-sw="cindy">Cindy</button>' +
+    '<div class="fld"><div class="tagBox" style="margin:0">Fichier d\'écriture : <b>' + esc(myFile) + '</b>' +
+    (SOLO ? '<br>Compte unique : les deux appareils écrivent dans ce fichier, et tous les fichiers existants restent lus.'
+          : '<br>Chaque appareil écrit dans son propre fichier. Aucune modification ne peut écraser celle de l\'autre.') +
     '</div></div>' +
+
+    (SOLO ? '' :
+      '<div class="accSec">Identité de cet appareil</div>' +
+      '<div class="fld"><div style="display:flex;gap:9px">' +
+      '<button class="aBtn ' + (who==='thomas'?'p':'') + '" style="flex:1;padding:11px" data-sw="thomas">Thomas</button>' +
+      '<button class="aBtn ' + (who==='cindy'?'o':'') + '" style="flex:1;padding:11px" data-sw="cindy">Cindy</button>' +
+      '</div></div>') +
 
     '<div class="accSec">Données</div>' +
     '<button class="accBtn" id="a_bak">Sauvegarder maintenant<span>automatique toutes les 6 h</span></button>' +
@@ -1833,7 +1936,7 @@ function sheetAcc(){
       var w = this.getAttribute('data-sw');
       if(w === who) return;
       who = w;
-      try{ localStorage.setItem('pks_who', w); }catch(e){}
+      try{ localStorage.setItem(LS + 'who', w); }catch(e){}
       savedLots = {}; myFileId = null;
       closeSheet(); boot(); toast('Identité : ' + WHOS[w]);
     };
@@ -1852,7 +1955,7 @@ function sheetAcc(){
   $('k7').onclick = function(){
     confirmBox('Se déconnecter ?', 'Tes données restent sur Drive.', 'Déconnexion', function(){
       if(token) google.accounts.oauth2.revoke(token, function(){});
-      try{ localStorage.removeItem('pks_tk'); localStorage.removeItem(cacheKey()); }catch(e){}
+      try{ localStorage.removeItem(LS + 'tk'); localStorage.removeItem(cacheKey()); }catch(e){}
       clearInterval(pollTimer); clearTimeout(refreshTimer);
       booted = false;
       token = null; lots = []; savedLots = {};
@@ -1974,7 +2077,7 @@ document.addEventListener('click', function(e){
     var v2 = gb.getAttribute('data-gb');
     if(v2 !== groupBy){
       groupBy = v2;
-      try{ localStorage.setItem('pks_group', v2); }catch(err){}
+      try{ localStorage.setItem(LS + 'group', v2); }catch(err){}
       render();
     }
     return;
@@ -1992,17 +2095,18 @@ document.addEventListener('click', function(e){
     var k = s.getAttribute('data-sort');
     if(k === sortKey) sortDir = -sortDir;
     else { sortKey = k; sortDir = (k === 'alpha') ? 1 : -1; }
-    try{ localStorage.setItem('pks_sort', JSON.stringify({ k: sortKey, d: sortDir })); }catch(err){}
+    try{ localStorage.setItem(LS + 'sort', JSON.stringify({ k: sortKey, d: sortDir })); }catch(err){}
     render();
     return;
   }
-  var t = e.target.closest('[data-open],[data-mv],[data-list],[data-sell],[data-again],[data-tag],[data-ship]');
+  var t = e.target.closest('[data-open],[data-mv],[data-list],[data-sell],[data-again],[data-tag],[data-pk]');
   if(!t) return;
   var v;
   if((v = t.getAttribute('data-open'))){ sheetEdit(v); return; }
   if((v = t.getAttribute('data-list'))){ sheetList(v); return; }
   if((v = t.getAttribute('data-sell'))){ sheetSell(v); return; }
   if((v = t.getAttribute('data-again'))){ sheetAgain(v); return; }
+  if((v = t.getAttribute('data-pk'))){ sheetPick(v); return; }
   if((v = t.getAttribute('data-tag'))){
     var lt = lots.filter(function(x){ return x.id === v; })[0];
     if(lt) copyTags(lt);
@@ -2018,15 +2122,6 @@ document.addEventListener('click', function(e){
     toast(p[1] === 'pret' ? 'Lot prêt' : 'Marqué expédié');
     return;
   }
-  if((v = t.getAttribute('data-ship'))){
-    var ids = v.split(',');
-    for(var i=0;i<ids.length;i++){
-      var ll = lots.filter(function(x){ return x.id === ids[i]; })[0];
-      if(ll){ ll.st = 'expedie'; ll.dtExp = now(); commit(ll); }
-    }
-    toast('Commande expédiée');
-    return;
-  }
 });
 
 var navs = document.querySelectorAll('.nv');
@@ -2036,6 +2131,8 @@ for(var n=0;n<navs.length;n++){
     this.classList.add('on');
     tab = this.getAttribute('data-t');
     boxFilter = null;
+    if(tab !== 'stock') stkJournal = false;
+    if(tab !== 'stock' && stkSet){ stkSet = null; stkQry = ''; if(history.state && history.state.d === 3) history.back(); }
     $('fab').classList.toggle('hide', tab !== 'vitrine' && tab !== 'afaire');
     $('q').value = '';
     window.scrollTo(0,0);
@@ -2065,6 +2162,9 @@ window.addEventListener('popstate', function(){
   if($('cfm').classList.contains('on')){ closeCfm(); history.pushState({d:1},''); return; }
   if(sheetOpen){ closeSheet(); history.pushState({d:1},''); return; }
   if(query()){ $('q').value = ''; render(); history.pushState({d:1},''); return; }
+  if(history.state && history.state.d === 3) return;           /* retour sur la grille depuis un panneau */
+  if(tab === 'stock' && stkJournal){ stkJournal = false; window.scrollTo(0,0); render(); return; }
+  if(tab === 'stock' && stkSet){ stkSet = null; stkQry = ''; window.scrollTo(0,0); render(); return; }
 });
 var _open = openSheet;
 openSheet = function(h){ _open(h); history.pushState({ d:1 }, ''); };
@@ -2086,22 +2186,1056 @@ window.addEventListener('load', function(){
   s.onload = function(){
     initGis();
     var st = null;
-    try{ st = JSON.parse(localStorage.getItem('pks_tk') || 'null'); }catch(e){}
+    try{ st = JSON.parse(localStorage.getItem(LS + 'tk') || 'null'); }catch(e){}
     if(st && st.t && st.e > Date.now() + 60000){
       token = st.t; tokenExp = st.e;
       start();
       return;
     }
-    var w = null;
-    try{ w = localStorage.getItem('pks_who'); }catch(e){}
+    var w = SOLO;
+    if(!w){ try{ w = localStorage.getItem(LS + 'who'); }catch(e){} }
     if(w && WHOS[w]){
       start();
       setTimeout(reauth, 150);
     }
   };
   document.head.appendChild(s);
-  if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+  if('serviceWorker' in navigator){
+    /* un nouveau service worker prend la main : recharger une fois pour afficher
+       la nouvelle version. hadCtrl evite de recharger a la toute premiere visite,
+       ou clients.claim() declenche aussi cet evenement. */
+    var hadCtrl = !!navigator.serviceWorker.controller, swReloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function(){
+      if(!hadCtrl || swReloaded || sheetOpen) return;
+      swReloaded = true;
+      location.reload();
+    });
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(function(reg){
+      reg.update();
+      document.addEventListener('visibilitychange', function(){
+        if(document.visibilityState === 'visible') reg.update();
+      });
+    }).catch(function(){});
+  }
 });
+
+/* ===================== MODULE STOCK ===================== */
+var STK_FILE = 'pkstk.json';
+var MV_FILE  = 'pkstkmv.json';   /* journal a part : il grossit sans fin, le stock non */
+var MV_CAP   = 4000;             /* mouvements conserves */
+var CARDS_VER = '5';   /* fichiers cards/ et pks_names.json */
+var SETS_VER  = '6';   /* pks_sets.json seul, pour ne pas invalider les cartes deja en cache */
+var VAR_LBL = { n:'Norm', r:'Rev', h:'Holo' };
+var VAR_FULL = { n:'Normale', r:'Reverse', h:'Holo' };
+var VAR_BIT = { n:1, r:2, h:4 };
+var ETS = [['nm','Near Mint'],['jo','Joué'],['ab','Abîmé']];
+var ET_LBL = { nm:'NM', jo:'Joué', ab:'Abîmé' };
+
+var cdb = null, cdbById = {};
+var stock = {}, stkOv = {}, stkMoves = [], stkRev = 0;
+var mvNew = [], mvCount = 0, mvFileId = null, mvLoaded = false, mvTimer = null, mvSaving = false;
+var stkFileId = null, stkBaseRev = 0, stkPending = [];
+var stkTimer = null, stkSaving = false, stkLoaded = false;
+var stkSet = null, stkLp = null, stkLpFired = false;
+var stkArr = [], stkQry = '', stkJournal = false;
+var mvFilt = localStorage.getItem(LS + 'mvf') || 'lot';   /* all | lot */
+var stkFilt = localStorage.getItem(LS + 'filt') || 'all';   /* all | has | none */
+var stkTri  = localStorage.getItem(LS + 'tri')  || 'num';   /* num | qty */
+
+function stkKey(id, v, e){ return id + '|' + v + '|' + e; }
+function stkQ(id, v, e){ return stock[stkKey(id, v, e)] || 0; }
+function stkVarQ(id, v){ var t = 0; for(var i=0;i<ETS.length;i++) t += stkQ(id, v, ETS[i][0]); return t; }
+function stkCardQ(id){ return stkVarQ(id,'n') + stkVarQ(id,'r') + stkVarQ(id,'h'); }
+
+function stkVars(c){
+  var m = (stkOv[c.i] != null) ? stkOv[c.i] : c.v, r = [];
+  if(m & 1) r.push('n');
+  if(m & 2) r.push('r');
+  if(m & 4) r.push('h');
+  return r.length ? r : ['n'];
+}
+
+/* ---- base de cartes : liste des extensions d'abord, cartes a la demande ---- */
+var setCards = {}, nameIdx = null, cdbP = null, nameP = null, setP = {};
+
+function jgetv(u, v){ return fetch(u + '?v=' + v).then(function(r){
+  if(!r.ok) throw new Error('http ' + r.status); return r.json(); }); }
+function jget(u){ return jgetv(u, CARDS_VER); }
+
+/* sous-extensions (Galeries des Dresseurs, Galerie de Galar, coffres brillants) :
+   pokemontcg.io en fait des extensions a part, alors qu'elles sont physiquement
+   rangees avec leur extension parente. On les fusionne a l'affichage. */
+function subsOf(sid){
+  var r = [];
+  if(!cdb) return r;
+  for(var i=0;i<cdb.sets.length;i++) if(cdb.sets[i].parent === sid) r.push(cdb.sets[i].id);
+  return r;
+}
+function rootSet(sid){
+  var s = setInfo(sid);
+  return (s && s.parent) ? s.parent : sid;
+}
+
+function cdbLoad(){
+  if(cdbP) return cdbP;
+  cdbP = jgetv('./pks_sets.json', SETS_VER).then(function(j){
+    cdb = j; cdbById = {};
+    return j;
+  }).catch(function(e){ cdbP = null; toast('Liste des extensions introuvable'); throw e; });
+  return cdbP;
+}
+function setLoad(sid){
+  if(setCards[sid]) return Promise.resolve(setCards[sid]);
+  if(setP[sid]) return setP[sid];
+  setP[sid] = jget('./cards/' + sid + '.json').then(function(arr){
+    setCards[sid] = arr;
+    for(var i=0;i<arr.length;i++) cdbById[arr[i].i] = arr[i];
+    delete setP[sid];
+    return arr;
+  }).catch(function(e){ delete setP[sid]; toast('Extension indisponible'); throw e; });
+  return setP[sid];
+}
+function namesLoad(){
+  if(nameIdx) return Promise.resolve(nameIdx);
+  if(nameP) return nameP;
+  nameP = jget('./pks_names.json').then(function(j){ nameIdx = j; return j; })
+    .catch(function(e){ nameP = null; toast('Index de recherche indisponible'); throw e; });
+  return nameP;
+}
+function setInfo(sid){
+  if(!cdb) return null;
+  for(var i=0;i<cdb.sets.length;i++) if(cdb.sets[i].id === sid) return cdb.sets[i];
+  return null;
+}
+/* depuis Ecarlate et Violet, le symbole de l'extension porte deja son abreviation :
+   inutile de la repeter a cote du nom */
+var SYM_HAS_CODE = { 'Écarlate et Violet':1, 'Méga-Évolution':1 };
+function codeHtml(st){
+  if(!st || !st.code) return '';
+  if(SYM_HAS_CODE[st.serie] || (st.date && st.date >= '2023-03-31')) return '';
+  return '<span class="scode">' + esc(st.code) + '</span>';
+}
+/* symbole d'extension : essaie les sources dans l'ordre, pokemontcg.io en dernier */
+function symHtml(st, cls){
+  var l = st.syms || [];
+  if(!l.length) return '<span class="sfb ' + (cls||'') + '">' + esc((st.code || '?').slice(0,3)) + '</span>';
+  return '<img class="ssym ' + (cls||'') + '" loading="lazy" src="' + esc(l[0]) + '" alt="" ' +
+         'data-sy="' + esc(JSON.stringify(l)) + '" data-syi="0" data-code="' + esc(st.code || '') + '" onerror="symNext(this)">';
+}
+function symNext(img){
+  var l; try{ l = JSON.parse(img.getAttribute('data-sy')); }catch(e){ l = []; }
+  var i = parseInt(img.getAttribute('data-syi'), 10) + 1;
+  if(i < l.length){ img.setAttribute('data-syi', i); img.src = l[i]; return; }
+  var fb = document.createElement('span');
+  fb.className = 'sfb';
+  fb.textContent = (img.getAttribute('data-code') || '?').slice(0,3);
+  img.replaceWith(fb);
+}
+/* Visuels de cartes : chaine de sources.
+   TCGdex d'abord quand la base le fournit, puis pokemontcg.io, qui couvre
+   les sous-extensions (Galeries des Dresseurs, coffres brillants) pour
+   lesquelles la base n'a aucune URL. */
+function ptcgImg(c, big){
+  if(!c || !c.s || c.u == null) return '';
+  return 'https://images.pokemontcg.io/' + c.s + '/' + c.u + (big ? '_hires' : '') + '.png';
+}
+function cardSrcs(c, big){
+  var l = [];
+  if(c.g) l.push(c.g + (big ? '/high.webp' : '/low.webp'));
+  if(c.g && big) l.push(c.g + '/low.webp');
+  var pt = ptcgImg(c, big);
+  if(pt) l.push(pt);
+  if(big){ var pl = ptcgImg(c, false); if(pl) l.push(pl); }
+  return l;
+}
+function cdbImg(c){ return cardSrcs(c, false)[0] || ''; }
+function cdbImgBig(c){ return cardSrcs(c, true)[0] || ''; }
+
+/* balise image a sources multiples : passe a la suivante en cas d'echec */
+function cardImg(c, cls, big){
+  var l = cardSrcs(c, big);
+  if(!l.length) return '<span class="' + (cls || '') + '"></span>';
+  return '<img class="' + (cls || '') + '" loading="lazy" src="' + esc(l[0]) + '" alt="" ' +
+         'data-cs="' + esc(JSON.stringify(l)) + '" data-ci="0" onerror="cardImgErr(this)">';
+}
+function cardImgErr(img){
+  var l; try{ l = JSON.parse(img.getAttribute('data-cs') || '[]'); }catch(e){ l = []; }
+  var i = parseInt(img.getAttribute('data-ci') || '0', 10) + 1;
+  if(i < l.length){ img.setAttribute('data-ci', i); img.src = l[i]; return; }
+  img.classList.add('gone');
+  img.style.visibility = 'hidden';
+}
+
+
+/* ---- persistance Drive ---- */
+async function stkFind(){
+  var url = 'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&pageSize=50&fields=files(id,name)&q=' +
+    encodeURIComponent("name = '" + STK_FILE + "' and trashed=false");
+  var r = await api(url);
+  var j = await r.json();
+  return (j.files && j.files[0]) ? j.files[0].id : null;
+}
+function stkApply(data){
+  stock = (data && data.stock) || {};
+  stkOv = (data && data.ov) || {};
+  stkRev = (data && data.rev) || 0;
+  mvCount = (data && data.mvCount) || 0;
+  stkBaseRev = stkRev;
+  /* migration : un ancien fichier porte encore le journal, on le bascule */
+  if(data && data.moves && data.moves.length){
+    mvNew = data.moves.concat(mvNew);
+    mvCount = Math.max(mvCount, data.moves.length);
+    mvQueue();
+  }
+}
+async function stkLoad(){
+  if(stkLoaded) return;
+  try{
+    stkFileId = await stkFind();
+    if(stkFileId){
+      var r = await api('https://www.googleapis.com/drive/v3/files/' + stkFileId + '?alt=media');
+      stkApply(await r.json());
+    }
+    stkLoaded = true;
+  }catch(e){ toast('Stock : lecture impossible'); }
+}
+function stkBody(){
+  return JSON.stringify({ rev: stkRev, stock: stock, ov: stkOv, mvCount: mvCount, at: now(), v: APP_VERSION });
+}
+async function stkWrite(){
+  var meta = { name: STK_FILE, parents: ['appDataFolder'] };
+  var fd = new FormData();
+  if(!stkFileId){
+    fd.append('metadata', new Blob([JSON.stringify(meta)], { type:'application/json' }));
+    fd.append('file', new Blob([stkBody()], { type:'application/json' }));
+    var r = await api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method:'POST', body: fd });
+    stkFileId = (await r.json()).id;
+  } else {
+    await api('https://www.googleapis.com/upload/drive/v3/files/' + stkFileId + '?uploadType=media', {
+      method:'PATCH', headers:{ 'Content-Type':'application/json' }, body: stkBody()
+    });
+  }
+}
+/* garde-fou : si le fichier a bougé ailleurs, on rejoue nos mouvements dessus */
+async function stkSave(){
+  if(stkSaving || !stkPending.length) return;
+  stkSaving = true; setSync('busy');
+  try{
+    if(stkFileId){
+      var r = await api('https://www.googleapis.com/drive/v3/files/' + stkFileId + '?alt=media');
+      var rem = await r.json().catch(function(){ return null; });
+      if(rem && (rem.rev || 0) !== stkBaseRev){
+        var mine = stkPending.slice();
+        stkApply(rem);
+        for(var i=0;i<mine.length;i++){
+          var m = mine[i], k = stkKey(m.c, m.v, m.e);
+          stock[k] = Math.max(0, (stock[k] || 0) + m.d);
+          stkMoves.push(m);
+        }
+        toast('Stock fusionné avec l\'autre appareil');
+      }
+    }
+    stkRev = stkBaseRev + 1;
+    await stkWrite();
+    stkBaseRev = stkRev;
+    stkPending = [];
+    setSync('ok');
+  }catch(e){ setSync('err'); toast('Stock non sauvegardé'); }
+  stkSaving = false;
+  if(stkPending.length) stkQueue();
+}
+function stkQueue(){ clearTimeout(stkTimer); stkTimer = setTimeout(stkSave, 2500); }
+
+/* ---- journal : fichier separe, ecrit plus rarement ---- */
+async function mvFind(){
+  var url = 'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&pageSize=10&fields=files(id,name)&q=' +
+    encodeURIComponent("name = '" + MV_FILE + "' and trashed=false");
+  var r = await api(url);
+  var j = await r.json();
+  return (j.files && j.files[0]) ? j.files[0].id : null;
+}
+async function mvLoad(){
+  if(mvLoaded) return stkMoves;
+  var base = [];
+  try{
+    if(!mvFileId) mvFileId = await mvFind();
+    if(mvFileId){
+      var r = await api('https://www.googleapis.com/drive/v3/files/' + mvFileId + '?alt=media');
+      var j = await r.json();
+      base = (j && j.moves) || [];
+    }
+  }catch(e){ toast('Journal : lecture impossible'); }
+  /* mvNew contient ce qui n'est pas encore ecrit : eviter de le compter deux fois */
+  var seen = {};
+  for(var i=0;i<base.length;i++) seen[base[i].t + '|' + base[i].c + '|' + base[i].d] = 1;
+  var add = mvNew.filter(function(m){ return !seen[m.t + '|' + m.c + '|' + m.d]; });
+  stkMoves = base.concat(add);
+  stkMoves.sort(function(a, b){ return a.t - b.t; });
+  mvCount = Math.max(mvCount, stkMoves.length);
+  mvLoaded = true;
+  return stkMoves;
+}
+async function mvSave(){
+  if(mvSaving || !mvNew.length) return;
+  mvSaving = true;
+  var envoi = mvNew.slice();
+  try{
+    if(!mvFileId) mvFileId = await mvFind();
+    var base = [];
+    if(mvFileId){
+      try{
+        var r = await api('https://www.googleapis.com/drive/v3/files/' + mvFileId + '?alt=media');
+        var j = await r.json();
+        base = (j && j.moves) || [];
+      }catch(e){ base = []; }
+    }
+    var seen = {};
+    for(var i=0;i<base.length;i++) seen[base[i].t + '|' + base[i].c + '|' + base[i].d] = 1;
+    for(var k=0;k<envoi.length;k++){
+      var key = envoi[k].t + '|' + envoi[k].c + '|' + envoi[k].d;
+      if(!seen[key]){ base.push(envoi[k]); seen[key] = 1; }
+    }
+    base.sort(function(a, b){ return a.t - b.t; });
+    if(base.length > MV_CAP) base = base.slice(-MV_CAP);
+    var body = JSON.stringify({ moves: base, at: now(), v: APP_VERSION });
+    if(!mvFileId){
+      var fd = new FormData();
+      fd.append('metadata', new Blob([JSON.stringify({ name: MV_FILE, parents: ['appDataFolder'] })], { type:'application/json' }));
+      fd.append('file', new Blob([body], { type:'application/json' }));
+      var rr = await api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method:'POST', body: fd });
+      mvFileId = (await rr.json()).id;
+    } else {
+      await api('https://www.googleapis.com/upload/drive/v3/files/' + mvFileId + '?uploadType=media', {
+        method:'PATCH', headers:{ 'Content-Type':'application/json' }, body: body
+      });
+    }
+    mvNew = mvNew.slice(envoi.length);
+    mvCount = base.length + mvNew.length;
+    if(mvLoaded){ stkMoves = base.concat(mvNew); }
+  }catch(e){ /* on retentera : mvNew est conserve */ }
+  mvSaving = false;
+  if(mvNew.length) mvQueue();
+}
+function mvQueue(){ clearTimeout(mvTimer); mvTimer = setTimeout(mvSave, 20000); }
+
+function stkAdd(id, v, e, d, src){
+  var k = stkKey(id, v, e), cur = stock[k] || 0, nv = Math.max(0, cur + d);
+  if(nv === cur) return false;
+  stock[k] = nv;
+  if(!nv) delete stock[k];
+  var mv = { t: now(), c: id, v: v, e: e, d: nv - cur, w: who || '', s: src || 'saisie' };
+  stkPending.push(mv);
+  mvNew.push(mv); mvCount++;
+  if(mvLoaded) stkMoves.push(mv);
+  stkQueue(); mvQueue();
+  return true;
+}
+function stkSetOv(id, mask){
+  if(mask) stkOv[id] = mask; else delete stkOv[id];
+  stkQueue();
+}
+
+/* ---- rendu ---- */
+async function renderStock(){
+  if(!cdb){
+    $('view').innerHTML = '<div class="ph">Chargement des extensions…</div>';
+    try{ await cdbLoad(); }catch(e){ $('view').innerHTML = empty(EMPTY_CMD, 'Liste des extensions indisponible.'); return; }
+  }
+  if(!stkLoaded) await stkLoad();
+  if(stkJournal) return stkRenderJournal();
+  if(stkSet) return stkRenderGrid();      /* la recherche se fait dans l'extension */
+  var q = query();
+  if(q) return stkRenderSearch(q);
+  stkRenderSets();
+}
+
+function stkRenderSets(){
+  var tot = 0, uniq = 0;
+  for(var k in stock){ tot += stock[k]; uniq++; }
+  var per = {};
+  for(var k2 in stock){
+    var p = k2.split('|')[0], dash = p.lastIndexOf('-');
+    var sid = dash > 0 ? p.slice(0, dash) : p;
+    per[sid] = (per[sid] || 0) + stock[k2];
+  }
+  var h = '<div class="stkTot"><div><span>Cartes en stock</span><b>' + tot + '</b></div>' +
+          '<div><span>Lignes</span><b>' + uniq + '</b></div></div>';
+  h += '<div class="stkJB" data-stkj="1">' +
+       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
+       '<path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>' +
+       'Mouvements de stock<span class="jc">' + (mvLoaded ? stkMoves.length : mvCount) + '</span></div>';
+  /* reporter le stock des sous-extensions sur leur parent */
+  for(var sk in per){
+    var rt = rootSet(sk);
+    if(rt !== sk){ per[rt] = (per[rt] || 0) + per[sk]; per[sk] = 0; }
+  }
+  var cur = null;
+  for(var i=0;i<cdb.sets.length;i++){
+    var st = cdb.sets[i];
+    if(st.parent) continue;                 /* fusionnee dans son parent */
+    var n = per[st.id] || 0;
+    if(st.serie !== cur){ cur = st.serie; h += '<div class="stkSerie">' + esc(cur) + '</div>'; }
+    h += '<div class="stkSet" data-stkset="' + esc(st.id) + '">' + symHtml(st) +
+         '<div class="sinfo"><b>' + esc(st.name) + '</b>' + codeHtml(st) + '</div>' +
+         '<span class="sc' + (n ? '' : ' z') + '">' + (n ? n : '—') + '</span></div>';
+  }
+  $('view').innerHTML = h;
+}
+
+/* compteurs de variantes, partages entre la grille et les resultats de recherche */
+function stkChips(c){
+  var vs = stkVars(c), solo = vs.length === 1, out = '';
+  for(var i=0;i<vs.length;i++){
+    var q = stkVarQ(c.i, vs[i]);
+    out += '<div class="stkV ' + (q ? 'on' : 'q0') + (solo ? ' solo' : '') + '" data-stkv="' + esc(c.i) + '|' + vs[i] + '">' +
+           (solo ? '' : '<span class="vl">' + VAR_LBL[vs[i]] + '</span>') +
+           '<span class="vq">' + q + '</span></div>';
+  }
+  return out;
+}
+function stkTile(c){
+  var vs = stkVars(c), h = '';
+  h += '<div class="stkC' + (stkCardQ(c.i) ? ' has' : '') + '" data-stkid="' + esc(c.i) + '">';
+  h += '<div class="im">' + cardImg(c, '') +
+       '<span class="nu">' + esc(c.u) + '</span>' + (c.d ? '<span class="stkDot" title="variante déduite"></span>' : '') + '</div>';
+  h += '<div class="na">' + esc(c.n) + '</div><div class="vs">' + stkChips(c);
+  return h + '</div></div>';
+}
+
+async function stkRenderGrid(){
+  var s = setInfo(stkSet), sid = stkSet;
+  var ico = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>';
+  function head(sub){
+    return '<div class="stkBar"><button class="stkBack" data-stkback="1" aria-label="Retour">' + ico + '</button>' +
+           '<div class="stkTit"><span class="th">' + (s ? symHtml(s) : '') + esc(s ? s.name : sid) +
+           codeHtml(s) + '</span>' +
+           '<small>' + sub + '</small></div></div>';
+  }
+  var parts = [sid].concat(subsOf(sid));
+  var todo = parts.filter(function(x){ return !setCards[x]; });
+  if(todo.length){
+    $('view').innerHTML = head('chargement…') + '<div class="ph">Chargement des cartes…</div>';
+    try{ await Promise.all(todo.map(setLoad)); }
+    catch(e){ $('view').innerHTML = head('erreur') + empty(EMPTY_CMD, 'Cartes indisponibles.'); return; }
+    if(stkSet !== sid || tab !== 'stock' || query()) return;   /* l'utilisateur est parti entre-temps */
+  }
+  var arr = [];
+  for(var pi=0;pi<parts.length;pi++) arr = arr.concat(setCards[parts[pi]] || []);
+  var tot = 0, poss = 0;
+  for(var j=0;j<arr.length;j++){ var q = stkCardQ(arr[j].i); tot += q; if(q) poss++; }
+
+  stkArr = arr;
+
+  function seg(attr, val, cur, lbl){
+    return '<button class="' + (cur === val ? 'on' : '') + '" data-' + attr + '="' + val + '">' + lbl + '</button>';
+  }
+  var bar = '<div class="stkFB"><div class="sg">' +
+    seg('stkf','all',stkFilt,'Toutes') + seg('stkf','has',stkFilt,'J\'en ai') + seg('stkf','none',stkFilt,'Manquantes') +
+    '</div><div class="sg">' +
+    seg('stkt','num',stkTri,'N°') + seg('stkt','qty',stkTri,'Quantité') +
+    '</div></div>';
+
+  var srch = '<div class="stkSrch"><input type="search" id="stkq" placeholder="Chercher dans cette extension…"' + noAuto() + ' value="' + esc(stkQry) + '">' +
+             (stkQry ? '<button class="sx" id="stkqx" aria-label="Effacer">×</button>' : '') + '</div>';
+
+  var sub = arr.length + ' cartes · ' + poss + ' possédées · ' + tot + ' en stock';
+  $('view').innerHTML = head(sub) + srch + bar + '<div id="stkgrid"></div>';
+  stkGridFill();
+
+  var inp = $('stkq');
+  if(inp){
+    inp.oninput = function(){
+      clearTimeout(inp._t);
+      inp._t = setTimeout(function(){
+        stkQry = inp.value;
+        stkGridFill();
+        var x = $('stkqx');
+        if(stkQry && !x){
+          var b = document.createElement('button');
+          b.className = 'sx'; b.id = 'stkqx'; b.textContent = '×';
+          b.onclick = stkClearQ;
+          inp.parentNode.appendChild(b);
+        } else if(!stkQry && x) x.remove();
+      }, 200);
+    };
+  }
+  if($('stkqx')) $('stkqx').onclick = stkClearQ;
+}
+
+function stkClearQ(){
+  stkQry = '';
+  var i = $('stkq');
+  if(i) i.value = '';
+  var x = $('stkqx');
+  if(x) x.remove();
+  stkGridFill();
+  if(i) i.focus();
+}
+
+/* recalcule uniquement la grille : le champ de recherche garde le focus */
+function stkGridFill(){
+  var g = $('stkgrid');
+  if(!g) return;
+  var vue = stkArr;
+  if(stkFilt === 'has')  vue = vue.filter(function(c){ return stkCardQ(c.i) > 0; });
+  if(stkFilt === 'none') vue = vue.filter(function(c){ return stkCardQ(c.i) === 0; });
+
+  var q = norm(stkQry || '');
+  if(q){
+    vue = vue.filter(function(c){
+      return norm(c.n).indexOf(q) >= 0 || norm(c.e).indexOf(q) >= 0 ||
+             String(c.u).toLowerCase().indexOf(stkQry.trim().toLowerCase()) === 0;
+    });
+  }
+  if(stkTri === 'qty'){
+    vue = vue.slice().sort(function(a, b){
+      return (stkCardQ(b.i) - stkCardQ(a.i)) || (stkArr.indexOf(a) - stkArr.indexOf(b));
+    });
+  }
+  if(!vue.length){
+    g.innerHTML = '<div class="pkE">' +
+      (q ? 'Aucune carte ne correspond dans cette extension.'
+         : (stkFilt === 'has' ? 'Aucune carte saisie dans cette extension.'
+                              : 'Tu as toutes les cartes de cette extension.')) + '</div>';
+    return;
+  }
+  var h = '<div class="stkGrid">';
+  for(var k=0;k<vue.length;k++) h += stkTile(vue[k]);
+  g.innerHTML = h + '</div>';
+}
+
+async function stkRenderSearch(q){
+  var n = norm(q);
+  if(n.length < 2){ $('view').innerHTML = '<div class="ph">Tape au moins deux lettres.</div>'; return; }
+  if(!nameIdx){
+    $('view').innerHTML = '<div class="ph">Chargement de l\'index…</div>';
+    try{ await namesLoad(); }catch(e){ $('view').innerHTML = empty(EMPTY_CMD, 'Recherche indisponible.'); return; }
+    if(norm(query()) !== n || tab !== 'stock') return;
+  }
+  var ids = [];
+  for(var nm in nameIdx){ if(nm.indexOf(n) >= 0){ ids = ids.concat(nameIdx[nm]); if(ids.length > 900) break; } }
+  if(!ids.length){ $('view').innerHTML = noHit(EMPTY_CMD, 'ce Pokémon'); return; }
+
+  /* ne charger que les extensions reellement concernees */
+  var need = {}, sids = [];
+  for(var i=0;i<ids.length;i++){
+    var d2 = ids[i].lastIndexOf('-'), sid = d2 > 0 ? ids[i].slice(0, d2) : ids[i];
+    if(!need[sid]){ need[sid] = 1; sids.push(sid); }
+  }
+  var missing = sids.filter(function(s){ return !setCards[s]; });
+  if(missing.length){
+    $('view').innerHTML = '<div class="ph">Recherche dans ' + sids.length + ' extensions…</div>';
+    try{ await Promise.all(missing.map(setLoad)); }catch(e){}
+    if(norm(query()) !== n || tab !== 'stock') return;
+  }
+
+  var cards = [];
+  for(var j=0;j<ids.length;j++){ var c = cdbById[ids[j]]; if(c) cards.push(c); }
+  var withQ = cards.filter(function(c){ return stkCardQ(c.i) > 0; });
+  var LIM = 400, coupe = cards.length > LIM;
+  var show = cards.slice(0, LIM);          /* toujours tout, possede ou non */
+  if(!show.length){ $('view').innerHTML = noHit(EMPTY_CMD, 'ce Pokémon'); return; }
+
+  var order = [], grp = {};
+  for(var m=0;m<cdb.sets.length;m++) if(!cdb.sets[m].parent) order.push(cdb.sets[m].id);
+  for(var p=0;p<show.length;p++){
+    var rs = rootSet(show[p].s);
+    (grp[rs] = grp[rs] || []).push(show[p]);
+  }
+  var tot = 0;
+  for(var t=0;t<withQ.length;t++) tot += stkCardQ(withQ[t].i);
+
+  var h;
+  if(withQ.length){
+    h = '<div class="stkTot">' +
+        '<div><span>Trouvées</span><b>' + show.length + '</b></div>' +
+        '<div><span>J\'en ai</span><b>' + withQ.length + '</b></div>' +
+        '<div><span>Exempl.</span><b>' + tot + '</b></div>' +
+        '<div><span>Extensions</span><b>' + Object.keys(grp).length + '</b></div></div>';
+  } else {
+    h = '<div class="stkTot">' +
+        '<div><span>Cartes trouvées</span><b>' + show.length + '</b></div>' +
+        '<div><span>Extensions</span><b>' + Object.keys(grp).length + '</b></div></div>';
+    h += '<div class="stkWarn">Aucun exemplaire en stock pour ce nom.</div>';
+  }
+  if(coupe) h += '<div class="stkWarn">' + cards.length + ' cartes correspondent, seules les ' + LIM + ' premières sont affichées. Affine la recherche.</div>';
+  for(var o=0;o<order.length;o++){
+    var a = grp[order[o]];
+    if(!a) continue;
+    var si = setInfo(order[o]);
+    var sc = si && si.code && !(SYM_HAS_CODE[si.serie] || (si.date && si.date >= '2023-03-31'));
+    h += '<div class="stkSerie">' + esc(si ? si.name : order[o]) + (sc ? ' · ' + esc(si.code) : '') + '</div>';
+    for(var z=0;z<a.length;z++){
+      var c2 = a[z], vs = stkVars(c2), det = [];
+      for(var v=0;v<vs.length;v++){
+        var qq = stkVarQ(c2.i, vs[v]);
+        if(qq) det.push(vs.length === 1 ? ('×' + qq) : (VAR_FULL[vs[v]] + ' ×' + qq));
+      }
+      h += '<div class="stkRow" data-stkid="' + esc(c2.i) + '">' +
+           cardImg(c2, '') +
+           '<div class="rt"><b>' + esc(c2.n) + '</b><small>N° ' + esc(c2.u) + (det.length ? ' · ' + esc(det.join(' · ')) : '') + '</small>' +
+           '<div class="rvs">' + stkChips(c2) + '</div></div>' +
+           '<div class="rq">' + stkCardQ(c2.i) + '</div></div>';
+    }
+  }
+  $('view').innerHTML = h;
+}
+
+/* ---- journal des mouvements ---- */
+var SRC_LBL = { saisie:'Saisie', lot:'Mis en lot', retour:'Retour de lot', variante:'Variante' };
+
+async function stkRenderJournal(){
+  var ico = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>';
+  function head(sub){
+    return '<div class="stkBar"><button class="stkBack" data-stkjb="1" aria-label="Retour">' + ico + '</button>' +
+           '<div class="stkTit">Mouvements de stock<small>' + sub + '</small></div></div>';
+  }
+  if(!mvLoaded){
+    $('view').innerHTML = head('chargement…');
+    await mvLoad();
+    if(!stkJournal || tab !== 'stock') return;
+  }
+  if(!stkMoves.length){
+    $('view').innerHTML = head('aucun mouvement') + '<div class="pkE">Rien n\'a encore été saisi.</div>';
+    return;
+  }
+
+  var LIM = 300;
+  var nLot = 0;
+  for(var z=0;z<stkMoves.length;z++) if(stkMoves[z].s === 'lot' || stkMoves[z].s === 'retour') nLot++;
+
+  var src = (mvFilt === 'lot')
+    ? stkMoves.filter(function(m){ return m.s === 'lot' || m.s === 'retour'; })
+    : stkMoves;
+  var list = src.slice(-LIM).reverse();
+
+  var bar = '<div class="stkFB"><div class="sg">' +
+    '<button class="' + (mvFilt === 'lot' ? 'on' : '') + '" data-mvf="lot">Lots (' + nLot + ')</button>' +
+    '<button class="' + (mvFilt === 'all' ? 'on' : '') + '" data-mvf="all">Tout (' + stkMoves.length + ')</button>' +
+    '</div></div>';
+
+  var keys = list.map(function(m){ return m.c; });
+  $('view').innerHTML = head('chargement…') + bar;
+  await ensureCards(keys);
+  if(!stkJournal || tab !== 'stock') return;
+
+  var sub = src.length + ' mouvement' + (src.length > 1 ? 's' : '');
+  if(src.length > LIM) sub += ' · ' + LIM + ' derniers affichés';
+  var h = head(sub) + bar, jour = null;
+
+  if(!list.length){
+    $('view').innerHTML = h + '<div class="pkE">Aucun mouvement lié à un lot pour l\'instant. Les cartes piochées ou remises apparaîtront ici.</div>';
+    return;
+  }
+
+  for(var i=0;i<list.length;i++){
+    var m = list[i], c = cdbById[m.c];
+    var d = new Date(m.t), j = dt(m.t);
+    if(j !== jour){ jour = j; h += '<div class="stkJD">' + esc(j) + '</div>'; }
+
+    var vs = c ? stkVars(c) : [];
+    var det = [];
+    if(vs.length > 1 && VAR_FULL[m.v]) det.push(VAR_FULL[m.v]);
+    if(m.e && m.e !== 'nm') det.push(ET_LBL[m.e] || m.e);
+    var si = c ? setInfo(rootSet(c.s)) : null;
+    if(si) det.push(si.name);
+    if(m.s && SRC_LBL[m.s]) det.push(SRC_LBL[m.s]);
+
+    var hh = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+    h += '<div class="stkMv">' +
+         '<span class="d ' + (m.d > 0 ? 'p' : 'm') + '">' + (m.d > 0 ? '+' : '') + m.d + '</span>' +
+         '<span class="mt"><b>' + esc(c ? c.n : m.c) + (c ? ' <span style="color:var(--tx3);font-weight:600">n° ' + esc(c.u) + '</span>' : '') + '</b>' +
+         '<small>' + esc(det.join(' · ')) + '</small></span>' +
+         '<span class="mh">' + hh + (m.w ? ' · ' + esc(m.w) : '') + '</span></div>';
+  }
+  $('view').innerHTML = h;
+}
+
+/* ---- panneau détail carte ---- */
+function sheetStkCard(id){
+  var c = cdbById[id];
+  if(!c) return;
+  var vs = stkVars(c), all = ['n','r','h'];
+  var h = '<h3>' + esc(c.n) + '</h3><p class="sub">N° ' + esc(c.u) + ' · ' + esc(c.r || '—') + '</p>';
+  var big = cardSrcs(c, true);
+  if(big.length) h += '<img class="shImg" src="' + esc(big[0]) + '" alt="" ' +
+      'data-cs="' + esc(JSON.stringify(big)) + '" data-ci="0" onerror="cardImgErr(this)" ' +
+      'data-stkzoom="' + esc(c.i) + '">';
+  if(c.d) h += '<div class="stkWarn">Variantes déduites de la rareté, non certifiées par TCGdex. Corrige-les si besoin.</div>';
+  var solo = vs.length === 1;
+  for(var i=0;i<vs.length;i++){
+    var v = vs[i];
+    var vq = stkVarQ(id, v);
+    var canRm = !solo && vq === 0;
+    h += '<div class="shV"><div class="vh"><span>' + (solo ? 'Exemplaires' : VAR_FULL[v]) +
+         '</span><span class="rr"><em>total ' + vq + '</em>' +
+         (canRm ? '<button class="vRm" data-stkrv="' + esc(id) + '|' + v + '" title="Retirer cette variante">×</button>' : '') +
+         '</span></div>';
+    for(var e=0;e<ETS.length;e++){
+      var et = ETS[e][0];
+      h += '<div class="shE"><label>' + esc(ETS[e][1]) + '</label>' +
+           '<button data-stkd="' + esc(id) + '|' + v + '|' + et + '|-1">−</button>' +
+           '<span class="qv" id="sq_' + v + '_' + et + '">' + stkQ(id, v, et) + '</span>' +
+           '<button data-stkd="' + esc(id) + '|' + v + '|' + et + '|1">+</button></div>';
+    }
+    h += '</div>';
+  }
+  if(stkOv[id] != null){
+    h += '<div class="acts" style="margin-bottom:9px"><button class="aBtn" data-stkreset="' + esc(id) + '">Rétablir les variantes d\'origine</button></div>';
+  }
+  var miss = all.filter(function(x){ return vs.indexOf(x) < 0; });
+  if(miss.length){
+    h += '<p class="sub" style="margin-top:4px">Variante manquante ?</p><div class="acts">';
+    for(var m=0;m<miss.length;m++) h += '<button class="aBtn" data-stkav="' + esc(id) + '|' + miss[m] + '">+ ' + VAR_FULL[miss[m]] + '</button>';
+    h += '</div>';
+  }
+  openSheet(h);
+}
+
+/* ---- interactions ---- */
+function stkBind(){
+  var vw = $('view');
+
+  vw.addEventListener('click', function(e){
+    if(tab !== 'stock') return;
+    var t;
+    if((t = e.target.closest('[data-stkback]'))){
+      if(history.state && history.state.d === 3){ history.back(); }
+      else { stkSet = null; window.scrollTo(0,0); render(); }
+      return;
+    }
+    if((t = e.target.closest('[data-stkset]'))){
+      stkSet = t.getAttribute('data-stkset');
+      stkQry = ''; stkJournal = false;
+      history.pushState({ d:3 }, '');
+      window.scrollTo(0,0); render(); return;
+    }
+    if((t = e.target.closest('[data-mvf]'))){
+      mvFilt = t.getAttribute('data-mvf');
+      localStorage.setItem(LS + 'mvf', mvFilt);
+      window.scrollTo(0,0); render(); return;
+    }
+    if((t = e.target.closest('[data-stkj]'))){
+      stkJournal = true; history.pushState({ d:3 }, '');
+      window.scrollTo(0,0); render(); return;
+    }
+    if((t = e.target.closest('[data-stkjb]'))){
+      if(history.state && history.state.d === 3){ history.back(); }
+      else { stkJournal = false; window.scrollTo(0,0); render(); }
+      return;
+    }
+    if((t = e.target.closest('[data-stkf]'))){
+      stkFilt = t.getAttribute('data-stkf');
+      localStorage.setItem(LS + 'filt', stkFilt);
+      var g1 = t.closest('.stkFB');
+      if(g1){ var bs = g1.querySelectorAll('[data-stkf]'); for(var z=0;z<bs.length;z++) bs[z].classList.toggle('on', bs[z].getAttribute('data-stkf') === stkFilt); }
+      stkGridFill(); return;
+    }
+    if((t = e.target.closest('[data-stkt]'))){
+      stkTri = t.getAttribute('data-stkt');
+      localStorage.setItem(LS + 'tri', stkTri);
+      var g2 = t.closest('.stkFB');
+      if(g2){ var bt = g2.querySelectorAll('[data-stkt]'); for(var z2=0;z2<bt.length;z2++) bt[z2].classList.toggle('on', bt[z2].getAttribute('data-stkt') === stkTri); }
+      stkGridFill(); return;
+    }
+    if((t = e.target.closest('[data-stkv]'))){
+      if(stkLpFired){ stkLpFired = false; return; }
+      var p = t.getAttribute('data-stkv').split('|');
+      if(stkAdd(p[0], p[1], 'nm', 1)) stkRefresh(p[0]);
+      return;
+    }
+    if((t = e.target.closest('.stkRow[data-stkid]'))){ sheetStkCard(t.getAttribute('data-stkid')); return; }
+    /* uniquement depuis l'image : un appui sur le nom ou dans un interstice
+       ne doit pas ouvrir la fiche par surprise pendant la saisie */
+    if(e.target.closest('.stkC .im')){
+      var tc = e.target.closest('.stkC[data-stkid]');
+      if(tc){ sheetStkCard(tc.getAttribute('data-stkid')); return; }
+    }
+  });
+
+  /* appui long sur un compteur = -1 */
+  vw.addEventListener('touchstart', function(e){
+    if(tab !== 'stock') return;
+    var t = e.target.closest('[data-stkv]');
+    if(!t) return;
+    stkLpFired = false;
+    clearTimeout(stkLp);
+    stkLp = setTimeout(function(){
+      stkLpFired = true;
+      var p = t.getAttribute('data-stkv').split('|');
+      var et = 'nm';
+      for(var i=0;i<ETS.length;i++) if(stkQ(p[0], p[1], ETS[i][0]) > 0){ et = ETS[i][0]; break; }
+      if(stkAdd(p[0], p[1], et, -1)){ if(navigator.vibrate) navigator.vibrate(18); stkRefresh(p[0]); }
+    }, 420);
+  }, { passive:true });
+  ['touchend','touchmove','touchcancel'].forEach(function(ev){
+    vw.addEventListener(ev, function(){ clearTimeout(stkLp); }, { passive:true });
+  });
+
+  document.addEventListener('click', function(e){
+    var t;
+    if((t = e.target.closest('[data-stkd]'))){
+      var p = t.getAttribute('data-stkd').split('|');
+      if(stkAdd(p[0], p[1], p[2], parseInt(p[3],10))){
+        var q = $('sq_' + p[1] + '_' + p[2]);
+        if(q) q.textContent = stkQ(p[0], p[1], p[2]);
+        var hd = t.closest('.shV');
+        if(hd) hd.querySelector('em').textContent = 'total ' + stkVarQ(p[0], p[1]);
+        stkRefresh(p[0]);
+      }
+      return;
+    }
+    if((t = e.target.closest('[data-stkzoom]'))){
+      var cz = cdbById[t.getAttribute('data-stkzoom')];
+      if(cz && typeof showLightbox === 'function') showLightbox(cdbImgBig(cz));
+      return;
+    }
+    if((t = e.target.closest('[data-stkrv]'))){
+      var pr = t.getAttribute('data-stkrv').split('|');
+      var cr = cdbById[pr[0]];
+      if(!cr) return;
+      var mr = (stkOv[pr[0]] != null) ? stkOv[pr[0]] : cr.v;
+      var nr = mr & ~VAR_BIT[pr[1]];
+      if(!nr) return;                       /* jamais zero variante */
+      stkSetOv(pr[0], nr === cr.v ? 0 : nr);
+      sheetStkCard(pr[0]); stkRefresh(pr[0]);
+      return;
+    }
+    if((t = e.target.closest('[data-stkreset]'))){
+      var ir = t.getAttribute('data-stkreset');
+      stkSetOv(ir, 0);
+      sheetStkCard(ir); stkRefresh(ir);
+      return;
+    }
+    if((t = e.target.closest('[data-stkav]'))){
+      var q2 = t.getAttribute('data-stkav').split('|');
+      var c = cdbById[q2[0]];
+      var cur = (stkOv[q2[0]] != null) ? stkOv[q2[0]] : c.v;
+      var nm2 = cur | VAR_BIT[q2[1]];
+      stkSetOv(q2[0], nm2 === c.v ? 0 : nm2);
+      sheetStkCard(q2[0]);
+      stkRefresh(q2[0]);
+      return;
+    }
+  });
+}
+
+/* met à jour la vignette concernée sans re-rendre toute la grille */
+function stkRefresh(id){
+  var c = cdbById[id];
+  if(!c) return;
+  var el = document.querySelector('.stkC[data-stkid="' + id.replace(/"/g,'') + '"]');
+  if(el){
+    var tmp = document.createElement('div');
+    tmp.innerHTML = stkTile(c);
+    el.replaceWith(tmp.firstChild);
+    return;
+  }
+  var row = document.querySelector('.stkRow[data-stkid="' + id.replace(/"/g,'') + '"]');
+  if(row){
+    var rq = row.querySelector('.rq');
+    if(rq) rq.textContent = stkCardQ(id);
+    var rvs = row.querySelector('.rvs');
+    if(rvs) rvs.innerHTML = stkChips(c);
+    var sm = row.querySelector('.rt small');
+    if(sm){
+      var vs2 = stkVars(c), det2 = [];
+      for(var v2=0;v2<vs2.length;v2++){
+        var q2 = stkVarQ(id, vs2[v2]);
+        if(q2) det2.push(vs2.length === 1 ? ('×' + q2) : (VAR_FULL[vs2[v2]] + ' ×' + q2));
+      }
+      sm.textContent = 'N° ' + c.u + (det2.length ? ' · ' + det2.join(' · ') : '');
+    }
+  }
+}
+
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState !== 'hidden') return;
+  if(stkPending.length){ clearTimeout(stkTimer); stkSave(); }
+  if(mvNew.length){ clearTimeout(mvTimer); mvSave(); }
+});
+
+/* ═══ LIAISON LOTS <-> STOCK ═══
+   Un lot porte un champ optionnel `cards` : { "cardId|variante|etat": quantite }.
+   Champ purement additif : l'ancienne version de l'app le conserve tel quel
+   lors d'un enregistrement, puisque mergeInto garde l'objet entier. */
+
+function lotCards(l){ return (l && l.cards) || {}; }
+function lotCardCount(l){
+  var m = lotCards(l), t = 0;
+  for(var k in m) t += m[k];
+  return t;
+}
+
+/* charge les extensions necessaires pour afficher une liste de cles de stock */
+function keysSets(keys){
+  var seen = {}, out = [];
+  for(var i=0;i<keys.length;i++){
+    var id = keys[i].split('|')[0], d = id.lastIndexOf('-');
+    var sid = d > 0 ? id.slice(0, d) : id;
+    if(!seen[sid]){ seen[sid] = 1; out.push(sid); }
+  }
+  return out;
+}
+async function ensureCards(keys){
+  var sids = keysSets(keys).filter(function(s){ return !setCards[s]; });
+  if(sids.length) { try{ await Promise.all(sids.map(setLoad)); }catch(e){} }
+}
+
+/* ---- deplacements ---- */
+function lotTake(l, key, n){
+  var p = key.split('|');
+  if(n > 0){
+    if(stkQ(p[0], p[1], p[2]) < n) return false;
+    if(!stkAdd(p[0], p[1], p[2], -n, 'lot')) return false;
+    l.cards = l.cards || {};
+    l.cards[key] = (l.cards[key] || 0) + n;
+  } else {
+    var have = (l.cards || {})[key] || 0;
+    var back = Math.min(have, -n);
+    if(!back) return false;
+    stkAdd(p[0], p[1], p[2], back, 'retour');
+    l.cards[key] -= back;
+    if(!l.cards[key]) delete l.cards[key];
+  }
+  return true;
+}
+/* remet tout le contenu d'un lot en stock */
+function lotRestore(l){
+  var m = lotCards(l), n = 0;
+  for(var k in m){
+    var p = k.split('|');
+    stkAdd(p[0], p[1], p[2], m[k], 'retour');
+    n += m[k];
+  }
+  l.cards = {};
+  return n;
+}
+
+/* ---- panneau de selection ---- */
+var pickLot = null;
+
+async function sheetPick(id){
+  var l = lots.filter(function(x){ return x.id === id; })[0];
+  if(!l) return;
+  pickLot = l;
+  openSheet('<div class="shT">Cartes du lot</div><div class="ph">Chargement…</div>');
+  if(!cdb){ try{ await cdbLoad(); }catch(e){} }
+  if(!stkLoaded) await stkLoad();
+  if(!nameIdx){ try{ await namesLoad(); }catch(e){} }
+  pickRender(l.poke || '');
+}
+
+async function pickRender(q){
+  var l = pickLot;
+  if(!l) return;
+  var inLot = lotCards(l);
+  var mine = Object.keys(inLot);
+
+  /* resultats disponibles en stock */
+  var n = norm(q || ''), avail = [];
+  if(n.length >= 2 && nameIdx){
+    var ids = {};
+    for(var nm in nameIdx){
+      if(nm.indexOf(n) < 0) continue;
+      var a = nameIdx[nm];
+      for(var i=0;i<a.length;i++) ids[a[i]] = 1;
+    }
+    for(var k in stock){
+      var cid = k.split('|')[0];
+      if(ids[cid] && stock[k] > 0 && !inLot[k]) avail.push(k);
+    }
+  }
+
+  /* charger les extensions concernees avant d'afficher, sinon pas de nom ni d'image */
+  var all = mine.concat(avail);
+  if(all.length) await ensureCards(all);
+  if(pickLot !== l) return;
+
+  var nb = lotCardCount(l), s = nb > 1 ? 's' : '';
+  var h = '<div class="shT">Cartes du lot</div>' +
+          '<div class="shS">' + esc(lotTitle(l)) + ' — ' + nb + ' carte' + s + ' rattachée' + s + '</div>' +
+          '<div class="fld"><input class="inp" id="f_pick" placeholder="Chercher un Pokémon…" value="' + esc(q || '') + '"' + noAuto() + '></div>';
+
+  if(mine.length) h += '<div class="pkH">Dans ce lot</div>' + pickRows(mine, inLot);
+
+  if(n.length >= 2){
+    h += '<div class="pkH">Disponible en stock</div>';
+    h += avail.length ? pickRows(avail, inLot)
+                      : '<div class="pkE">Aucun exemplaire en stock pour cette recherche.</div>';
+  } else if(!mine.length){
+    h += '<div class="pkE">Tape au moins deux lettres pour chercher dans ton stock.</div>';
+  }
+
+  h += '<div class="shF"><button class="bP" id="k_pk">Terminé</button></div>';
+  if(mine.length) h += '<button class="dgr" id="k_pkr">Tout remettre en stock</button>';
+
+  openSheetKeep(h);
+
+  var inp = $('f_pick');
+  if(inp){
+    inp.oninput = function(){ clearTimeout(inp._t); inp._t = setTimeout(function(){ pickRender(inp.value); }, 260); };
+  }
+  $('k_pk').onclick = function(){ commit(pickLot); pickLot = null; closeSheet(); };
+  if($('k_pkr')) $('k_pkr').onclick = function(){
+    var ll = pickLot;
+    confirmBox('Tout remettre en stock ?',
+      lotCardCount(ll) + ' carte(s) seront recréditées dans ton stock et détachées de ce lot.',
+      'Remettre', function(){
+        var n2 = lotRestore(ll);
+        commit(ll);
+        toast(n2 + ' carte(s) remise(s) en stock');
+        pickRender($('f_pick') ? $('f_pick').value : '');
+      });
+  };
+}
+
+function pickRows(keys, inLot){
+  keys.sort();
+  var h = '';
+  for(var i=0;i<keys.length;i++){
+    var key = keys[i], p = key.split('|');
+    var c = cdbById[p[0]];
+    var vs = c ? stkVars(c) : [p[1]];
+    var vlbl = (vs.length === 1) ? '' : (VAR_FULL[p[1]] || p[1]);
+    var parts = [];
+    if(vlbl) parts.push(vlbl);
+    if(p[2] !== 'nm') parts.push(ET_LBL[p[2]] || p[2]);
+    var si = c ? setInfo(c.s) : null;
+    var sub = (c ? 'N° ' + c.u : '') + (si ? ' · ' + si.name : '') + (parts.length ? ' · ' + parts.join(' ') : '');
+    var dispo = stkQ(p[0], p[1], p[2]);
+    var qte = inLot[key] || 0;
+
+    h += '<div class="pkR">' +
+         (c ? cardImg(c, '') : '<span class="pkNo"></span>') +
+         '<div class="pkT"><b>' + esc(c ? c.n : p[0]) + '</b><small>' + esc(sub) + '</small>' +
+         '<small class="pkD">stock : ' + dispo + '</small></div>' +
+         '<div class="pkC">' +
+         '<button class="pkB" data-pick="' + esc(key) + '|-1"' + (qte ? '' : ' disabled') + '>−</button>' +
+         '<span class="pkQ">' + qte + '</span>' +
+         '<button class="pkB" data-pick="' + esc(key) + '|1"' + (dispo ? '' : ' disabled') + '>+</button>' +
+         '</div></div>';
+  }
+  return h;
+}
+
+/* remplace le contenu du panneau sans reempiler d'etat d'historique */
+function openSheetKeep(html){
+  $('sheet').innerHTML = '<div class="grab"></div>' + html;
+  if(!sheetOpen){ $('ovl').classList.add('on'); sheetOpen = true; }
+}
+
+document.addEventListener('click', function(e){
+  var t = e.target.closest('[data-pick]');
+  if(!t || !pickLot) return;
+  var raw = t.getAttribute('data-pick').split('|');
+  var key = raw[0] + '|' + raw[1] + '|' + raw[2];
+  var d = parseInt(raw[3], 10);
+  if(lotTake(pickLot, key, d)) pickRender($('f_pick') ? $('f_pick').value : '');
+  else toast(d > 0 ? 'Plus d\'exemplaire en stock' : 'Rien à retirer');
+});
+
+stkBind();
 </script>
 </body>
 </html>
