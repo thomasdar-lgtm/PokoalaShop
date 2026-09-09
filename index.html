@@ -486,7 +486,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '3.05';
+var APP_VERSION = '3.06';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -1327,7 +1327,7 @@ function sheetMultiSell(){
   var rows = items.map(function(l){
     return '<div class="msRow"><div class="msNm">' + esc(lotTitle(l)) +
       '<span>' + (num(l.pa) != null ? 'affiché ' + eur(num(l.pa)) : 'sans prix affiché') +
-      (l.boite ? ' · boîte ' + esc(l.boite) : '') + '</span></div>' +
+      '</span></div>' +
       '<input class="msIn" type="number" inputmode="decimal" step="0.5" data-ms="' + l.id + '" value="' +
       (l.pa == null ? '' : l.pa) + '"></div>';
   }).join('');
@@ -1738,8 +1738,6 @@ function sheetEdit(id){
     '<div class="fld"><label class="lbl">Titre de l\'annonce</label><input class="inp" id="f_nom" value="' + esc(l.nom) + '" placeholder="' + esc(lotTitle(l)) + '"></div>' +
     '<div class="row2"><div class="fld"><label class="lbl">Pokémon</label><input class="inp" id="f_poke" value="' + esc(l.poke) + '"></div>' +
     '<div class="fld"><label class="lbl">Nb cartes</label><input class="inp" id="f_nb" type="number" inputmode="numeric" value="' + (l.nb==null?'':l.nb) + '"></div></div>' +
-    '<div class="row2"><div class="fld"><label class="lbl">Boîte</label><input class="inp" id="f_boite" value="' + esc(l.boite) + '"></div>' +
-    '<div class="fld"><label class="lbl">Séparateur</label><input class="inp" id="f_sep" value="' + esc(l.sep) + '"></div></div>' +
     '<div class="row2"><div class="fld"><label class="lbl">Prix affiché</label><input class="inp" id="f_pa" type="number" inputmode="decimal" step="0.5" value="' + (l.pa==null?'':l.pa) + '"></div>' +
     '<div class="fld"><label class="lbl">Prix mini accepté</label><input class="inp" id="f_pm" type="number" inputmode="decimal" step="0.5" value="' + (l.pm==null?'':l.pm) + '"></div></div>' +
     (num(l.pv) != null ? '<div class="fld"><label class="lbl">Prix de vente réel</label><input class="inp" id="f_pv" type="number" inputmode="decimal" step="0.5" value="' + l.pv + '"></div>' : '') +
@@ -1777,8 +1775,6 @@ function sheetEdit(id){
     l.nom = $('f_nom').value.trim();
     l.poke = $('f_poke').value.trim();
     l.nb = parseInt($('f_nb').value,10) || null;
-    l.boite = $('f_boite').value.trim();
-    l.sep = $('f_sep').value.trim();
     l.pa = num($('f_pa').value); l.pm = num($('f_pm').value);
     if($('f_pv')) l.pv = num($('f_pv').value);
     l.acheteur = $('f_ach').value.trim();
@@ -1868,8 +1864,6 @@ function sheetAgain(id){
     '<div class="shT">Refaire un lot ' + esc(src.poke) + '</div>' +
     '<div class="shS">Nouveau lot à préparer. Ajuste le nombre de cartes.</div>' +
     '<div class="row2"><div class="fld"><label class="lbl">Nombre de cartes</label><input class="inp" id="f_nb" type="number" inputmode="numeric" value="' + (src.nb==null?'':src.nb) + '"></div>' +
-    '<div class="fld"><label class="lbl">Boîte</label><input class="inp" id="f_boite" value="' + esc(src.boite) + '"></div></div>' +
-    '<div class="fld"><label class="lbl">Séparateur</label><input class="inp" id="f_sep" value="' + esc(src.sep) + '"></div>' +
     hint +
     '<div class="shF"><button class="bS" id="x5">Annuler</button><button class="bP" id="k5">Ajouter à préparer</button></div>'
   );
@@ -1878,7 +1872,7 @@ function sheetAgain(id){
     var l = {
       id: nid(), poke: src.poke, nom: '',
       nb: parseInt($('f_nb').value,10) || null,
-      boite: $('f_boite').value.trim(), sep: $('f_sep').value.trim(),
+      boite: '', sep: '',
       st: 'afaire', pa: src.pa, pm: src.pm, pv: null,
       acheteur: '', notes: '', photo: null,
       dtCree: now(), dtPret: null, dtListe: null, dtVente: null, dtExp: null

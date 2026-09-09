@@ -1,4 +1,4 @@
-const CACHE_VERSION = '3.05';
+const CACHE_VERSION = '3.06';
 const CACHE_NAME = 'pokoalashop-v' + CACHE_VERSION;
 /* cache non versionne : la base de cartes est versionnee par son URL (?v=N),
    inutile de re-telecharger 2,7 Mo a chaque montee de version */
