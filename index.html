@@ -368,6 +368,10 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 .shE button{width:31px;height:31px;border-radius:8px;border:1px solid var(--bd);background:#0c1428;color:var(--tx);font-size:16px;font-weight:800;cursor:pointer;flex:none;line-height:1}
 .shE .qv{width:30px;text-align:center;font-size:15px;font-weight:900;flex:none}
 .stkWarn{background:rgba(210,153,34,.11);border:1px solid rgba(210,153,34,.34);color:#d29922;border-radius:9px;padding:8px 11px;font-size:11px;font-weight:600;margin-bottom:11px;line-height:1.4}
+.stkTot.clic{cursor:pointer}
+.stkTot.clic:active{background:var(--surf2)}
+.stkTot .go{position:absolute;right:11px;top:11px;color:var(--tx3);font-size:15px;line-height:1}
+.stkTot{position:relative}
 .stkJB{display:flex;align-items:center;gap:8px;background:var(--surf);border:1px solid var(--bd);border-radius:11px;padding:10px 13px;margin-bottom:10px;cursor:pointer;font-size:13px;font-weight:700}
 .stkJB svg{width:17px;height:17px;flex:none;color:var(--tx3)}
 .stkJB .jc{margin-left:auto;color:var(--tx3);font-weight:700;font-size:12px}
@@ -472,7 +476,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '3.02';
+var APP_VERSION = '3.04';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -1048,7 +1052,7 @@ function render(){
   $('s4').textContent = eur0(rev);
   setBadge('nb2', afaire);
   $('stats').classList.toggle('hide', tab !== 'vitrine' && tab !== 'histo');
-  $('srch').classList.toggle('hide', tab === 'stock' && (!!stkSet || stkJournal));
+  $('srch').classList.toggle('hide', tab === 'stock' && (!!stkSet || stkJournal || stkInv));
   $('qClr').classList.toggle('hide', !query());
 
   if(selMode) updateSelBar();
@@ -2128,7 +2132,7 @@ for(var n=0;n<navs.length;n++){
     for(var i=0;i<navs.length;i++) navs[i].classList.remove('on');
     this.classList.add('on');
     tab = this.getAttribute('data-t');
-    if(tab !== 'stock') stkJournal = false;
+    if(tab !== 'stock'){ stkJournal = false; stkInv = false; }
     if(tab !== 'stock' && stkSet){ stkSet = null; stkQry = ''; if(history.state && history.state.d === 3) history.back(); }
     $('fab').classList.toggle('hide', tab !== 'vitrine' && tab !== 'afaire');
     $('q').value = '';
@@ -2160,6 +2164,7 @@ window.addEventListener('popstate', function(){
   if(sheetOpen){ closeSheet(); history.pushState({d:1},''); return; }
   if(query()){ $('q').value = ''; render(); history.pushState({d:1},''); return; }
   if(history.state && history.state.d === 3) return;           /* retour sur la grille depuis un panneau */
+  if(tab === 'stock' && stkInv){ stkInv = false; window.scrollTo(0,0); render(); return; }
   if(tab === 'stock' && stkJournal){ stkJournal = false; window.scrollTo(0,0); render(); return; }
   if(tab === 'stock' && stkSet){ stkSet = null; stkQry = ''; window.scrollTo(0,0); render(); return; }
 });
@@ -2234,7 +2239,7 @@ var mvNew = [], mvCount = 0, mvFileId = null, mvLoaded = false, mvTimer = null, 
 var stkFileId = null, stkBaseRev = 0, stkPending = [];
 var stkTimer = null, stkSaving = false, stkLoaded = false;
 var stkSet = null, stkLp = null, stkLpFired = false;
-var stkArr = [], stkQry = '', stkJournal = false;
+var stkArr = [], stkQry = '', stkJournal = false, stkInv = false;
 var mvFilt = localStorage.getItem(LS + 'mvf') || 'lot';   /* all | lot */
 var stkFilt = localStorage.getItem(LS + 'filt') || 'all';   /* all | has | none */
 var stkTri  = localStorage.getItem(LS + 'tri')  || 'num';   /* num | qty */
@@ -2539,6 +2544,7 @@ async function renderStock(){
     try{ await cdbLoad(); }catch(e){ $('view').innerHTML = empty(EMPTY_CMD, 'Liste des extensions indisponible.'); return; }
   }
   if(!stkLoaded) await stkLoad();
+  if(stkInv) return stkRenderInv();
   if(stkJournal) return stkRenderJournal();
   if(stkSet) return stkRenderGrid();      /* la recherche se fait dans l'extension */
   var q = query();
@@ -2555,8 +2561,28 @@ function stkRenderSets(){
     var sid = dash > 0 ? p.slice(0, dash) : p;
     per[sid] = (per[sid] || 0) + stock[k2];
   }
-  var h = '<div class="stkTot"><div><span>Cartes en stock</span><b>' + tot + '</b></div>' +
-          '<div><span>Lignes</span><b>' + uniq + '</b></div></div>';
+  /* cartes distinctes possedees, et extensions concernees */
+  var vus = {}, exts = {};
+  for(var k3 in stock){
+    if(!stock[k3]) continue;
+    var id3 = k3.split('|')[0];
+    vus[id3] = 1;
+    var d3 = id3.lastIndexOf('-');
+    exts[rootSet(d3 > 0 ? id3.slice(0, d3) : id3)] = 1;
+  }
+  /* cartes actuellement engagees dans des lots non vendus */
+  var enLot = 0;
+  for(var li=0;li<lots.length;li++){
+    var lt = lots[li];
+    if(lt.st === 'vendu' || lt.st === 'expedie') continue;
+    enLot += lotCardCount(lt);
+  }
+
+  var h = '<div class="stkTot clic" data-stkinv="1"><span class="go">›</span>' +
+          '<div><span>Exemplaires</span><b>' + tot + '</b></div>' +
+          '<div><span>Différentes</span><b>' + Object.keys(vus).length + '</b></div>' +
+          '<div><span>Extensions</span><b>' + Object.keys(exts).length + '</b></div>' +
+          '<div><span>En lots</span><b>' + enLot + '</b></div></div>';
   h += '<div class="stkJB" data-stkj="1">' +
        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
        '<path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>' +
@@ -2778,6 +2804,76 @@ async function stkRenderSearch(q){
   $('view').innerHTML = h;
 }
 
+/* ---- inventaire complet : toutes les cartes possedees ---- */
+async function stkRenderInv(){
+  var ico = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>';
+  function head(sub){
+    return '<div class="stkBar"><button class="stkBack" data-stkib="1" aria-label="Retour">' + ico + '</button>' +
+           '<div class="stkTit">Tout mon stock<small>' + sub + '</small></div></div>';
+  }
+  var ids = {}, tot = 0;
+  for(var k in stock){
+    if(!stock[k]) continue;
+    ids[k.split('|')[0]] = 1;
+    tot += stock[k];
+  }
+  var keys = Object.keys(ids);
+  if(!keys.length){
+    $('view').innerHTML = head('vide') + '<div class="pkE">Aucune carte en stock pour l\'instant.</div>';
+    return;
+  }
+
+  $('view').innerHTML = head('chargement…');
+  try{ await ensureCards(keys); }catch(e){}
+  if(!stkInv || tab !== 'stock') return;
+
+  var cards = [];
+  for(var i=0;i<keys.length;i++){ var c = cdbById[keys[i]]; if(c) cards.push(c); }
+
+  var bar = '<div class="stkFB"><div class="sg">' +
+    '<button class="' + (stkTri === 'num' ? 'on' : '') + '" data-stkt="num">Par extension</button>' +
+    '<button class="' + (stkTri === 'qty' ? 'on' : '') + '" data-stkt="qty">Par quantité</button>' +
+    '</div></div>';
+
+  var h = head(cards.length + ' cartes différentes · ' + tot + ' exemplaires') + bar;
+
+  if(stkTri === 'qty'){
+    cards.sort(function(a, b){ return stkCardQ(b.i) - stkCardQ(a.i) || a.n.localeCompare(b.n, 'fr'); });
+    h += invRows(cards);
+  } else {
+    var grp = {};
+    for(var j=0;j<cards.length;j++){
+      var rs = rootSet(cards[j].s);
+      (grp[rs] = grp[rs] || []).push(cards[j]);
+    }
+    for(var s=0;s<cdb.sets.length;s++){
+      var sid = cdb.sets[s].id, a = grp[sid];
+      if(cdb.sets[s].parent || !a) continue;
+      var st = 0;
+      for(var q=0;q<a.length;q++) st += stkCardQ(a[q].i);
+      h += '<div class="stkSerie">' + esc(cdb.sets[s].name) + ' · ' + st + '</div>' + invRows(a);
+    }
+  }
+  $('view').innerHTML = h;
+}
+
+function invRows(arr){
+  var h = '';
+  for(var z=0;z<arr.length;z++){
+    var c = arr[z], vs = stkVars(c), det = [];
+    for(var v=0;v<vs.length;v++){
+      var qq = stkVarQ(c.i, vs[v]);
+      if(qq) det.push(vs.length === 1 ? ('×' + qq) : (VAR_FULL[vs[v]] + ' ×' + qq));
+    }
+    h += '<div class="stkRow" data-stkid="' + esc(c.i) + '">' + cardImg(c, '') +
+         '<div class="rt"><b>' + esc(c.n) + '</b><small>N° ' + esc(c.u) +
+         (det.length ? ' · ' + esc(det.join(' · ')) : '') + '</small>' +
+         '<div class="rvs">' + stkChips(c) + '</div></div>' +
+         '<div class="rq">' + stkCardQ(c.i) + '</div></div>';
+  }
+  return h;
+}
+
 /* ---- journal des mouvements ---- */
 var SRC_LBL = { saisie:'Saisie', lot:'Mis en lot', retour:'Retour de lot', variante:'Variante' };
 
@@ -2903,9 +2999,18 @@ function stkBind(){
     }
     if((t = e.target.closest('[data-stkset]'))){
       stkSet = t.getAttribute('data-stkset');
-      stkQry = ''; stkJournal = false;
+      stkQry = ''; stkJournal = false; stkInv = false;
       history.pushState({ d:3 }, '');
       window.scrollTo(0,0); render(); return;
+    }
+    if((t = e.target.closest('[data-stkinv]'))){
+      stkInv = true; history.pushState({ d:3 }, '');
+      window.scrollTo(0,0); render(); return;
+    }
+    if((t = e.target.closest('[data-stkib]'))){
+      if(history.state && history.state.d === 3){ history.back(); }
+      else { stkInv = false; window.scrollTo(0,0); render(); }
+      return;
     }
     if((t = e.target.closest('[data-mvf]'))){
       mvFilt = t.getAttribute('data-mvf');
@@ -2931,6 +3036,7 @@ function stkBind(){
     if((t = e.target.closest('[data-stkt]'))){
       stkTri = t.getAttribute('data-stkt');
       localStorage.setItem(LS + 'tri', stkTri);
+      if(stkInv){ window.scrollTo(0,0); render(); return; }
       var g2 = t.closest('.stkFB');
       if(g2){ var bt = g2.querySelectorAll('[data-stkt]'); for(var z2=0;z2<bt.length;z2++) bt[z2].classList.toggle('on', bt[z2].getAttribute('data-stkt') === stkTri); }
       stkGridFill(); return;
@@ -3228,9 +3334,22 @@ document.addEventListener('click', function(e){
   var raw = t.getAttribute('data-pick').split('|');
   var key = raw[0] + '|' + raw[1] + '|' + raw[2];
   var d = parseInt(raw[3], 10);
-  if(lotTake(pickLot, key, d)) pickRender($('f_pick') ? $('f_pick').value : '');
+  if(lotTake(pickLot, key, d)){
+    /* enregistrer immediatement : le stock est deja decremente de son cote,
+       si le lot n'est pas ecrit les deux sortent de synchro */
+    commit(pickLot);
+    pickRender($('f_pick') ? $('f_pick').value : '');
+  }
   else toast(d > 0 ? 'Plus d\'exemplaire en stock' : 'Rien à retirer');
 });
+
+/* filet de securite : quel que soit le chemin de fermeture du selecteur
+   (bouton Termine, retour Android, appui hors du panneau), le lot est ecrit */
+var _closeSheetPick = closeSheet;
+closeSheet = function(){
+  if(pickLot){ commit(pickLot); pickLot = null; }
+  _closeSheetPick();
+};
 
 stkBind();
 </script>
