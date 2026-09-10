@@ -564,7 +564,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '3.24';
+var APP_VERSION = '3.26';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2404,8 +2404,10 @@ window.addEventListener('online', function(){
 })();
 
 /* ===================== MODULE STOCK ===================== */
-var STK_FILE = 'pkstk.json';
-var MV_FILE  = 'pkstkmv.json';   /* journal a part : il grossit sans fin, le stock non */
+var STK_PREFIX = 'pkstk_';        /* un fichier de stock par appareil */
+var STK_LEGACY = 'pkstk.json';    /* ancien fichier unique : lu, jamais reecrit */
+var MV_PREFIX  = 'pkstkmv_';      /* journal a part : il grossit sans fin, le stock non */
+var MV_LEGACY  = 'pkstkmv.json';
 var MV_CAP   = 4000;             /* mouvements conserves */
 var CARDS_VER = '5';   /* fichiers cards/ et pks_names.json */
 var SETS_VER  = '6';   /* pks_sets.json seul, pour ne pas invalider les cartes deja en cache */
@@ -2416,9 +2418,11 @@ var ETS = [['nm','Near Mint'],['jo','Joué'],['ab','Abîmé']];
 var ET_LBL = { nm:'NM', jo:'Joué', ab:'Abîmé' };
 
 var cdb = null, cdbById = {};
-var stock = {}, stkOv = {}, stkMoves = [], stkRev = 0;
+var stock = {}, stkOv = {}, stkMoves = [];
+var stkLayers = [];                 /* couches des autres appareils */
+var myDelta = {}, myOv = {}, myDone = {}, myStamp = 0;   /* notre contribution */
 var mvNew = [], mvCount = 0, mvFileId = null, mvLoaded = false, mvTimer = null, mvSaving = false;
-var stkFileId = null, stkBaseRev = 0, stkPending = [];
+var stkFileId = null, stkPending = [];
 var stkTimer = null, stkSaving = false, stkLoaded = false;
 var stkSet = null, stkLp = null, stkLpFired = false;
 var stkArr = [], stkQry = '', stkJournal = false, stkInv = false, stkNever = false;
@@ -2569,36 +2573,97 @@ function cardImgErr(img){
 }
 
 
-/* ---- persistance Drive ---- */
-async function stkFind(){
-  var url = 'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&pageSize=50&fields=files(id,name)&q=' +
-    encodeURIComponent("name = '" + STK_FILE + "' and trashed=false");
+/* ---- persistance Drive : un fichier par appareil ----
+
+   Chaque appareil ecrit UNIQUEMENT son propre fichier, et n'y stocke pas des
+   quantites absolues mais la somme de ses propres gestes. La lecture additionne
+   tous les fichiers. Personne ne peut donc ecraser personne, et l'ordre des
+   enregistrements n'a aucune importance.
+
+   L'ancien fichier unique, s'il existe, est lu comme une couche de base
+   supplementaire et n'est jamais reecrit : rien n'est perdu ni migre.
+
+   Les corrections de variantes et les Pokemon marques « deja fait » ne sont pas
+   des compteurs mais des etats : pour eux, l'ecriture la plus recente gagne. */
+
+function devId(){
+  var d = null;
+  try{ d = localStorage.getItem(LS + 'dev'); }catch(e){}
+  if(!d){
+    d = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    try{ localStorage.setItem(LS + 'dev', d); }catch(e){}
+  }
+  return d;
+}
+var DEV = devId();
+var STK_MINE = STK_PREFIX + DEV + '.json';
+var MV_MINE  = MV_PREFIX  + DEV + '.json';
+
+async function driveList(prefix){
+  var url = 'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&pageSize=100&fields=files(id,name)&q=' +
+    encodeURIComponent("name contains '" + prefix + "' and trashed=false");
+  var r = await api(url);
+  var j = await r.json();
+  return j.files || [];
+}
+async function driveFindExact(nom){
+  var url = 'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&pageSize=10&fields=files(id,name)&q=' +
+    encodeURIComponent("name = '" + nom + "' and trashed=false");
   var r = await api(url);
   var j = await r.json();
   return (j.files && j.files[0]) ? j.files[0].id : null;
 }
-function stkApply(data){
-  stock = (data && data.stock) || {};
-  stkOv = (data && data.ov) || {};
-  stkDone = (data && data.done) || {};
-  for(var dk in doneDirty){ stkDone[dk] = doneDirty[dk]; }   /* nos marquages priment sur le distant */
-  stkRev = (data && data.rev) || 0;
-  mvCount = (data && data.mvCount) || 0;
-  stkBaseRev = stkRev;
-  /* migration : un ancien fichier porte encore le journal, on le bascule */
-  if(data && data.moves && data.moves.length){
-    mvNew = data.moves.concat(mvNew);
-    mvCount = Math.max(mvCount, data.moves.length);
-    mvQueue();
-  }
+async function driveRead(id){
+  var r = await api('https://www.googleapis.com/drive/v3/files/' + id + '?alt=media');
+  if(!r.ok) throw new Error('http ' + r.status);
+  return await r.json();
 }
-/* Cache local du stock : evite d'attendre Drive au premier acces a l'onglet.
-   L'identifiant du fichier est memorise aussi, ce qui supprime la requete
-   de recherche et donc un aller-retour complet. */
+async function driveWrite(id, nom, body){
+  if(!id){
+    var fd = new FormData();
+    fd.append('metadata', new Blob([JSON.stringify({ name: nom, parents: ['appDataFolder'] })], { type:'application/json' }));
+    fd.append('file', new Blob([body], { type:'application/json' }));
+    var r = await api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method:'POST', body: fd });
+    return (await r.json()).id;
+  }
+  await api('https://www.googleapis.com/upload/drive/v3/files/' + id + '?uploadType=media', {
+    method:'PATCH', headers:{ 'Content-Type':'application/json' }, body: body
+  });
+  return id;
+}
+
+/* recompose la vue du stock a partir des couches lues */
+function stkRebuild(){
+  stock = {};
+  for(var i=0;i<stkLayers.length;i++){
+    var d = stkLayers[i].delta || {};
+    for(var k in d) stock[k] = (stock[k] || 0) + d[k];
+  }
+  for(var k2 in myDelta) stock[k2] = (stock[k2] || 0) + myDelta[k2];
+  for(var k3 in stock) if(stock[k3] <= 0) delete stock[k3];
+}
+
+function stkApplyStates(){
+  /* etats : la couche la plus recemment ecrite gagne, la notre en dernier */
+  var best = null;
+  for(var i=0;i<stkLayers.length;i++){
+    var L = stkLayers[i];
+    if(!best || (L.stamp || 0) > (best.stamp || 0)) best = L;
+  }
+  stkOv = (best && best.ov) ? JSON.parse(JSON.stringify(best.ov)) : {};
+  stkDone = (best && best.done) ? JSON.parse(JSON.stringify(best.done)) : {};
+  if(myStamp >= ((best && best.stamp) || 0)){
+    for(var a in myOv) stkOv[a] = myOv[a];
+    for(var b in myDone){ if(myDone[b]) stkDone[b] = 1; else delete stkDone[b]; }
+  }
+  for(var dk in doneDirty){ if(doneDirty[dk]) stkDone[dk] = 1; else delete stkDone[dk]; }
+}
+
 function stkSaveCache(){
   try{
     localStorage.setItem(LS + 'stkc', JSON.stringify({
-      rev: stkRev, stock: stock, ov: stkOv, done: stkDone, mvCount: mvCount, id: stkFileId
+      layers: stkLayers, delta: myDelta, ov: myOv, done: myDone, stamp: myStamp,
+      mvCount: mvCount, id: stkFileId
     }));
   }catch(e){ /* quota plein : on s'en passe */ }
 }
@@ -2607,89 +2672,91 @@ function stkLoadCache(){
     var c = JSON.parse(localStorage.getItem(LS + 'stkc') || 'null');
     if(!c) return false;
     if(c.id) stkFileId = c.id;
-    stock = c.stock || {};
-    stkOv = c.ov || {};
-    stkDone = c.done || {};
+    stkLayers = c.layers || [];
+    myDelta = c.delta || {};
+    myOv = c.ov || {};
+    myDone = c.done || {};
+    myStamp = c.stamp || 0;
     mvCount = c.mvCount || 0;
-    stkRev = c.rev || 0;
-    stkBaseRev = stkRev;
+    stkRebuild();
+    stkApplyStates();
     return true;
   }catch(e){ return false; }
 }
 
 async function stkLoad(){
-  if(stkNet) return;                        /* deja lu depuis Drive */
+  if(stkNet) return;
   var vuEnCache = stkLoaded ? true : stkLoadCache();
-  if(vuEnCache) stkLoaded = true;           /* affichage immediat, rafraichi juste apres */
-  if(!tokenValid()) return;                 /* pas de jeton : on retentera plus tard */
-  async function lire(id){
-    var r = await api('https://www.googleapis.com/drive/v3/files/' + id + '?alt=media');
-    if(!r.ok) throw new Error('http ' + r.status);
-    return await r.json();
-  }
+  if(vuEnCache) stkLoaded = true;
+  if(!tokenValid()) return;
   try{
-    var data = null;
-    if(stkFileId){
-      /* identifiant memorise : peut etre perime si le fichier a ete recree */
-      try{ data = await lire(stkFileId); }
-      catch(e1){ stkFileId = null; }
+    var files = await driveList(STK_PREFIX);
+    var couches = [];
+    var mienId = null;
+    for(var i=0;i<files.length;i++){
+      var f = files[i];
+      var data = null;
+      try{ data = await driveRead(f.id); }catch(e){ continue; }
+      if(!data) continue;
+      if(f.name === STK_MINE){
+        mienId = f.id;
+        /* notre propre fichier : il fait foi sauf si des gestes sont en attente */
+        if(!stkPending.length){
+          myDelta = data.delta || {};
+          myOv = data.ov || {};
+          myDone = data.done || {};
+          myStamp = data.stamp || 0;
+        }
+        continue;
+      }
+      couches.push({ dev: data.dev || f.name, delta: data.delta || {},
+                     ov: data.ov || {}, done: data.done || {}, stamp: data.stamp || 0 });
     }
-    if(data === null){
-      stkFileId = await stkFind();
-      if(stkFileId) data = await lire(stkFileId);
-    }
-    if(data){
-      /* ne pas ecraser des gestes faits pendant le chargement */
-      if(!stkPending.length) stkApply(data);
-      stkSaveCache();
-      if(vuEnCache && tab === 'stock') render();
-      stkNet = true;
-    }
+    /* ancien fichier unique : couche de base, jamais reecrite */
+    try{
+      var oldId = await driveFindExact(STK_LEGACY);
+      if(oldId){
+        var vieux = await driveRead(oldId);
+        if(vieux){
+          couches.push({ dev: 'legacy', delta: vieux.stock || {},
+                         ov: vieux.ov || {}, done: vieux.done || {}, stamp: 0 });
+          if(vieux.moves && vieux.moves.length){
+            mvNew = vieux.moves.concat(mvNew);
+            mvQueue();
+          }
+        }
+      }
+    }catch(e){}
+
+    stkFileId = mienId;
+    stkLayers = couches;
+    stkRebuild();
+    stkApplyStates();
+    stkSaveCache();
+    if(vuEnCache && tab === 'stock') render();
     stkLoaded = true;
+    stkNet = true;
   }catch(e){
     if(!vuEnCache) toast('Stock : lecture impossible');
   }
 }
+
 function stkBody(){
-  return JSON.stringify({ rev: stkRev, stock: stock, ov: stkOv, done: stkDone, mvCount: mvCount, at: now(), v: APP_VERSION });
+  return JSON.stringify({
+    v: APP_VERSION, dev: DEV, at: now(), stamp: myStamp,
+    delta: myDelta, ov: myOv, done: myDone
+  });
 }
-async function stkWrite(){
-  var meta = { name: STK_FILE, parents: ['appDataFolder'] };
-  var fd = new FormData();
-  if(!stkFileId){
-    fd.append('metadata', new Blob([JSON.stringify(meta)], { type:'application/json' }));
-    fd.append('file', new Blob([stkBody()], { type:'application/json' }));
-    var r = await api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method:'POST', body: fd });
-    stkFileId = (await r.json()).id;
-  } else {
-    await api('https://www.googleapis.com/upload/drive/v3/files/' + stkFileId + '?uploadType=media', {
-      method:'PATCH', headers:{ 'Content-Type':'application/json' }, body: stkBody()
-    });
-  }
-}
-/* garde-fou : si le fichier a bougé ailleurs, on rejoue nos mouvements dessus */
+
+/* Ecriture : uniquement notre fichier. Aucun autre appareil n'y touche,
+   il ne peut donc y avoir ni conflit ni perte. */
 async function stkSave(){
   if(stkSaving || !stkPending.length) return;
   stkSaving = true; setSync('busy');
   try{
-    if(stkFileId){
-      var r = await api('https://www.googleapis.com/drive/v3/files/' + stkFileId + '?alt=media');
-      var rem = await r.json().catch(function(){ return null; });
-      if(rem && (rem.rev || 0) !== stkBaseRev){
-        var mine = stkPending.slice();
-        stkApply(rem);
-        for(var i=0;i<mine.length;i++){
-          var m = mine[i], k = stkKey(m.c, m.v, m.e);
-          stock[k] = Math.max(0, (stock[k] || 0) + m.d);
-          stkMoves.push(m);
-        }
-        toast('Stock fusionné avec l\'autre appareil');
-      }
-    }
-    stkRev = stkBaseRev + 1;
-    await stkWrite();
-    stkBaseRev = stkRev;
-    stkPending = [];
+    var envoi = stkPending.length;
+    stkFileId = await driveWrite(stkFileId, STK_MINE, stkBody());
+    stkPending = stkPending.slice(envoi);
     doneDirty = {};
     stkSaveCache();
     setSync('ok');
@@ -2699,90 +2766,88 @@ async function stkSave(){
 }
 function stkQueue(){ clearTimeout(stkTimer); stkTimer = setTimeout(stkSave, 2500); }
 
-/* ---- journal : fichier separe, ecrit plus rarement ---- */
-async function mvFind(){
-  var url = 'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&pageSize=10&fields=files(id,name)&q=' +
-    encodeURIComponent("name = '" + MV_FILE + "' and trashed=false");
-  var r = await api(url);
-  var j = await r.json();
-  return (j.files && j.files[0]) ? j.files[0].id : null;
-}
-async function mvLoad(){
-  if(mvLoaded) return stkMoves;
-  var base = [];
-  try{
-    if(!mvFileId) mvFileId = await mvFind();
-    if(mvFileId){
-      var r = await api('https://www.googleapis.com/drive/v3/files/' + mvFileId + '?alt=media');
-      var j = await r.json();
-      base = (j && j.moves) || [];
-    }
-  }catch(e){ toast('Journal : lecture impossible'); }
-  /* mvNew contient ce qui n'est pas encore ecrit : eviter de le compter deux fois */
-  var seen = {};
-  for(var i=0;i<base.length;i++) seen[base[i].t + '|' + base[i].c + '|' + base[i].d] = 1;
-  var add = mvNew.filter(function(m){ return !seen[m.t + '|' + m.c + '|' + m.d]; });
-  stkMoves = base.concat(add);
-  stkMoves.sort(function(a, b){ return a.t - b.t; });
-  mvCount = Math.max(mvCount, stkMoves.length);
-  mvLoaded = true;
-  return stkMoves;
-}
-async function mvSave(){
-  if(mvSaving || !mvNew.length) return;
-  mvSaving = true;
-  var envoi = mvNew.slice();
-  try{
-    if(!mvFileId) mvFileId = await mvFind();
-    var base = [];
-    if(mvFileId){
-      try{
-        var r = await api('https://www.googleapis.com/drive/v3/files/' + mvFileId + '?alt=media');
-        var j = await r.json();
-        base = (j && j.moves) || [];
-      }catch(e){ base = []; }
-    }
-    var seen = {};
-    for(var i=0;i<base.length;i++) seen[base[i].t + '|' + base[i].c + '|' + base[i].d] = 1;
-    for(var k=0;k<envoi.length;k++){
-      var key = envoi[k].t + '|' + envoi[k].c + '|' + envoi[k].d;
-      if(!seen[key]){ base.push(envoi[k]); seen[key] = 1; }
-    }
-    base.sort(function(a, b){ return a.t - b.t; });
-    if(base.length > MV_CAP) base = base.slice(-MV_CAP);
-    var body = JSON.stringify({ moves: base, at: now(), v: APP_VERSION });
-    if(!mvFileId){
-      var fd = new FormData();
-      fd.append('metadata', new Blob([JSON.stringify({ name: MV_FILE, parents: ['appDataFolder'] })], { type:'application/json' }));
-      fd.append('file', new Blob([body], { type:'application/json' }));
-      var rr = await api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method:'POST', body: fd });
-      mvFileId = (await rr.json()).id;
-    } else {
-      await api('https://www.googleapis.com/upload/drive/v3/files/' + mvFileId + '?uploadType=media', {
-        method:'PATCH', headers:{ 'Content-Type':'application/json' }, body: body
-      });
-    }
-    mvNew = mvNew.slice(envoi.length);
-    mvCount = base.length + mvNew.length;
-    if(mvLoaded){ stkMoves = base.concat(mvNew); }
-  }catch(e){ /* on retentera : mvNew est conserve */ }
-  mvSaving = false;
-  if(mvNew.length) mvQueue();
-}
-function mvQueue(){ clearTimeout(mvTimer); mvTimer = setTimeout(mvSave, 20000); }
-
 function stkAdd(id, v, e, d, src){
   var k = stkKey(id, v, e), cur = stock[k] || 0, nv = Math.max(0, cur + d);
   if(nv === cur) return false;
+  var vrai = nv - cur;
   stock[k] = nv;
   if(!nv) delete stock[k];
-  var mv = { t: now(), c: id, v: v, e: e, d: nv - cur, w: who || '', s: src || 'saisie' };
+  myDelta[k] = (myDelta[k] || 0) + vrai;
+  if(!myDelta[k]) delete myDelta[k];
+  var mv = { t: now(), c: id, v: v, e: e, d: vrai, w: who || '', s: src || 'saisie' };
   stkPending.push(mv);
   mvNew.push(mv); mvCount++;
   if(mvLoaded) stkMoves.push(mv);
   stkQueue(); mvQueue(); stkSaveCache();
   return true;
 }
+
+/* ---- journal : un fichier par appareil, meme principe ---- */
+async function mvLoad(){
+  if(mvLoaded) return stkMoves;
+  var tout = [];
+  try{
+    var files = await driveList(MV_PREFIX);
+    for(var i=0;i<files.length;i++){
+      var f = files[i], j = null;
+      try{ j = await driveRead(f.id); }catch(e){ continue; }
+      if(f.name === MV_MINE) mvFileId = f.id;
+      if(j && j.moves) tout = tout.concat(j.moves);
+    }
+    /* ancien fichier unique */
+    try{
+      var oldId = await driveFindExact(MV_LEGACY);
+      if(oldId){
+        var v = await driveRead(oldId);
+        if(v && v.moves) tout = tout.concat(v.moves);
+      }
+    }catch(e){}
+  }catch(e){ toast('Journal : lecture impossible'); }
+
+  var vus = {};
+  for(var z=0;z<tout.length;z++) vus[tout[z].t + '|' + tout[z].c + '|' + tout[z].d] = 1;
+  for(var n=0;n<mvNew.length;n++){
+    var m = mvNew[n], cle = m.t + '|' + m.c + '|' + m.d;
+    if(!vus[cle]){ tout.push(m); vus[cle] = 1; }
+  }
+  tout.sort(function(a, b){ return a.t - b.t; });
+  stkMoves = tout;
+  mvCount = Math.max(mvCount, tout.length);
+  mvLoaded = true;
+  return stkMoves;
+}
+
+/* Ecriture : uniquement notre fichier, en ajoutant nos nouveaux mouvements
+   a ceux qu'il contient deja. */
+async function mvSave(){
+  if(mvSaving || !mvNew.length) return;
+  mvSaving = true;
+  var envoi = mvNew.slice();
+  try{
+    if(!mvFileId) mvFileId = await driveFindExact(MV_MINE);
+    var base = [];
+    if(mvFileId){
+      try{ var j = await driveRead(mvFileId); base = (j && j.moves) || []; }
+      catch(e){ base = []; }
+    }
+    var vus = {};
+    for(var i=0;i<base.length;i++) vus[base[i].t + '|' + base[i].c + '|' + base[i].d] = 1;
+    for(var k=0;k<envoi.length;k++){
+      var cle = envoi[k].t + '|' + envoi[k].c + '|' + envoi[k].d;
+      if(!vus[cle]){ base.push(envoi[k]); vus[cle] = 1; }
+    }
+    base.sort(function(a, b){ return a.t - b.t; });
+    if(base.length > MV_CAP) base = base.slice(-MV_CAP);
+    mvFileId = await driveWrite(mvFileId, MV_MINE,
+      JSON.stringify({ moves: base, dev: DEV, at: now(), v: APP_VERSION }));
+    mvNew = mvNew.slice(envoi.length);
+  }catch(e){ /* on retentera : mvNew est conserve */ }
+  mvSaving = false;
+  if(mvNew.length) mvQueue();
+}
+function mvQueue(){ clearTimeout(mvTimer); mvTimer = setTimeout(mvSave, 20000); }
+
+
 function stkSetOv(id, mask){
   if(mask) stkOv[id] = mask; else delete stkOv[id];
   stkQueue();
