@@ -66,8 +66,8 @@ header{position:sticky;top:0;z-index:60;background:var(--bg);padding:calc(10px +
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;padding-bottom:10px}
 .st{background:var(--surf);border-radius:10px;padding:7px 4px;text-align:center}
 .stV{font-size:17px;font-weight:800;line-height:1.1}
-.stL{font-size:9.5px;color:var(--tx2);margin-top:2px}
-.st.a .stV{color:var(--red)}.st.b .stV{color:var(--yel)}.st.c .stV{color:var(--blu)}.st.d .stV{color:var(--grn);font-size:14px}
+.stL{font-size:9.5px;color:var(--tx2);margin-bottom:3px;font-weight:600;letter-spacing:.2px}
+.st.a .stV{color:var(--grn)}.st.b .stV{color:var(--yel)}.st.c .stV{color:var(--blu)}.st.d .stV{color:var(--grn)}
 
 /* CONTENT */
 main{padding:4px 16px 20px}
@@ -519,13 +519,13 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
     </div>
     <div class="srch" id="srch">
       <span class="ic" style="width:14px;height:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="m21 21-4.34-4.34"/> <circle cx="11" cy="11" r="8"/></svg></span>
-      <input type="search" id="q" placeholder="Nom, Pokémon, boîte…" autocomplete="off">
+      <input type="search" id="q" placeholder="Recherche" autocomplete="off">
       <button class="clr hide" id="qClr">×</button>
     </div>
     <div class="stats" id="stats">
-      <div class="st a"><div class="stV" id="s1">0</div><div class="stL">Vitrine</div></div>
-      <div class="st b"><div class="stV" id="s2">0</div><div class="stL">À faire</div></div>
-      <div class="st d"><div class="stV" id="s4">0€</div><div class="stL">Revenus</div></div>
+      <div class="st a"><div class="stL">Vitrine</div><div class="stV" id="s1">0</div></div>
+      <div class="st b"><div class="stL">À faire</div><div class="stV" id="s2">0</div></div>
+      <div class="st d"><div class="stL">Revenus</div><div class="stV" id="s4">0€</div></div>
     </div>
   </header>
 
@@ -564,7 +564,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '3.20';
+var APP_VERSION = '3.23';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -901,7 +901,11 @@ async function sync(full){
     offline = false;
     saveCache();
     setSync('');
-    render();
+    /* Ne pas reconstruire une vue du Stock en cours de consultation : la
+       synchronisation ne concerne que les lots, et un rafraichissement
+       complet ferait remonter le defilement en haut toutes les 12 secondes,
+       rendant la saisie impossible dans une extension. */
+    if(!(tab === 'stock' && (stkSet || stkJournal || stkInv || stkNever))) render();
   }catch(e){
     if(e.message !== 'auth') setSync('err');
   }
@@ -2331,7 +2335,28 @@ window.addEventListener('online', function(){
 });
 
 /* ═══ BOOT ═══ */
-window.addEventListener('load', function(){
+/* Une session connue permet d'afficher l'interface immediatement. Sans ca,
+   l'ecran de connexion restait visible le temps de charger le script Google,
+   puis disparaissait : c'est ce va-et-vient qui produisait le scintillement. */
+(function(){
+  var connu = false;
+  try{
+    var st0 = JSON.parse(localStorage.getItem(LS + 'tk') || 'null');
+    connu = !!(st0 && st0.t && st0.e > Date.now() + 60000);
+    if(!connu){
+      var w0 = SOLO || localStorage.getItem(LS + 'who');
+      connu = !!(w0 && WHOS[w0]);
+    }
+  }catch(e){}
+  if(connu){
+    $('auth').classList.add('hide');
+    $('app').classList.remove('hide');
+  }
+})();
+
+/* le script Google n'a pas a attendre que toutes les images de la page soient
+   arrivees : on le lance des maintenant */
+(function(){
   var s = document.createElement('script');
   s.src = 'https://accounts.google.com/gsi/client';
   s.onload = function(){
@@ -2376,7 +2401,7 @@ window.addEventListener('load', function(){
       });
     }).catch(function(){});
   }
-});
+})();
 
 /* ===================== MODULE STOCK ===================== */
 var STK_FILE = 'pkstk.json';
