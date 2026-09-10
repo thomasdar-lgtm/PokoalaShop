@@ -279,23 +279,6 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
   .cPh{width:92px}
   .cIn{min-height:82px}
 
-
-  /* ─── module Stock sur tablette ─── */
-  #view>.stkWrap{grid-column:1/-1;display:block}
-  .stkGrid{grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:12px}
-  .stkC .na{font-size:11px;height:31px}
-  .stkC .nu{font-size:14px}
-  .stkC .vs{gap:5px;padding:0 6px 7px}
-  .stkV{padding:9px 0 8px}
-  .stkV .vq{font-size:15px}
-  .stkSets{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px}
-  .stkSets>.stkSerie{grid-column:1/-1}
-  .stkSet{margin-bottom:0}
-  .stkRows{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:8px}
-  .stkRows>.stkSerie{grid-column:1/-1}
-  .stkRow,.nvRow{margin-bottom:0}
-  .stkTot b{font-size:22px}
-  .stkTit{font-size:19px}
   .ovl{align-items:center;padding:26px}
   .sheet{border-radius:18px;max-width:560px;max-height:86vh;padding-bottom:26px;animation:pop .2s ease}
   .grab{display:none}
@@ -452,6 +435,38 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 .pkB:disabled{opacity:.3;cursor:default}
 .pkQ{min-width:20px;text-align:center;font-size:15px;font-weight:900}
 .lotCB{background:rgba(56,139,253,.16);color:var(--blu);font-weight:800;border-radius:5px;padding:1px 5px;font-size:10px;margin-left:5px}
+
+/* ─── module Stock sur grand ecran ───
+   Place en fin de feuille, apres les regles de base du module : a specificite
+   egale c'est la derniere qui s'applique. */
+@media (min-width:760px){
+  #view>.stkWrap{grid-column:1/-1;display:block}
+  .stkGrid{grid-template-columns:repeat(auto-fill,minmax(142px,1fr));gap:12px}
+  .stkC .na{font-size:11.5px;height:32px;padding:5px 6px}
+  .stkC .nu{font-size:15px;padding:3px 8px}
+  .stkC .vs{gap:5px;padding:0 6px 7px}
+  .stkC .vs .stkV{padding:9px 0 8px}
+  .stkC .vs .stkV .vq{font-size:15px}
+  .stkC .vs .stkV.solo{padding:13px 0 12px}
+  .stkC .rar{width:22px;height:22px;bottom:5px;left:5px}
+  .stkC .rar svg{width:13px;height:13px}
+  .stkC .cmk{width:26px;height:26px;bottom:4px;right:4px}
+  .stkC .cmk img{width:19px;height:19px}
+  .stkSets{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:8px}
+  .stkSets>.stkSerie{grid-column:1/-1}
+  .stkSet{margin-bottom:0}
+  .stkRows{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:8px}
+  .stkRows>.stkSerie{grid-column:1/-1}
+  .stkRow,.nvRow{margin-bottom:0}
+  .stkTot b{font-size:22px}
+  .stkTit{font-size:19px}
+  .stkTit small{font-size:12.5px}
+  .stkSrch input{font-size:15px;padding:12px 36px 12px 14px}
+  .stkFB button{font-size:12.5px;padding:8px 4px}
+}
+@media (min-width:1180px){
+  .stkGrid{grid-template-columns:repeat(auto-fill,minmax(152px,1fr))}
+}
 </style>
 </head>
 <body>
@@ -520,7 +535,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '3.17';
+var APP_VERSION = '3.18';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
