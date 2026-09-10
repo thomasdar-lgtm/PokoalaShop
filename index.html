@@ -387,6 +387,10 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 .nvOk:active{color:var(--grn);border-color:rgba(63,185,80,.5)}
 .nvRow.fait{opacity:.55}
 .nvRow.fait .nvOk{color:var(--grn)}
+.majBar{position:fixed;left:10px;right:10px;bottom:calc(74px + env(safe-area-inset-bottom));z-index:9998;display:flex;align-items:center;gap:10px;background:var(--surf2);border:1px solid var(--bd);border-radius:12px;padding:10px 12px;box-shadow:0 8px 26px rgba(0,0,0,.45);font-size:13px;font-weight:600}
+.majBar b{font-weight:800}
+.majBar .mj{margin-left:auto;flex:none;background:var(--blu);border:0;color:#fff;border-radius:9px;padding:8px 13px;font-size:12.5px;font-weight:800;cursor:pointer}
+.majBar .mx{flex:none;background:none;border:0;color:var(--tx3);font-size:17px;line-height:1;cursor:pointer;padding:0 2px}
 .stkJB{display:flex;align-items:center;gap:8px;background:var(--surf);border:1px solid var(--bd);border-radius:11px;padding:10px 13px;margin-bottom:10px;cursor:pointer;font-size:13px;font-weight:700}
 .stkJB svg{width:17px;height:17px;flex:none;color:var(--tx3)}
 .stkJB .jc{margin-left:auto;color:var(--tx3);font-weight:700;font-size:12px}
@@ -491,7 +495,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '3.12';
+var APP_VERSION = '3.15';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -749,6 +753,12 @@ async function boot(){
      du cache du service worker, le stock du cache local puis de Drive.
      Quand l'utilisateur ouvre l'onglet, tout est deja pret. */
   stkPreload();
+
+  setTimeout(checkUpdate, 4000);
+  setInterval(checkUpdate, 10 * 60 * 1000);
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'visible') checkUpdate();
+  });
 
   if(pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(function(){
@@ -2172,6 +2182,10 @@ for(var n=0;n<navs.length;n++){
     $('fab').classList.toggle('hide', tab !== 'vitrine' && tab !== 'afaire');
     $('q').value = '';
     window.scrollTo(0,0);
+    /* vider la zone avant de rendre : les autres onglets se dessinent
+       instantanement, mais le Stock attend ses donnees et laisserait
+       sinon le contenu de l'onglet precedent a l'ecran */
+    $('view').innerHTML = '';
     render();
   };
 }
@@ -2249,9 +2263,17 @@ window.addEventListener('load', function(){
       location.reload();
     });
     navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(function(reg){
+      /* un service worker deja installe mais bloque en attente ne prendrait
+         la main qu'apres fermeture complete de l'app : on le debloque */
+      function pousser(){ if(reg.waiting) reg.waiting.postMessage('skipWaiting'); }
+      pousser();
+      reg.addEventListener('updatefound', function(){
+        var sw = reg.installing;
+        if(sw) sw.addEventListener('statechange', pousser);
+      });
       reg.update();
       document.addEventListener('visibilitychange', function(){
-        if(document.visibilityState === 'visible') reg.update();
+        if(document.visibilityState === 'visible'){ reg.update(); pousser(); }
       });
     }).catch(function(){});
   }
@@ -2630,6 +2652,55 @@ function stkSetOv(id, mask){
 /* ---- rendu ---- */
 /* prechargement silencieux, declenche au demarrage */
 var stkPreloaded = false;
+/* ═══ MISE A JOUR ═══
+   En PWA installee il n'y a pas de bouton de rechargement, et un service
+   worker recalcitrant laisse l'utilisateur bloque sur une ancienne version
+   sans aucun recours. On verifie donc nous-memes, en contournant tous les
+   caches, et on propose un rechargement explicite. */
+var majVue = null;
+
+async function checkUpdate(){
+  try{
+    var r = await fetch('./index.html?_=' + Date.now(), { cache: 'no-store' });
+    if(!r.ok) return;
+    var t = await r.text();
+    var m = t.match(/APP_VERSION\s*=\s*'([^']+)'/);
+    if(!m) return;
+    if(m[1] !== APP_VERSION && m[1] !== majVue) showMaj(m[1]);
+  }catch(e){}
+}
+
+function showMaj(v){
+  majVue = v;
+  if(document.getElementById('majBar')) return;
+  var d = document.createElement('div');
+  d.className = 'majBar';
+  d.id = 'majBar';
+  d.innerHTML = '<span>Version <b>' + v + '</b> disponible</span>' +
+                '<button class="mj" id="majGo">Recharger</button>' +
+                '<button class="mx" id="majNo" aria-label="Plus tard">×</button>';
+  document.body.appendChild(d);
+  document.getElementById('majNo').onclick = function(){ d.remove(); };
+  document.getElementById('majGo').onclick = hardReload;
+}
+
+/* purge le cache de la coquille puis recharge : les caches d'images et de
+   donnees de cartes sont conserves, inutile de les retelecharger */
+async function hardReload(){
+  var b = document.getElementById('majGo');
+  if(b){ b.textContent = '…'; b.disabled = true; }
+  try{
+    var keys = await caches.keys();
+    await Promise.all(keys.filter(function(k){ return k.indexOf('-v') > 0; })
+                          .map(function(k){ return caches.delete(k); }));
+  }catch(e){}
+  try{
+    var reg = await navigator.serviceWorker.getRegistration();
+    if(reg){ await reg.update(); if(reg.waiting) reg.waiting.postMessage('skipWaiting'); }
+  }catch(e){}
+  location.replace(location.pathname + '?maj=' + Date.now());
+}
+
 function stkPreload(){
   if(stkPreloaded) return;
   cdbLoad().catch(function(){});

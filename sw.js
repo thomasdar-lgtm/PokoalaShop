@@ -1,4 +1,4 @@
-const CACHE_VERSION = '3.12';
+const CACHE_VERSION = '3.15';
 const CACHE_NAME = 'pokoalashop-v' + CACHE_VERSION;
 /* cache non versionne : la base de cartes est versionnee par son URL (?v=N),
    inutile de re-telecharger 2,7 Mo a chaque montee de version */
@@ -10,9 +10,20 @@ const IMAGE_HOSTS = ['assets.tcgdex.net', 'images.pokemontcg.io', 'images.scryde
 const ASSETS = ['./', './index.html', './manifest.json', './icons/logo.png', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {
+  /* addAll echoue en bloc des qu'un seul fichier manque, et l'installation
+     entiere est alors rejetee : le nouveau service worker n'est jamais active
+     et la mise a jour n'arrive jamais. On met en cache un par un, et on
+     s'active quoi qu'il arrive. */
   e.waitUntil(
-    caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME)
+      .then(c => Promise.all(ASSETS.map(u => c.add(u).catch(() => null))))
+      .catch(() => null)
+      .then(() => self.skipWaiting())
   );
+});
+
+self.addEventListener('message', e => {
+  if (e.data === 'skipWaiting') self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
