@@ -491,7 +491,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '3.09';
+var APP_VERSION = '3.10';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -656,7 +656,10 @@ function scheduleRefresh(){
   var wait = tokenExp - Date.now() - REFRESH_MARGIN;
   if(wait < 30000) wait = 30000;
   refreshTimer = setTimeout(function(){
-    if(document.hidden) return;
+    /* en arriere-plan on ne peut pas renouveler, mais il ne faut surtout pas
+       abandonner : sans nouvelle tentative le jeton expire et la reconnexion
+       devient visible en pleine utilisation */
+    if(document.hidden){ refreshTimer = setTimeout(scheduleRefresh, 45000); return; }
     reauth();
   }, wait);
 }
