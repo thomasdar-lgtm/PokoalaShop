@@ -564,7 +564,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '3.27';
+var APP_VERSION = '3.28';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2760,17 +2760,22 @@ async function stkSync(force){
   if(!force && document.hidden) return;
   stkSyncing = true;
   try{
-    var avant = JSON.stringify(stock);
+    var avant = {};
+    for(var k in stock) avant[k] = stock[k];
     await stkFetch();
-    if(JSON.stringify(stock) !== avant) stkTouchUI();
+    /* ne rafraichir que les cartes reellement modifiees */
+    var touchees = {};
+    for(var k2 in stock) if(avant[k2] !== stock[k2]) touchees[k2.split('|')[0]] = 1;
+    for(var k3 in avant) if(!(k3 in stock)) touchees[k3.split('|')[0]] = 1;
+    var ids = Object.keys(touchees);
+    if(ids.length) stkTouchUI(ids);
   }catch(e){}
   stkSyncing = false;
 }
-function stkTouchUI(){
+function stkTouchUI(ids){
   if(tab !== 'stock') return;
   if(stkSet){
-    var els = document.querySelectorAll('.stkC[data-stkid]');
-    for(var i=0;i<els.length;i++) stkRefresh(els[i].getAttribute('data-stkid'));
+    for(var i=0;i<ids.length;i++) stkRefresh(ids[i]);
     return;
   }
   render();
@@ -3737,9 +3742,11 @@ function stkRefresh(id){
   if(!c) return;
   var el = document.querySelector('.stkC[data-stkid="' + id.replace(/"/g,'') + '"]');
   if(el){
-    var tmp = document.createElement('div');
-    tmp.innerHTML = stkTile(c);
-    el.replaceWith(tmp.firstChild);
+    /* mise a jour sur place : remplacer la vignette entiere rechargerait
+       l'image de la carte, ce qui produit un scintillement */
+    var vs0 = el.querySelector('.vs');
+    if(vs0) vs0.innerHTML = stkChips(c);
+    el.classList.toggle('has', stkCardQ(id) > 0);
     return;
   }
   var row = document.querySelector('.stkRow[data-stkid="' + id.replace(/"/g,'') + '"]');
