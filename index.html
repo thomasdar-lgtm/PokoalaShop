@@ -491,7 +491,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '3.11';
+var APP_VERSION = '3.12';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -744,6 +744,11 @@ async function boot(){
     scheduleRefresh();
     await sync(true);
   }
+
+  /* Precharger le module Stock sans bloquer : la liste des extensions vient
+     du cache du service worker, le stock du cache local puis de Drive.
+     Quand l'utilisateur ouvre l'onglet, tout est deja pret. */
+  stkPreload();
 
   if(pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(function(){
@@ -2271,7 +2276,7 @@ var stkFileId = null, stkBaseRev = 0, stkPending = [];
 var stkTimer = null, stkSaving = false, stkLoaded = false;
 var stkSet = null, stkLp = null, stkLpFired = false;
 var stkArr = [], stkQry = '', stkJournal = false, stkInv = false, stkNever = false;
-var stkDone = {}, doneDirty = {};
+var stkDone = {}, doneDirty = {}, stkNet = false;
 var invDir = parseInt(localStorage.getItem(LS + 'invdir') || '-1', 10);   /* -1 decroissant, 1 croissant */
 var nvTri  = localStorage.getItem(LS + 'nvtri') || 'az';                 /* az | qty */
 var mvFilt = localStorage.getItem(LS + 'mvf') || 'lot';   /* all | lot */
@@ -2452,9 +2457,10 @@ function stkLoadCache(){
 }
 
 async function stkLoad(){
-  if(stkLoaded) return;
-  var vuEnCache = stkLoadCache();
-  if(vuEnCache) stkLoaded = true;          /* affichage immediat, rafraichi juste apres */
+  if(stkNet) return;                        /* deja lu depuis Drive */
+  var vuEnCache = stkLoaded ? true : stkLoadCache();
+  if(vuEnCache) stkLoaded = true;           /* affichage immediat, rafraichi juste apres */
+  if(!tokenValid()) return;                 /* pas de jeton : on retentera plus tard */
   async function lire(id){
     var r = await api('https://www.googleapis.com/drive/v3/files/' + id + '?alt=media');
     if(!r.ok) throw new Error('http ' + r.status);
@@ -2476,6 +2482,7 @@ async function stkLoad(){
       if(!stkPending.length) stkApply(data);
       stkSaveCache();
       if(vuEnCache && tab === 'stock') render();
+      stkNet = true;
     }
     stkLoaded = true;
   }catch(e){
@@ -2621,10 +2628,29 @@ function stkSetOv(id, mask){
 }
 
 /* ---- rendu ---- */
+/* prechargement silencieux, declenche au demarrage */
+var stkPreloaded = false;
+function stkPreload(){
+  if(stkPreloaded) return;
+  cdbLoad().catch(function(){});
+  /* sans jeton valide la lecture Drive echouerait sans nouvelle tentative :
+     on repousse jusqu'a ce que l'authentification aboutisse */
+  if(!tokenValid()){ setTimeout(stkPreload, 2000); return; }
+  stkPreloaded = true;
+  stkLoad().catch(function(){});
+}
+
 async function renderStock(){
   if(!cdb){
-    $('view').innerHTML = '<div class="ph">Chargement des extensions…</div>';
-    try{ await cdbLoad(); }catch(e){ $('view').innerHTML = empty(EMPTY_CMD, 'Liste des extensions indisponible.'); return; }
+    /* le prechargement est probablement deja en cours : on l'attend brievement
+       avant d'afficher un message, pour ne pas faire clignoter l'ecran */
+    var p = cdbLoad().catch(function(){ return null; });
+    var vite = await Promise.race([p, new Promise(function(r){ setTimeout(function(){ r('lent'); }, 250); })]);
+    if(vite === 'lent' && !cdb){
+      $('view').innerHTML = '<div class="ph">Chargement des extensions…</div>';
+      try{ await p; }catch(e){}
+    }
+    if(!cdb){ $('view').innerHTML = empty(EMPTY_CMD, 'Liste des extensions indisponible.'); return; }
   }
   if(!stkLoaded) await stkLoad();
   if(stkNever) return stkRenderNever();
