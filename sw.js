@@ -1,4 +1,4 @@
-const CACHE_VERSION = '3.23';
+const CACHE_VERSION = '3.24';
 const CACHE_NAME = 'pokoalashop-v' + CACHE_VERSION;
 /* cache non versionne : la base de cartes est versionnee par son URL (?v=N),
    inutile de re-telecharger 2,7 Mo a chaque montee de version */
@@ -7,7 +7,7 @@ const CACHE_DATA = 'pokoalashop-data';
    ne changent jamais, inutile de les retelecharger a chaque montee de version */
 const CACHE_IMG = 'pokoalashop-img';
 const IMAGE_HOSTS = ['assets.tcgdex.net', 'images.pokemontcg.io', 'images.scrydex.com', 'archives.bulbagarden.net'];
-const ASSETS = ['./', './index.html', './manifest.json', './icons/logo.png', './icons/icon-192.png', './icons/icon-512.png'];
+const ASSETS = ['./', './index.html', './manifest.json', './icons/logo.png', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'];
 
 self.addEventListener('install', e => {
   /* addAll echoue en bloc des qu'un seul fichier manque, et l'installation
