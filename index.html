@@ -491,7 +491,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '3.10';
+var APP_VERSION = '3.11';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2426,16 +2426,61 @@ function stkApply(data){
     mvQueue();
   }
 }
+/* Cache local du stock : evite d'attendre Drive au premier acces a l'onglet.
+   L'identifiant du fichier est memorise aussi, ce qui supprime la requete
+   de recherche et donc un aller-retour complet. */
+function stkSaveCache(){
+  try{
+    localStorage.setItem(LS + 'stkc', JSON.stringify({
+      rev: stkRev, stock: stock, ov: stkOv, done: stkDone, mvCount: mvCount, id: stkFileId
+    }));
+  }catch(e){ /* quota plein : on s'en passe */ }
+}
+function stkLoadCache(){
+  try{
+    var c = JSON.parse(localStorage.getItem(LS + 'stkc') || 'null');
+    if(!c) return false;
+    if(c.id) stkFileId = c.id;
+    stock = c.stock || {};
+    stkOv = c.ov || {};
+    stkDone = c.done || {};
+    mvCount = c.mvCount || 0;
+    stkRev = c.rev || 0;
+    stkBaseRev = stkRev;
+    return true;
+  }catch(e){ return false; }
+}
+
 async function stkLoad(){
   if(stkLoaded) return;
+  var vuEnCache = stkLoadCache();
+  if(vuEnCache) stkLoaded = true;          /* affichage immediat, rafraichi juste apres */
+  async function lire(id){
+    var r = await api('https://www.googleapis.com/drive/v3/files/' + id + '?alt=media');
+    if(!r.ok) throw new Error('http ' + r.status);
+    return await r.json();
+  }
   try{
-    stkFileId = await stkFind();
+    var data = null;
     if(stkFileId){
-      var r = await api('https://www.googleapis.com/drive/v3/files/' + stkFileId + '?alt=media');
-      stkApply(await r.json());
+      /* identifiant memorise : peut etre perime si le fichier a ete recree */
+      try{ data = await lire(stkFileId); }
+      catch(e1){ stkFileId = null; }
+    }
+    if(data === null){
+      stkFileId = await stkFind();
+      if(stkFileId) data = await lire(stkFileId);
+    }
+    if(data){
+      /* ne pas ecraser des gestes faits pendant le chargement */
+      if(!stkPending.length) stkApply(data);
+      stkSaveCache();
+      if(vuEnCache && tab === 'stock') render();
     }
     stkLoaded = true;
-  }catch(e){ toast('Stock : lecture impossible'); }
+  }catch(e){
+    if(!vuEnCache) toast('Stock : lecture impossible');
+  }
 }
 function stkBody(){
   return JSON.stringify({ rev: stkRev, stock: stock, ov: stkOv, done: stkDone, mvCount: mvCount, at: now(), v: APP_VERSION });
@@ -2478,6 +2523,7 @@ async function stkSave(){
     stkBaseRev = stkRev;
     stkPending = [];
     doneDirty = {};
+    stkSaveCache();
     setSync('ok');
   }catch(e){ setSync('err'); toast('Stock non sauvegardé'); }
   stkSaving = false;
@@ -2566,7 +2612,7 @@ function stkAdd(id, v, e, d, src){
   stkPending.push(mv);
   mvNew.push(mv); mvCount++;
   if(mvLoaded) stkMoves.push(mv);
-  stkQueue(); mvQueue();
+  stkQueue(); mvQueue(); stkSaveCache();
   return true;
 }
 function stkSetOv(id, mask){
