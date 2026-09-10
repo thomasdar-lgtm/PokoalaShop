@@ -299,7 +299,11 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 /* bandeau d'extension collant sous l'en-tete de l'app.
    --hdrH est mesure en JS : la hauteur de l'en-tete varie selon que la barre
    de recherche globale est affichee ou non. */
-.stkBar{display:flex;align-items:center;gap:10px;margin:0 -16px 11px;padding:8px 16px;position:sticky;top:calc(var(--hdrH,54px) - 1px);z-index:50;background:var(--bg);box-shadow:0 -3px 0 0 var(--bg)}
+/* La marge haute negative annule le retrait de <main> (4px) et le pixel de
+   chevauchement : au repos le bandeau occupe deja sa position de blocage,
+   il ne parcourt donc aucune distance avant de se figer. Le retrait interne
+   compense pour conserver l'espacement visuel. */
+.stkBar{display:flex;align-items:center;gap:10px;margin:-5px -16px 11px;padding:13px 16px 8px;position:sticky;top:calc(var(--hdrH,54px) - 1px);z-index:50;background:var(--bg);box-shadow:0 -3px 0 0 var(--bg)}
 .stkBar::after{content:'';position:absolute;left:16px;right:16px;bottom:0;height:1px;background:var(--bd);opacity:.55}
 .stkBack{background:var(--surf);border:1px solid var(--bd);color:var(--tx);border-radius:11px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;padding:0}
 .stkBack svg{width:22px;height:22px;display:block}
@@ -502,7 +506,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 .stkFB .sg.cols button{min-width:30px;padding:6px 5px}
 
 @media (min-width:760px){
-  .stkBar{margin-left:-22px;margin-right:-22px;padding-left:22px;padding-right:22px}
+  .stkBar{margin:-7px -22px 11px;padding:15px 22px 8px}
   .stkBar::after{left:22px;right:22px}
 }
 </style>
@@ -573,7 +577,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '3.30';
+var APP_VERSION = '3.31';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
