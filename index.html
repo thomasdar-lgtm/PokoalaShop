@@ -467,6 +467,20 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 @media (min-width:1180px){
   .stkGrid{grid-template-columns:repeat(auto-fill,minmax(152px,1fr))}
 }
+
+/* ─── bandeau superieur sur grand ecran ─── */
+@media (min-width:760px){
+  header{padding:calc(16px + env(safe-area-inset-top)) 26px 2px}
+  .brand{gap:12px}
+  .brand img{width:52px}
+  .wm{font-size:27px}
+  .srch{margin-top:4px}
+}
+@media (min-width:1180px){
+  header{padding-left:30px;padding-right:30px}
+  .brand img{width:56px}
+  .wm{font-size:29px}
+}
 </style>
 </head>
 <body>
@@ -535,7 +549,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '3.18';
+var APP_VERSION = '3.19';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2237,9 +2251,16 @@ document.addEventListener('click', function(e){
 var navs = document.querySelectorAll('.nv');
 for(var n=0;n<navs.length;n++){
   navs[n].onclick = function(){
+    var cible = this.getAttribute('data-t');
+    /* retoucher l'onglet deja actif ramene a son accueil */
+    if(cible === tab){
+      if(tab === 'stock'){ stkSet = null; stkQry = ''; stkJournal = false; stkInv = false; stkNever = false; }
+      if(selMode) exitSel();
+      if(history.state && history.state.d === 3) history.back();
+    }
     for(var i=0;i<navs.length;i++) navs[i].classList.remove('on');
     this.classList.add('on');
-    tab = this.getAttribute('data-t');
+    tab = cible;
     if(tab !== 'stock'){ stkJournal = false; stkInv = false; stkNever = false; }
     if(tab !== 'stock' && stkSet){ stkSet = null; stkQry = ''; if(history.state && history.state.d === 3) history.back(); }
     $('fab').classList.toggle('hide', tab !== 'vitrine' && tab !== 'afaire');
