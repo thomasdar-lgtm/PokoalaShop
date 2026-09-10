@@ -323,7 +323,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 .stkFB .sg{display:flex;background:var(--surf);border:1px solid var(--bd);border-radius:9px;padding:2px;gap:2px;flex:1;min-width:0}
 .stkFB button{flex:1;min-width:0;background:none;border:0;color:var(--tx3);font-size:11px;font-weight:700;padding:6px 2px;border-radius:7px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stkFB button.on{background:var(--surf2);color:var(--tx)}
-.stkGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.stkGrid{display:grid;grid-template-columns:repeat(var(--cols,3),1fr);gap:9px}
 .stkC{background:var(--surf);border:1px solid var(--bd);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
 .stkC.has{border-color:var(--blu)}
 .stkC .im{position:relative;background:#0c1428;aspect-ratio:245/342}
@@ -441,7 +441,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
    egale c'est la derniere qui s'applique. */
 @media (min-width:760px){
   #view>.stkWrap{grid-column:1/-1;display:block}
-  .stkGrid{grid-template-columns:repeat(auto-fill,minmax(142px,1fr));gap:12px}
+  .stkGrid{grid-template-columns:repeat(var(--cols,6),1fr);gap:12px}
   .stkC .na{font-size:11.5px;height:32px;padding:5px 6px}
   .stkC .nu{font-size:15px;padding:3px 8px}
   .stkC .vs{gap:5px;padding:0 6px 7px}
@@ -465,7 +465,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
   .stkFB button{font-size:12.5px;padding:8px 4px}
 }
 @media (min-width:1180px){
-  .stkGrid{grid-template-columns:repeat(auto-fill,minmax(152px,1fr))}
+  .stkGrid{grid-template-columns:repeat(var(--cols,7),1fr)}
 }
 
 /* ─── bandeau superieur sur grand ecran ─── */
@@ -481,6 +481,21 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
   .brand img{width:56px}
   .wm{font-size:29px}
 }
+
+/* vignettes resserrees quand l'utilisateur demande beaucoup de colonnes */
+.stkGrid.dense .na{font-size:9px;height:23px;padding:3px 4px}
+.stkGrid.dense .nu{font-size:11px;padding:1px 5px}
+.stkGrid.dense .vs{gap:3px;padding:0 3px 4px}
+.stkGrid.dense .stkV{padding:5px 0 4px}
+.stkGrid.dense .stkV .vl{font-size:7px}
+.stkGrid.dense .stkV .vq{font-size:11px}
+.stkGrid.dense .stkV.solo{padding:7px 0 6px}
+.stkGrid.dense .rar{width:15px;height:15px;bottom:3px;left:3px}
+.stkGrid.dense .rar svg{width:9px;height:9px}
+.stkGrid.dense .cmk{width:17px;height:17px}
+.stkGrid.dense .cmk img{width:12px;height:12px}
+.stkFB .sg.cols{flex:0 0 auto}
+.stkFB .sg.cols button{min-width:30px;padding:6px 5px}
 </style>
 </head>
 <body>
@@ -549,7 +564,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '3.19';
+var APP_VERSION = '3.20';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2385,6 +2400,21 @@ var stkArr = [], stkQry = '', stkJournal = false, stkInv = false, stkNever = fal
 var stkDone = {}, doneDirty = {}, stkNet = false;
 var invDir = parseInt(localStorage.getItem(LS + 'invdir') || '-1', 10);   /* -1 decroissant, 1 croissant */
 var nvTri  = localStorage.getItem(LS + 'nvtri') || 'az';                 /* az | qty */
+/* nombre de colonnes de la grille, memorise separement pour ecran etroit et large */
+var stkCols = (function(){
+  try{ return JSON.parse(localStorage.getItem(LS + 'cols') || '{}') || {}; }catch(e){ return {}; }
+})();
+function largeEcran(){ return window.innerWidth >= 760; }
+function colsChoix(){ return largeEcran() ? [3,5,6,8,10] : [2,3,4]; }
+function colsNow(){
+  var d = largeEcran() ? 6 : 3;
+  var v = largeEcran() ? stkCols.w : stkCols.n;
+  return colsChoix().indexOf(v) >= 0 ? v : d;
+}
+function colsSet(v){
+  if(largeEcran()) stkCols.w = v; else stkCols.n = v;
+  try{ localStorage.setItem(LS + 'cols', JSON.stringify(stkCols)); }catch(e){}
+}
 var mvFilt = localStorage.getItem(LS + 'mvf') || 'lot';   /* all | lot */
 var stkFilt = localStorage.getItem(LS + 'filt') || 'all';   /* all | has | none */
 var stkTri  = localStorage.getItem(LS + 'tri')  || 'num';   /* num | qty */
@@ -2935,13 +2965,16 @@ async function stkRenderGrid(){
   stkArr = arr;
 
   function seg(attr, val, cur, lbl){
-    return '<button class="' + (cur === val ? 'on' : '') + '" data-' + attr + '="' + val + '">' + lbl + '</button>';
+    return '<button class="' + (String(cur) === String(val) ? 'on' : '') + '" data-' + attr + '="' + val + '">' + lbl + '</button>';
   }
+  var ch = colsChoix(), cn = colsNow(), colBtns = '';
+  for(var ci=0;ci<ch.length;ci++) colBtns += seg('stkcol', ch[ci], cn, String(ch[ci]));
   var bar = '<div class="stkFB"><div class="sg">' +
     seg('stkf','all',stkFilt,'Toutes') + seg('stkf','has',stkFilt,'J\'en ai') + seg('stkf','none',stkFilt,'Manquantes') +
     '</div><div class="sg">' +
     seg('stkt','num',stkTri,'N°') + seg('stkt','qty',stkTri,'Quantité') +
-    '</div></div>';
+    '</div></div>' +
+    '<div class="stkFB"><div class="sg cols">' + colBtns + '</div></div>';
 
   var srch = '<div class="stkSrch"><input type="search" id="stkq" placeholder="Chercher dans cette extension…"' + noAuto() + ' value="' + esc(stkQry) + '">' +
              (stkQry ? '<button class="sx" id="stkqx" aria-label="Effacer">×</button>' : '') + '</div>';
@@ -3007,7 +3040,8 @@ function stkGridFill(){
                               : 'Tu as toutes les cartes de cette extension.')) + '</div>';
     return;
   }
-  var h = '<div class="stkGrid">';
+  var nc = colsNow();
+  var h = '<div class="stkGrid' + (nc >= 8 ? ' dense' : '') + '" style="--cols:' + nc + '">';
   for(var k=0;k<vue.length;k++) h += stkTile(vue[k]);
   g.innerHTML = h + '</div>';
 }
@@ -3454,6 +3488,15 @@ function stkBind(){
       if(history.state && history.state.d === 3){ history.back(); }
       else { stkJournal = false; window.scrollTo(0,0); render(); }
       return;
+    }
+    if((t = e.target.closest('[data-stkcol]'))){
+      colsSet(parseInt(t.getAttribute('data-stkcol'), 10));
+      var gc = t.closest('.sg');
+      if(gc){
+        var bc = gc.querySelectorAll('[data-stkcol]');
+        for(var zc=0;zc<bc.length;zc++) bc[zc].classList.toggle('on', bc[zc].getAttribute('data-stkcol') === String(colsNow()));
+      }
+      stkGridFill(); return;
     }
     if((t = e.target.closest('[data-stkf]'))){
       stkFilt = t.getAttribute('data-stkf');
