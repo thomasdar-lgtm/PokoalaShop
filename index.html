@@ -299,7 +299,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 /* bandeau d'extension collant sous l'en-tete de l'app.
    --hdrH est mesure en JS : la hauteur de l'en-tete varie selon que la barre
    de recherche globale est affichee ou non. */
-.stkBar{display:flex;align-items:center;gap:10px;margin:0 -16px 11px;padding:8px 16px;position:sticky;top:var(--hdrH,54px);z-index:50;background:var(--bg)}
+.stkBar{display:flex;align-items:center;gap:10px;margin:0 -16px 11px;padding:8px 16px;position:sticky;top:calc(var(--hdrH,54px) - 1px);z-index:50;background:var(--bg);box-shadow:0 -3px 0 0 var(--bg)}
 .stkBar::after{content:'';position:absolute;left:16px;right:16px;bottom:0;height:1px;background:var(--bd);opacity:.55}
 .stkBack{background:var(--surf);border:1px solid var(--bd);color:var(--tx);border-radius:11px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;padding:0}
 .stkBack svg{width:22px;height:22px;display:block}
@@ -573,7 +573,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '3.29';
+var APP_VERSION = '3.30';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2962,7 +2962,10 @@ async function hardReload(){
 function majHdrH(){
   var e = document.querySelector('header');
   if(!e) return;
-  document.documentElement.style.setProperty('--hdrH', e.offsetHeight + 'px');
+  /* hauteur fractionnaire : offsetHeight arrondit, et le demi-pixel d'ecart
+     fait vibrer le bandeau pendant le defilement */
+  var hh = e.getBoundingClientRect().height;
+  document.documentElement.style.setProperty('--hdrH', Math.floor(hh) + 'px');
 }
 window.addEventListener('resize', majHdrH);
 window.addEventListener('orientationchange', function(){ setTimeout(majHdrH, 250); });
