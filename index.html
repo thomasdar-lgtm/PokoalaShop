@@ -577,7 +577,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '3.31';
+var APP_VERSION = '3.35';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -586,7 +586,8 @@ var POLL_MS = 12000;
 var BAK_PREFIX = 'bak_';
 var BAK_KEEP = 10;
 var BAK_EVERY = 6 * 3600 * 1000;
-var REFRESH_MARGIN = 5 * 60 * 1000;
+var REFRESH_MARGIN = 15 * 60 * 1000;   /* on renouvelle bien avant l'echeance */
+var TOKEN_SEUIL = 20 * 60 * 1000;      /* en dessous, on retente en continu */
 
 var ST = { afaire:'À préparer', pret:'Préparé', vitrine:'En vitrine', vendu:'Vendu', expedie:'Expédié' };
 
@@ -607,6 +608,7 @@ var WHOS = { thomas:'Thomas', cindy:'Cindy' };
    fonctionnement a deux comptes. */
 var SOLO = 'cindy';
 var dirty = false, saving = false, pollTimer = null, sheetOpen = false;
+var majTimer = null, majInt = null, syncInt = null, tokInt = null, visBound = false;
 var refreshTimer = null, booted = false, offline = false;
 var cfmCb = null;
 var tagTpl = '#pokemon #cartepokemon #lotpokemon #{poke} #carte{poke} #pokemontcg #collectionpokemon #cartesapokemon #dracaufeu #pikachu #evoli #boosterpokemon #lotcartes';
@@ -748,17 +750,27 @@ function reauth(){
   try{ tokenClient.requestAccessToken({ prompt: '' }); }catch(e){ offline = true; setSync('err'); }
 }
 
+function tokenLeft(){ return tokenExp - Date.now(); }
+
 function scheduleRefresh(){
   clearTimeout(refreshTimer);
-  var wait = tokenExp - Date.now() - REFRESH_MARGIN;
+  var wait = tokenLeft() - REFRESH_MARGIN;
   if(wait < 30000) wait = 30000;
   refreshTimer = setTimeout(function(){
-    /* en arriere-plan on ne peut pas renouveler, mais il ne faut surtout pas
-       abandonner : sans nouvelle tentative le jeton expire et la reconnexion
-       devient visible en pleine utilisation */
+    /* en arriere-plan le renouvellement ne peut pas aboutir : on repousse
+       plutot que d'abandonner */
     if(document.hidden){ refreshTimer = setTimeout(scheduleRefresh, 45000); return; }
     reauth();
   }, wait);
+}
+
+/* Surveillance continue. Une minuterie unique ne laisse qu'une seule chance :
+   si elle est manquee — Android suspend les minuteries en arriere-plan — ou si
+   Google refuse ce renouvellement precis, le jeton expire et la reconnexion
+   devient visible. Ici on retente tant qu'il reste peu de temps. */
+function watchToken(){
+  if(document.hidden || !token) return;
+  if(tokenLeft() < TOKEN_SEUIL) reauth();
 }
 
 function tokenValid(){ return !!token && Date.now() < tokenExp - 10000; }
@@ -847,12 +859,20 @@ async function boot(){
      Quand l'utilisateur ouvre l'onglet, tout est deja pret. */
   stkPreload();
 
-  setTimeout(checkUpdate, 4000);
-  setInterval(checkUpdate, 10 * 60 * 1000);
-  setInterval(function(){ if(tab === 'stock') stkSync(); }, 15000);
-  document.addEventListener('visibilitychange', function(){
-    if(document.visibilityState === 'visible'){ checkUpdate(); stkSync(true); }
-  });
+  /* toujours annuler avant d'installer : un second passage dans boot()
+     multiplierait les minuteries au lieu de les remplacer */
+  clearTimeout(majTimer);   clearInterval(majInt);
+  clearInterval(syncInt);   clearInterval(tokInt);
+  majTimer = setTimeout(checkUpdate, 4000);
+  majInt   = setInterval(checkUpdate, 10 * 60 * 1000);
+  syncInt  = setInterval(function(){ if(tab === 'stock') stkSync(); }, 15000);
+  tokInt   = setInterval(watchToken, 2 * 60 * 1000);
+  if(!visBound){
+    visBound = true;
+    document.addEventListener('visibilitychange', function(){
+      if(document.visibilityState === 'visible'){ checkUpdate(); stkSync(true); watchToken(); }
+    });
+  }
 
   if(pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(function(){
@@ -2424,7 +2444,7 @@ var MV_PREFIX  = 'pkstkmv_';      /* journal a part : il grossit sans fin, le st
 var MV_LEGACY  = 'pkstkmv.json';
 var MV_CAP   = 4000;             /* mouvements conserves */
 var CARDS_VER = '5';   /* fichiers cards/ et pks_names.json */
-var SETS_VER  = '6';   /* pks_sets.json seul, pour ne pas invalider les cartes deja en cache */
+var SETS_VER  = '8';   /* pks_sets.json seul, pour ne pas invalider les cartes deja en cache */
 var VAR_LBL = { n:'Norm', r:'Rev', h:'Holo' };
 var VAR_FULL = { n:'Normale', r:'Reverse', h:'Holo' };
 var VAR_BIT = { n:1, r:2, h:4 };
@@ -2785,13 +2805,42 @@ async function stkSync(force){
   }catch(e){}
   stkSyncing = false;
 }
+/* Mise a jour sur place, jamais de rendu complet : recreer les elements
+   rechargerait images et symboles, ce qui provoque un scintillement. */
 function stkTouchUI(ids){
   if(tab !== 'stock') return;
-  if(stkSet){
+  if(stkSet || stkInv){
     for(var i=0;i<ids.length;i++) stkRefresh(ids[i]);
     return;
   }
-  render();
+  if(stkJournal || stkNever) return;   /* vues de consultation, relues a l'entree */
+  stkTouchSets();
+}
+
+/* liste des extensions : seuls les compteurs changent */
+function stkTouchSets(){
+  var per = {}, tot = 0;
+  for(var k in stock){
+    if(!stock[k]) continue;
+    tot += stock[k];
+    var p = k.split('|')[0], d = p.lastIndexOf('-');
+    var sid = rootSet(d > 0 ? p.slice(0, d) : p);
+    per[sid] = (per[sid] || 0) + stock[k];
+  }
+  var els = document.querySelectorAll('.stkSet[data-stkset]');
+  for(var i=0;i<els.length;i++){
+    var id = els[i].getAttribute('data-stkset'), n = per[id] || 0;
+    var sc = els[i].querySelector('.sc');
+    if(!sc) continue;
+    var txt = n ? String(n) : '—';
+    if(sc.textContent !== txt){
+      sc.textContent = txt;
+      sc.className = 'sc' + (n ? '' : ' z');
+    }
+  }
+  var cells = document.querySelectorAll('.stkTot .cell b');
+  if(cells[0] && cells[0].textContent !== String(tot)) cells[0].textContent = tot;
+  nvCountFill();
 }
 
 function stkBody(){
