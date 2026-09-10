@@ -564,7 +564,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '3.26';
+var APP_VERSION = '3.27';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -836,8 +836,9 @@ async function boot(){
 
   setTimeout(checkUpdate, 4000);
   setInterval(checkUpdate, 10 * 60 * 1000);
+  setInterval(function(){ if(tab === 'stock') stkSync(); }, 15000);
   document.addEventListener('visibilitychange', function(){
-    if(document.visibilityState === 'visible') checkUpdate();
+    if(document.visibilityState === 'visible'){ checkUpdate(); stkSync(true); }
   });
 
   if(pollTimer) clearInterval(pollTimer);
@@ -2662,7 +2663,7 @@ function stkApplyStates(){
 function stkSaveCache(){
   try{
     localStorage.setItem(LS + 'stkc', JSON.stringify({
-      layers: stkLayers, delta: myDelta, ov: myOv, done: myDone, stamp: myStamp,
+      mine: STK_MINE, layers: stkLayers, delta: myDelta, ov: myOv, done: myDone, stamp: myStamp,
       mvCount: mvCount, id: stkFileId
     }));
   }catch(e){ /* quota plein : on s'en passe */ }
@@ -2671,7 +2672,7 @@ function stkLoadCache(){
   try{
     var c = JSON.parse(localStorage.getItem(LS + 'stkc') || 'null');
     if(!c) return false;
-    if(c.id) stkFileId = c.id;
+    if(c.id && c.mine === STK_MINE) stkFileId = c.id;   /* jamais un identifiant herite */
     stkLayers = c.layers || [];
     myDelta = c.delta || {};
     myOv = c.ov || {};
@@ -2684,61 +2685,95 @@ function stkLoadCache(){
   }catch(e){ return false; }
 }
 
+/* lecture reseau : recompose les couches depuis Drive */
+async function stkFetch(){
+  var files = await driveList(STK_PREFIX);
+  var couches = [];
+  var mienId = null;
+  for(var i=0;i<files.length;i++){
+    var f = files[i];
+    var data = null;
+    try{ data = await driveRead(f.id); }catch(e){ continue; }
+    if(!data) continue;
+    if(f.name === STK_MINE){
+      mienId = f.id;
+      /* notre propre fichier : il fait foi sauf si des gestes sont en attente */
+      if(!stkPending.length){
+        myDelta = data.delta || {};
+        myOv = data.ov || {};
+        myDone = data.done || {};
+        myStamp = data.stamp || 0;
+      }
+      continue;
+    }
+    couches.push({ dev: data.dev || f.name, delta: data.delta || {},
+                   ov: data.ov || {}, done: data.done || {}, stamp: data.stamp || 0 });
+  }
+  /* ancien fichier unique : couche de base, jamais reecrite */
+  try{
+    var oldId = await driveFindExact(STK_LEGACY);
+    if(oldId){
+      var vieux = await driveRead(oldId);
+      if(vieux){
+        couches.push({ dev: 'legacy', delta: vieux.stock || {},
+                       ov: vieux.ov || {}, done: vieux.done || {}, stamp: 0 });
+        if(vieux.moves && vieux.moves.length){
+          mvNew = vieux.moves.concat(mvNew);
+          mvQueue();
+        }
+      }
+    }
+  }catch(e){}
+
+  /* ne prendre l'identifiant que s'il correspond bien a NOTRE fichier :
+     un identifiant herite d'une version anterieure pointerait sur l'ancien
+     fichier unique, et nos ecritures l'ecraseraient */
+  stkFileId = mienId;
+  stkLayers = couches;
+  stkRebuild();
+  stkApplyStates();
+  stkSaveCache();
+}
+
 async function stkLoad(){
   if(stkNet) return;
   var vuEnCache = stkLoaded ? true : stkLoadCache();
   if(vuEnCache) stkLoaded = true;
   if(!tokenValid()) return;
   try{
-    var files = await driveList(STK_PREFIX);
-    var couches = [];
-    var mienId = null;
-    for(var i=0;i<files.length;i++){
-      var f = files[i];
-      var data = null;
-      try{ data = await driveRead(f.id); }catch(e){ continue; }
-      if(!data) continue;
-      if(f.name === STK_MINE){
-        mienId = f.id;
-        /* notre propre fichier : il fait foi sauf si des gestes sont en attente */
-        if(!stkPending.length){
-          myDelta = data.delta || {};
-          myOv = data.ov || {};
-          myDone = data.done || {};
-          myStamp = data.stamp || 0;
-        }
-        continue;
-      }
-      couches.push({ dev: data.dev || f.name, delta: data.delta || {},
-                     ov: data.ov || {}, done: data.done || {}, stamp: data.stamp || 0 });
-    }
-    /* ancien fichier unique : couche de base, jamais reecrite */
-    try{
-      var oldId = await driveFindExact(STK_LEGACY);
-      if(oldId){
-        var vieux = await driveRead(oldId);
-        if(vieux){
-          couches.push({ dev: 'legacy', delta: vieux.stock || {},
-                         ov: vieux.ov || {}, done: vieux.done || {}, stamp: 0 });
-          if(vieux.moves && vieux.moves.length){
-            mvNew = vieux.moves.concat(mvNew);
-            mvQueue();
-          }
-        }
-      }
-    }catch(e){}
-
-    stkFileId = mienId;
-    stkLayers = couches;
-    stkRebuild();
-    stkApplyStates();
-    stkSaveCache();
+    await stkFetch();
     if(vuEnCache && tab === 'stock') render();
     stkLoaded = true;
     stkNet = true;
   }catch(e){
     if(!vuEnCache) toast('Stock : lecture impossible');
   }
+}
+
+/* Rafraichissement periodique. Sur Android une PWA n'est pas reellement
+   arretee : sans cela, un appareil ne relirait jamais ce que l'autre ecrit.
+   Le rendu n'est refait que si quelque chose a change, et dans une grille
+   seules les vignettes sont mises a jour, pour ne pas perdre le defilement. */
+var stkSyncing = false;
+async function stkSync(force){
+  if(stkSyncing || stkSaving || !stkLoaded || !tokenValid()) return;
+  if(!force && document.hidden) return;
+  stkSyncing = true;
+  try{
+    var avant = JSON.stringify(stock);
+    await stkFetch();
+    if(JSON.stringify(stock) !== avant) stkTouchUI();
+  }catch(e){}
+  stkSyncing = false;
+}
+function stkTouchUI(){
+  if(tab !== 'stock') return;
+  if(stkSet){
+    var els = document.querySelectorAll('.stkC[data-stkid]');
+    for(var i=0;i<els.length;i++) stkRefresh(els[i].getAttribute('data-stkid'));
+    return;
+  }
+  render();
 }
 
 function stkBody(){
@@ -2935,7 +2970,7 @@ async function renderStock(){
     if(!cdb){ stkView(empty(EMPTY_CMD, 'Liste des extensions indisponible.')); return; }
   }
   if(!stkLoaded) await stkLoad();
-  if(stkNever) return stkRenderNever();
+  else stkSync();                      /* relire en arriere-plan a chaque entree */
   if(stkInv) return stkRenderInv();
   if(stkJournal) return stkRenderJournal();
   if(stkSet) return stkRenderGrid();      /* la recherche se fait dans l'extension */
