@@ -604,12 +604,12 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.46';
+var APP_VERSION = '3.47';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
 var LS = 'pks_';
-var POLL_MS = 12000;
+var POLL_MS = 45000;   /* lots : rien ne change assez vite pour interroger plus souvent */
 var BAK_PREFIX = 'bak_';
 var BAK_KEEP = 10;
 var BAK_EVERY = 6 * 3600 * 1000;
@@ -895,8 +895,8 @@ async function boot(){
   clearTimeout(majTimer);   clearInterval(majInt);
   clearInterval(syncInt);   clearInterval(tokInt);
   majTimer = setTimeout(checkUpdate, 4000);
-  majInt   = setInterval(checkUpdate, 10 * 60 * 1000);
-  syncInt  = setInterval(function(){ if(tab === 'stock') stkSync(); }, 15000);
+  majInt   = setInterval(checkUpdate, 30 * 60 * 1000);
+  syncInt  = setInterval(function(){ if(tab === 'stock') stkSync(); }, 30000);
   tokInt   = setInterval(watchToken, 2 * 60 * 1000);
   if(!visBound){
     visBound = true;
@@ -908,6 +908,7 @@ async function boot(){
   if(pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(function(){
     if(sheetOpen || saving || document.hidden) return;
+    if(tab === 'stock') return;        /* cet onglet n'affiche aucun lot */
     if(tokenValid()) sync(false);
     else reauth();
   }, POLL_MS);
