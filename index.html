@@ -577,7 +577,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '3.35';
+var APP_VERSION = '3.36';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -939,7 +939,9 @@ async function sync(full){
        synchronisation ne concerne que les lots, et un rafraichissement
        complet ferait remonter le defilement en haut toutes les 12 secondes,
        rendant la saisie impossible dans une extension. */
-    if(!(tab === 'stock' && (stkSet || stkJournal || stkInv || stkNever))) render();
+    /* L'onglet Stock n'affiche aucun lot : le reconstruire a chaque
+       synchronisation rechargeait images et symboles pour rien. */
+    if(tab !== 'stock') render();
   }catch(e){
     if(e.message !== 'auth') setSync('err');
   }
