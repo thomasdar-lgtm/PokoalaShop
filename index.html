@@ -321,7 +321,9 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 .stkTit .th .ssym,.stkTit .th .sfb{width:24px;height:24px}
 .stkSet .sc{font-size:12px;font-weight:800;color:var(--blu);flex:none}
 .stkSet .sc.z{color:var(--tx3);font-weight:600}
-.stkSerie{color:var(--tx3);font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;margin:15px 0 7px}
+/* en-tete de bloc : un vrai bandeau, comme sur Pokécardex */
+.stkSerie{display:flex;align-items:center;color:var(--tx);font-size:15px;font-weight:800;letter-spacing:0;text-transform:none;margin:17px 0 9px;padding:11px 14px;background:var(--surf);border:1px solid var(--bd);border-radius:12px}
+.stkSerie:first-child{margin-top:2px}
 .stkSrch{position:relative;margin:0 0 10px}
 .stkSrch input{width:100%;background:var(--surf);border:1px solid var(--bd);border-radius:11px;padding:10px 34px 10px 13px;color:var(--tx);font-size:14px;outline:none}
 .stkSrch input::-webkit-search-cancel-button,.stkSrch input::-webkit-search-decoration{-webkit-appearance:none;appearance:none;display:none}
@@ -515,6 +517,10 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
    entre l'ecran de demarrage d'Android et celui de l'app. */
 html.sess #auth{display:none!important}
 html.sess #app{display:block!important}
+
+@media (min-width:760px){
+  .stkSerie{font-size:17px;padding:13px 18px;margin:20px 0 10px}
+}
 </style>
 <script>
 /* execute avant tout rendu : si un jeton valide ou une identite est
@@ -591,7 +597,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.41';
+var APP_VERSION = '3.42';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
