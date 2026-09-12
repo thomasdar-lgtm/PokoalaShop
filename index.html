@@ -509,7 +509,21 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
   .stkBar{margin:-7px -22px 11px;padding:15px 22px 8px}
   .stkBar::after{left:22px;right:22px}
 }
+
+/* Session connue : ne jamais peindre l'ecran de connexion. La classe est posee
+   avant le rendu par le petit script du <head>, ce qui evite le sursaut du logo
+   entre l'ecran de demarrage d'Android et celui de l'app. */
+html.sess #auth{display:none!important}
+html.sess #app{display:block!important}
 </style>
+<script>
+/* execute avant tout rendu : si un jeton valide ou une identite est
+   enregistre, on masque l'ecran de connexion des le depart */
+(function(){try{var s=JSON.parse(localStorage.getItem('pks_tk')||'null');
+var ok=!!(s&&s.t&&s.e>Date.now()+60000);
+if(!ok){var w=localStorage.getItem('pks_who');ok=(w==='thomas'||w==='cindy');}
+if(ok)document.documentElement.className+=' sess';}catch(e){}})();
+</script>
 </head>
 <body>
 
@@ -577,7 +591,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '3.37';
+var APP_VERSION = '3.38';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
