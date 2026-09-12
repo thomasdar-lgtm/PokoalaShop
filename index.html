@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#00071a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -524,6 +524,10 @@ html.sess #app{display:block!important}
   .stkSerie{font-size:20px;padding:0 0 11px 16px;margin:28px 0 13px}
   .stkSerie::before{width:5px;bottom:13px}
 }
+
+/* Chrome Android ignore maximum-scale seul : il faut aussi neutraliser le
+   geste de pincement au niveau du document. */
+html{touch-action:pan-x pan-y}
 </style>
 <script>
 /* execute avant tout rendu : si un jeton valide ou une identite est
@@ -600,7 +604,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.45';
+var APP_VERSION = '3.46';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -770,7 +774,11 @@ var reauthAt = 0;
 function reauth(){
   if(Date.now() - reauthAt < 4000) return;
   reauthAt = Date.now();
-  try{ tokenClient.requestAccessToken({ prompt: '' }); }catch(e){ offline = true; setSync('err'); }
+  /* 'hint' indique a Google quel compte renouveler : sans lui, il affiche
+     souvent le selecteur de compte au lieu de rendre la main en silence. */
+  var o = { prompt: '' };
+  if(me && me.email) o.hint = me.email;
+  try{ tokenClient.requestAccessToken(o); }catch(e){ offline = true; setSync('err'); }
 }
 
 function tokenLeft(){ return tokenExp - Date.now(); }
