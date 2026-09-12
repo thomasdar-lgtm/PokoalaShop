@@ -604,7 +604,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.48';
+var APP_VERSION = '3.49';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -3879,13 +3879,25 @@ function stkBind(){
 function stkRefresh(id){
   var c = cdbById[id];
   if(!c) return;
-  var el = document.querySelector('.stkC[data-stkid="' + id.replace(/"/g,'') + '"]');
+  var sel = '[data-stkid="' + String(id).replace(/["\\]/g,'') + '"]';
+  var el = document.querySelector('.stkC' + sel);
   if(el){
-    /* mise a jour sur place : remplacer la vignette entiere rechargerait
-       l'image de la carte, ce qui produit un scintillement */
-    var vs0 = el.querySelector('.vs');
-    if(vs0) vs0.innerHTML = stkChips(c);
-    el.classList.toggle('has', stkCardQ(id) > 0);
+    /* Chemin rapide : mise a jour sur place, car remplacer la vignette
+       rechargerait l'image et ferait scintiller. On verifie ensuite que
+       l'affichage correspond vraiment au stock ; sinon on redessine la
+       grille, pour qu'un compteur ne puisse jamais rester fige. */
+    var ok = false;
+    try{
+      var vs0 = el.querySelector('.vs');
+      if(vs0){
+        vs0.innerHTML = stkChips(c);
+        var attendu = String(stkVarQ(id, stkVars(c)[0]));
+        var lu = vs0.querySelector('.vq');
+        ok = !!lu && lu.textContent === attendu;
+      }
+      el.classList.toggle('has', stkCardQ(id) > 0);
+    }catch(e){ ok = false; }
+    if(!ok && typeof stkGridFill === 'function') stkGridFill();
     return;
   }
   var row = document.querySelector('.stkRow[data-stkid="' + id.replace(/"/g,'') + '"]');
