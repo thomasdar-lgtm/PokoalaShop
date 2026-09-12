@@ -600,7 +600,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.43';
+var APP_VERSION = '3.44';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2762,18 +2762,35 @@ async function stkFetch(){
            : (old ? Promise.resolve(old) : driveFindExact(STK_LEGACY).then(function(id){ setLegacyId(id); return id; }));
 
   var files = await pList;
-  var lectures = files.map(function(f){
-    return driveRead(f.id).then(function(d){ return { f: f, d: d }; }, function(){ return null; });
-  });
+  /* Drive peut remonter l'ancien fichier dans ce listage : sans dedoublonnage
+     il serait lu une seconde fois par la recherche explicite ci-dessous, et
+     ses quantites compteraient double. */
+  var vus = {};
+  var lectures = [];
+  for(var z=0;z<files.length;z++){
+    (function(f){
+      if(vus[f.id]) return;
+      vus[f.id] = 1;
+      lectures.push(driveRead(f.id).then(function(d){ return { f: f, d: d }; }, function(){ return null; }));
+    })(files[z]);
+  }
   var oldId = await pOld;
-  if(oldId) lectures.push(driveRead(oldId).then(function(d){ return { f: { name: STK_LEGACY }, d: d }; }, function(){ return null; }));
+  if(oldId && !vus[oldId]){
+    vus[oldId] = 1;
+    lectures.push(driveRead(oldId).then(function(d){ return { f: { id: oldId, name: STK_LEGACY }, d: d }; }, function(){ return null; }));
+  }
 
   var res = await Promise.all(lectures);
   var couches = [];
   var mienId = null;
+  var pris = {};
   for(var i=0;i<res.length;i++){
     if(!res[i] || !res[i].d) continue;
     var f = res[i].f, data = res[i].d;
+    /* securite : jamais deux fois le meme fichier, quelle qu'en soit la raison */
+    var cle = f.id || f.name;
+    if(pris[cle]) continue;
+    pris[cle] = 1;
     if(f.name === STK_LEGACY){
       couches.push({ dev: 'legacy', delta: data.stock || {},
                      ov: data.ov || {}, done: data.done || {}, stamp: 0 });
