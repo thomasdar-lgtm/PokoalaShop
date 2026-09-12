@@ -577,7 +577,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 
 <script>
 'use strict';
-var APP_VERSION = '3.36';
+var APP_VERSION = '3.37';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2721,15 +2721,42 @@ function stkLoadCache(){
 }
 
 /* lecture reseau : recompose les couches depuis Drive */
+/* L'ancien fichier unique ne change jamais : une fois son emplacement connu,
+   inutile de le rechercher a chaque lecture. 'non' signifie qu'il n'existe pas. */
+function legacyId(){
+  try{ return localStorage.getItem(LS + 'oldstk'); }catch(e){ return null; }
+}
+function setLegacyId(v){
+  try{ localStorage.setItem(LS + 'oldstk', v || 'non'); }catch(e){}
+}
+
 async function stkFetch(){
-  var files = await driveList(STK_PREFIX);
+  /* Toutes les lectures en parallele : enchainees une par une, elles
+     cumulaient cinq a six allers-retours vers Drive. */
+  var pList = driveList(STK_PREFIX);
+  var old = legacyId();
+  var pOld = (old === 'non') ? Promise.resolve(null)
+           : (old ? Promise.resolve(old) : driveFindExact(STK_LEGACY).then(function(id){ setLegacyId(id); return id; }));
+
+  var files = await pList;
+  var lectures = files.map(function(f){
+    return driveRead(f.id).then(function(d){ return { f: f, d: d }; }, function(){ return null; });
+  });
+  var oldId = await pOld;
+  if(oldId) lectures.push(driveRead(oldId).then(function(d){ return { f: { name: STK_LEGACY }, d: d }; }, function(){ return null; }));
+
+  var res = await Promise.all(lectures);
   var couches = [];
   var mienId = null;
-  for(var i=0;i<files.length;i++){
-    var f = files[i];
-    var data = null;
-    try{ data = await driveRead(f.id); }catch(e){ continue; }
-    if(!data) continue;
+  for(var i=0;i<res.length;i++){
+    if(!res[i] || !res[i].d) continue;
+    var f = res[i].f, data = res[i].d;
+    if(f.name === STK_LEGACY){
+      couches.push({ dev: 'legacy', delta: data.stock || {},
+                     ov: data.ov || {}, done: data.done || {}, stamp: 0 });
+      if(data.moves && data.moves.length){ mvNew = data.moves.concat(mvNew); mvQueue(); }
+      continue;
+    }
     if(f.name === STK_MINE){
       mienId = f.id;
       /* notre propre fichier : il fait foi sauf si des gestes sont en attente */
@@ -2744,21 +2771,6 @@ async function stkFetch(){
     couches.push({ dev: data.dev || f.name, delta: data.delta || {},
                    ov: data.ov || {}, done: data.done || {}, stamp: data.stamp || 0 });
   }
-  /* ancien fichier unique : couche de base, jamais reecrite */
-  try{
-    var oldId = await driveFindExact(STK_LEGACY);
-    if(oldId){
-      var vieux = await driveRead(oldId);
-      if(vieux){
-        couches.push({ dev: 'legacy', delta: vieux.stock || {},
-                       ov: vieux.ov || {}, done: vieux.done || {}, stamp: 0 });
-        if(vieux.moves && vieux.moves.length){
-          mvNew = vieux.moves.concat(mvNew);
-          mvQueue();
-        }
-      }
-    }
-  }catch(e){}
 
   /* ne prendre l'identifiant que s'il correspond bien a NOTRE fichier :
      un identifiant herite d'une version anterieure pointerait sur l'ancien
