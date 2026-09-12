@@ -321,9 +321,11 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 .stkTit .th .ssym,.stkTit .th .sfb{width:24px;height:24px}
 .stkSet .sc{font-size:12px;font-weight:800;color:var(--blu);flex:none}
 .stkSet .sc.z{color:var(--tx3);font-weight:600}
-/* en-tete de bloc : un vrai bandeau, comme sur Pokécardex */
-.stkSerie{display:flex;align-items:center;color:var(--tx);font-size:15px;font-weight:800;letter-spacing:0;text-transform:none;margin:17px 0 9px;padding:11px 14px;background:var(--surf);border:1px solid var(--bd);border-radius:12px}
-.stkSerie:first-child{margin-top:2px}
+/* en-tete de bloc : volontairement different des lignes d'extension,
+   sinon les deux se confondent */
+.stkSerie{position:relative;display:flex;align-items:center;color:var(--tx);font-size:17px;font-weight:900;letter-spacing:-.2px;text-transform:none;margin:24px 0 11px;padding:0 0 9px 13px;background:none;border:0;border-bottom:2px solid var(--bd)}
+.stkSerie::before{content:'';position:absolute;left:0;top:1px;bottom:11px;width:4px;border-radius:3px;background:var(--blu)}
+.stkSerie:first-child{margin-top:4px}
 .stkSrch{position:relative;margin:0 0 10px}
 .stkSrch input{width:100%;background:var(--surf);border:1px solid var(--bd);border-radius:11px;padding:10px 34px 10px 13px;color:var(--tx);font-size:14px;outline:none}
 .stkSrch input::-webkit-search-cancel-button,.stkSrch input::-webkit-search-decoration{-webkit-appearance:none;appearance:none;display:none}
@@ -519,7 +521,8 @@ html.sess #auth{display:none!important}
 html.sess #app{display:block!important}
 
 @media (min-width:760px){
-  .stkSerie{font-size:17px;padding:13px 18px;margin:20px 0 10px}
+  .stkSerie{font-size:20px;padding:0 0 11px 16px;margin:28px 0 13px}
+  .stkSerie::before{width:5px;bottom:13px}
 }
 </style>
 <script>
@@ -597,7 +600,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.42';
+var APP_VERSION = '3.43';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
