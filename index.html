@@ -540,6 +540,12 @@ color:var(--tx);border-radius:11px;padding:11px 16px;font-size:13.5px;font-weigh
 .addB .pl{display:flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;
 background:var(--blu);color:#fff;font-size:14px;font-weight:800;line-height:1}
 .addB:active{border-color:var(--blu)}
+
+/* marqueur : une variante supplementaire existe, visible dans la fiche */
+.stkV{position:relative}
+.autreV{position:absolute;top:-3px;right:-3px;width:8px;height:8px;border-radius:50%;
+background:#f85149;border:1.5px solid var(--surf);box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.stkGrid.dense .autreV{width:7px;height:7px;top:-2px;right:-2px}
 </style>
 <script>
 /* execute avant tout rendu : si un jeton valide ou une identite est
@@ -616,7 +622,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.54';
+var APP_VERSION = '3.55';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2496,9 +2502,13 @@ var MV_LEGACY  = 'pkstkmv.json';
 var MV_CAP   = 4000;             /* mouvements conserves */
 var CARDS_VER = '7';   /* fichiers cards/ et pks_names.json */
 var SETS_VER  = '12';   /* pks_sets.json seul, pour ne pas invalider les cartes deja en cache */
-var VAR_LBL = { n:'Norm', r:'Rev', h:'Holo' };
-var VAR_FULL = { n:'Normale', r:'Reverse', h:'Holo' };
-var VAR_BIT = { n:1, r:2, h:4 };
+/* Quatre variantes possibles. Le cosmos ne s'active que depuis la fiche :
+   aucune source ne le recense, il releve donc toujours d'une saisie manuelle. */
+var VAR_LBL = { n:'Norm', r:'Rev', h:'Holo', c:'Cosmos' };
+var VAR_FULL = { n:'Normale', r:'Reverse', h:'Holo', c:'Holo cosmos' };
+var VAR_BIT = { n:1, r:2, h:4, c:8 };
+var VAR_ORDRE = ['n','r','h','c'];
+var CHIPS_MAX = 3;   /* la vignette n'en montre jamais plus, faute de place */
 var ETS = [['nm','Near Mint'],['jo','Joué'],['ab','Abîmé']];
 var ET_LBL = { nm:'NM', jo:'Joué', ab:'Abîmé' };
 
@@ -2536,7 +2546,11 @@ var stkTri  = localStorage.getItem(LS + 'tri')  || 'num';   /* num | qty */
 function stkKey(id, v, e){ return id + '|' + v + '|' + e; }
 function stkQ(id, v, e){ return stock[stkKey(id, v, e)] || 0; }
 function stkVarQ(id, v){ var t = 0; for(var i=0;i<ETS.length;i++) t += stkQ(id, v, ETS[i][0]); return t; }
-function stkCardQ(id){ return stkVarQ(id,'n') + stkVarQ(id,'r') + stkVarQ(id,'h'); }
+function stkCardQ(id){
+  var t = 0;
+  for(var i=0;i<VAR_ORDRE.length;i++) t += stkVarQ(id, VAR_ORDRE[i]);
+  return t;
+}
 
 /* Raretes dites classiques : la carte de base existe en normale, avec une
    version reverse. Les autres tirages (holo, holo cosmos...) existent parfois
@@ -2553,10 +2567,13 @@ function masqueDefaut(c){
 }
 function stkVars(c){
   var m = (stkOv[c.i] != null) ? stkOv[c.i] : masqueDefaut(c), r = [];
-  if(m & 1) r.push('n');
-  if(m & 2) r.push('r');
-  if(m & 4) r.push('h');
+  for(var i=0;i<VAR_ORDRE.length;i++) if(m & VAR_BIT[VAR_ORDRE[i]]) r.push(VAR_ORDRE[i]);
   return r.length ? r : ['n'];
+}
+/* variantes reellement affichees sur une vignette */
+function stkVarsChips(c){
+  var vs = stkVars(c);
+  return vs.length > CHIPS_MAX ? vs.slice(0, CHIPS_MAX) : vs;
 }
 
 /* Raretes en francais : la base les stocke en anglais. */
@@ -3240,10 +3257,17 @@ function openCM(nom, num){
 }
 
 function stkChips(c){
-  var vs = stkVars(c), solo = vs.length === 1, out = '';
+  var toutes = stkVars(c), vs = stkVarsChips(c);
+  var solo = vs.length === 1, out = '';
+  /* une variante de plus que ce que la vignette peut montrer : on la signale */
+  var caches = toutes.slice(vs.length);
+  var marque = '';
+  for(var z=0;z<caches.length;z++) if(stkVarQ(c.i, caches[z])) marque = caches[z];
   for(var i=0;i<vs.length;i++){
     var q = stkVarQ(c.i, vs[i]);
+    var dernier = (i === vs.length - 1) && marque;
     out += '<div class="stkV ' + (q ? 'on' : 'q0') + (solo ? ' solo' : '') + '" data-stkv="' + esc(c.i) + '|' + vs[i] + '">' +
+           (dernier ? '<span class="autreV" title="' + esc(VAR_FULL[marque]) + ' présent"></span>' : '') +
            (solo ? '' : '<span class="vl">' + VAR_LBL[vs[i]] + '</span>') +
            '<span class="vq">' + q + '</span></div>';
   }
@@ -3253,7 +3277,7 @@ function stkTile(c){
   var vs = stkVars(c), h = '';
   h += '<div class="stkC' + (stkCardQ(c.i) ? ' has' : '') + '" data-stkid="' + esc(c.i) + '">';
   h += '<div class="im">' + cardImg(c, '') +
-       '<span class="nu">' + esc(c.u) + '</span>' + (c.d ? '<span class="stkDot" title="variante déduite"></span>' : '') +
+       '<span class="nu">' + esc(c.u) + '</span>' +
        rarHtml(c) + cmHtml(c) + '</div>';
   h += '<div class="na">' + esc(c.n) + '</div><div class="vs">' + stkChips(c);
   return h + '</div></div>';
@@ -3707,7 +3731,7 @@ async function stkRenderJournal(){
 function sheetStkCard(id, garder){
   var c = cdbById[id];
   if(!c) return;
-  var vs = stkVars(c), all = ['n','r','h'];
+  var vs = stkVars(c), all = VAR_ORDRE;
   var ico = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>';
   var h = '<div class="shHd2"><button class="stkBack" id="shBack" aria-label="Retour">' + ico + '</button>' +
           '<div class="shTi"><b>' + esc(c.n) + '</b><small>N° ' + esc(c.u) + ' · ' + esc(rarFr(c.r)) + '</small></div></div>';
