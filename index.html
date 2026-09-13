@@ -523,6 +523,23 @@ html.sess #app{display:block!important}
 /* Chrome Android ignore maximum-scale seul : il faut aussi neutraliser le
    geste de pincement au niveau du document. */
 html{touch-action:pan-x pan-y}
+
+/* fiche d'une carte */
+.shHd2{position:relative;display:flex;align-items:center;gap:11px;padding:2px 18px 12px}
+.shHd2 .stkBack{width:38px;height:38px;flex:none}
+.shHd2 .stkBack svg{width:20px;height:20px}
+.shTi{min-width:0;flex:1}
+.shTi b{display:block;font-size:17px;font-weight:800;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shTi small{display:block;color:var(--tx3);font-size:12px;margin-top:3px}
+.sheet .shImg{margin-top:0}
+.sheet .shV{margin-left:18px;margin-right:18px}
+.addTit{text-align:center;color:var(--tx2);font-size:12.5px;font-weight:700;margin:16px 18px 10px}
+.addV{display:flex;gap:9px;padding:0 18px 2px;justify-content:center;flex-wrap:wrap}
+.addB{display:flex;align-items:center;gap:7px;background:var(--surf2);border:1px solid var(--bd);
+color:var(--tx);border-radius:11px;padding:11px 16px;font-size:13.5px;font-weight:700;cursor:pointer}
+.addB .pl{display:flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;
+background:var(--blu);color:#fff;font-size:14px;font-weight:800;line-height:1}
+.addB:active{border-color:var(--blu)}
 </style>
 <script>
 /* execute avant tout rendu : si un jeton valide ou une identite est
@@ -599,7 +616,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.53';
+var APP_VERSION = '3.54';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2521,13 +2538,46 @@ function stkQ(id, v, e){ return stock[stkKey(id, v, e)] || 0; }
 function stkVarQ(id, v){ var t = 0; for(var i=0;i<ETS.length;i++) t += stkQ(id, v, ETS[i][0]); return t; }
 function stkCardQ(id){ return stkVarQ(id,'n') + stkVarQ(id,'r') + stkVarQ(id,'h'); }
 
+/* Raretes dites classiques : la carte de base existe en normale, avec une
+   version reverse. Les autres tirages (holo, holo cosmos...) existent parfois
+   mais varient selon les extensions : ils s'ajoutent a la main depuis la fiche.
+   Applique ici plutot que dans les donnees, donc reversible sans rien redeployer. */
+var RAR_CLASSIQUE = { 'Common':1, 'Uncommon':1, 'Rare':1, 'Rare Holo':1, '':1 };
+var REVERSE_DEPUIS = '2002-05-24';   /* Legendary Collection */
+
+function masqueDefaut(c){
+  if(!RAR_CLASSIQUE[c.r || '']) return c.v;
+  var s = (typeof setInfo === 'function') ? setInfo(rootSet(c.s)) : null;
+  var dt = s && s.date;
+  return (!dt || dt >= REVERSE_DEPUIS) ? 3 : 1;
+}
 function stkVars(c){
-  var m = (stkOv[c.i] != null) ? stkOv[c.i] : c.v, r = [];
+  var m = (stkOv[c.i] != null) ? stkOv[c.i] : masqueDefaut(c), r = [];
   if(m & 1) r.push('n');
   if(m & 2) r.push('r');
   if(m & 4) r.push('h');
   return r.length ? r : ['n'];
 }
+
+/* Raretes en francais : la base les stocke en anglais. */
+var RAR_FR = {
+  'Common':'Commune','Uncommon':'Peu commune','Rare':'Rare','Rare Holo':'Rare Holo',
+  'Promo':'Promo','Rare Ultra':'Ultra Rare','Ultra Rare':'Ultra Rare',
+  'Illustration Rare':'Illustration Rare','Special Illustration Rare':'Illustration Spéciale Rare',
+  'Rare Secret':'Secrète','Rare Rainbow':'Arc-en-ciel','Hyper Rare':'Hyper Rare',
+  'Double Rare':'Double Rare','Rare Holo EX':'Rare Holo EX','Rare Holo V':'Rare Holo V',
+  'Rare Holo VMAX':'Rare Holo VMAX','Rare Holo VSTAR':'Rare Holo VSTAR',
+  'Rare Holo GX':'Rare Holo GX','Rare Holo LV.X':'Rare Holo Niv.X',
+  'Rare Shiny':'Chromatique','Shiny Rare':'Chromatique','Rare Shiny GX':'Chromatique GX',
+  'Shiny Ultra Rare':'Ultra Rare Chromatique','Rare Shining':'Brillante',
+  'Radiant Rare':'Radieuse','Amazing Rare':'Fabuleuse','ACE SPEC Rare':'ACE SPEC Rare',
+  'Rare ACE':'Rare ACE','Rare BREAK':'Rare BREAK','Rare Prime':'Prime',
+  'Rare Prism Star':'Prisme Star','Rare Holo Star':'Holo Star','LEGEND':'LEGEND',
+  'Trainer Gallery Rare Holo':'Galerie des Dresseurs','Classic Collection':'Collection Classique',
+  'Mega Hyper Rare':'Méga Hyper Rare','MEGA_ATTACK_RARE':'Méga Attaque Rare',
+  'Black White Rare':'Rare Noir et Blanc'
+};
+function rarFr(r){ return RAR_FR[r] || r || '—'; }
 
 /* ---- base de cartes : liste des extensions d'abord, cartes a la demande ---- */
 var setCards = {}, nameIdx = null, cdbP = null, nameP = null, setP = {};
@@ -3658,12 +3708,13 @@ function sheetStkCard(id, garder){
   var c = cdbById[id];
   if(!c) return;
   var vs = stkVars(c), all = ['n','r','h'];
-  var h = '<h3>' + esc(c.n) + '</h3><p class="sub">N° ' + esc(c.u) + ' · ' + esc(c.r || '—') + '</p>';
+  var ico = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>';
+  var h = '<div class="shHd2"><button class="stkBack" id="shBack" aria-label="Retour">' + ico + '</button>' +
+          '<div class="shTi"><b>' + esc(c.n) + '</b><small>N° ' + esc(c.u) + ' · ' + esc(rarFr(c.r)) + '</small></div></div>';
   var big = cardSrcs(c, true);
   if(big.length) h += '<img class="shImg" src="' + esc(big[0]) + '" alt="" ' +
       'data-cs="' + esc(JSON.stringify(big)) + '" data-ci="0" onerror="cardImgErr(this)" ' +
       'data-stkzoom="' + esc(c.i) + '">';
-  if(c.d) h += '<div class="stkWarn">Variantes déduites de la rareté, non certifiées par TCGdex. Corrige-les si besoin.</div>';
   var solo = vs.length === 1;
   for(var i=0;i<vs.length;i++){
     var v = vs[i];
@@ -3687,11 +3738,15 @@ function sheetStkCard(id, garder){
   }
   var miss = all.filter(function(x){ return vs.indexOf(x) < 0; });
   if(miss.length){
-    h += '<p class="sub" style="margin-top:4px">Variante manquante ?</p><div class="acts">';
-    for(var m=0;m<miss.length;m++) h += '<button class="aBtn" data-stkav="' + esc(id) + '|' + miss[m] + '">+ ' + VAR_FULL[miss[m]] + '</button>';
+    h += '<div class="addTit">Ajouter une version</div><div class="addV">';
+    for(var m=0;m<miss.length;m++)
+      h += '<button class="addB" data-stkav="' + esc(id) + '|' + miss[m] + '">' +
+           '<span class="pl">+</span>' + VAR_FULL[miss[m]] + '</button>';
     h += '</div>';
   }
   if(garder) openSheetKeep(h); else openSheet(h);
+  var b = document.getElementById('shBack');
+  if(b) b.onclick = closeSheet;
 }
 
 /* ---- interactions ---- */
