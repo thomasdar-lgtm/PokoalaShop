@@ -551,6 +551,16 @@ background:#f85149;border:1.5px solid var(--surf);box-shadow:0 0 0 1px rgba(0,0,
   /* la poignee de glissement est masquee sur grand ecran : il faut compenser */
   .shHd2{padding-top:20px}
 }
+
+/* verification du stock */
+.diagL{display:flex;align-items:center;gap:10px;border:1px solid var(--bd);border-radius:10px;padding:10px 12px;margin-bottom:7px}
+.diagL .dt{flex:1;min-width:0}
+.diagL .dt b{display:block;font-size:13px;font-weight:700}
+.diagL .dt small{display:block;color:var(--tx3);font-size:10.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.diagL .dn{flex:none;text-align:right;font-size:17px;font-weight:900;color:var(--blu);line-height:1.1}
+.diagL .dn small{display:block;color:var(--tx3);font-size:10px;font-weight:600}
+.diagOk{margin:0 18px 12px;padding:10px 12px;border-radius:9px;font-size:12px;font-weight:600;
+background:rgba(63,185,80,.11);border:1px solid rgba(63,185,80,.34);color:#3fb950}
 </style>
 <script>
 /* execute avant tout rendu : si un jeton valide ou une identite est
@@ -627,7 +637,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.56';
+var APP_VERSION = '3.57';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2132,6 +2142,61 @@ function sheetTags(){
   $('k6').onclick = function(){ tagTpl = $('f_tpl').value; closeSheet(); save(); toast('Modèle enregistré'); };
 }
 
+/* Verification du stock : detaille chaque source lue et signale deux sources
+   au contenu identique, seul cas ou une saisie pourrait etre comptee deux fois. */
+function stkTotalEx(){
+  var t = 0;
+  for(var k in stock) t += stock[k];
+  return t;
+}
+async function sheetStkDiag(){
+  openSheet('<div class="shT">Vérification du stock</div><div class="ph">Lecture…</div>');
+  try{ await stkFetch(); }catch(e){}
+
+  function mesure(d){
+    var l = 0, t = 0;
+    for(var k in d){ if(d[k]){ l++; t += d[k]; } }
+    return { lignes: l, total: t };
+  }
+  var sources = [];
+  for(var i=0;i<stkLayers.length;i++){
+    var L = stkLayers[i], m = mesure(L.delta);
+    sources.push({ nom: L.dev === 'legacy' ? 'Ancien fichier commun' : 'Autre appareil',
+                   detail: L.dev === 'legacy' ? 'saisies d\'avant la séparation' : L.dev,
+                   lignes: m.lignes, total: m.total, sig: JSON.stringify(L.delta) });
+  }
+  var mm = mesure(myDelta);
+  sources.push({ nom: 'Cet appareil', detail: DEV, lignes: mm.lignes, total: mm.total,
+                 sig: JSON.stringify(myDelta) });
+
+  /* deux sources au contenu rigoureusement identique = doublon */
+  var vus = {}, doublons = [];
+  for(var s=0;s<sources.length;s++){
+    var sg = sources[s].sig;
+    if(sg === '{}') continue;
+    if(vus[sg]) doublons.push(sources[s].nom + ' et ' + vus[sg]);
+    else vus[sg] = sources[s].nom;
+  }
+
+  var h = '<div class="shT">Vérification du stock</div>' +
+          '<div class="shS">' + stkTotalEx() + ' exemplaires au total, ' +
+          sources.length + ' source' + (sources.length > 1 ? 's' : '') + '</div>';
+  h += '<div class="fld">';
+  for(var j=0;j<sources.length;j++){
+    var o = sources[j];
+    h += '<div class="diagL"><span class="dt"><b>' + esc(o.nom) + '</b><small>' + esc(o.detail) + '</small></span>' +
+         '<span class="dn">' + o.total + '<small>' + o.lignes + ' lignes</small></span></div>';
+  }
+  h += '</div>';
+  h += doublons.length
+     ? '<div class="stkWarn" style="margin:0 18px 12px">Doublon détecté : ' + esc(doublons.join(', ')) +
+       '. Signale-le-moi, ces quantités sont comptées deux fois.</div>'
+     : '<div class="diagOk">Aucun doublon : chaque source a un contenu distinct.</div>';
+  h += '<div class="shF"><button class="bP" id="dgx">Fermer</button></div>';
+  openSheetKeep(h);
+  $('dgx').onclick = closeSheet;
+}
+
 function sheetAcc(){
   var etatOk = tokenValid() && !offline;
   var etatLbl = etatOk ? ((me && (me.email || me.name)) || 'Connecté') : 'Non connecté';
@@ -2148,6 +2213,9 @@ function sheetAcc(){
     '<div class="fld"><div class="gAcc' + (etatOk ? ' ok' : ' ko') + '">' +
     '<span class="gDot"></span><span class="gTx"><b>' + esc(etatLbl) + '</b>' +
     (etatSub ? '<small>' + esc(etatSub) + '</small>' : '') + '</span></div></div>' +
+
+    '<div class="accSec">Stock</div>' +
+    '<button class="accBtn" id="a_stk">Vérifier le stock<span>' + stkTotalEx() + ' exemplaires</span></button>' +
 
     '<div class="accSec">Synchronisation</div>' +
     '<button class="accBtn" id="a_ref">Rafraîchir maintenant<span>' + lots.length + ' lots</span></button>' +
@@ -2184,6 +2252,7 @@ function sheetAcc(){
     };
   }
   $('x7').onclick = closeSheet;
+  $('a_stk').onclick = sheetStkDiag;
   $('a_ref').onclick = function(){ closeSheet(); sync(true); toast('Synchronisation…'); };
   $('a_js').onclick = exportJson;
   $('a_cs').onclick = exportCsv;
