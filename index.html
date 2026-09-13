@@ -567,6 +567,12 @@ background:rgba(63,185,80,.11);border:1px solid rgba(63,185,80,.34);color:#3fb95
 .famC{background:var(--surf2);border:1px solid var(--bd);color:var(--tx2);border-radius:9px;
 padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
 .famC.on{background:rgba(56,139,253,.16);border-color:var(--blu);color:var(--blu)}
+
+/* libelles longs : Pokeball et Masterball */
+.stkV .vl{white-space:nowrap;overflow:hidden;text-overflow:clip}
+.stkGrid .stkV .vl{font-size:7.5px;letter-spacing:0}
+@media (min-width:760px){ .stkGrid .stkV .vl{font-size:9px} }
+.addV{max-width:560px;margin:0 auto}
 </style>
 <script>
 /* execute avant tout rendu : si un jeton valide ou une identite est
@@ -643,7 +649,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.58';
+var APP_VERSION = '3.59';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -838,9 +844,13 @@ function scheduleRefresh(){
    si elle est manquee — Android suspend les minuteries en arriere-plan — ou si
    Google refuse ce renouvellement precis, le jeton expire et la reconnexion
    devient visible. Ici on retente tant qu'il reste peu de temps. */
-function watchToken(){
+/* Le renouvellement peut ouvrir une fenetre Google : on le declenche au moment
+   le moins genant, quand l'utilisateur revient sur l'app. En pleine saisie on
+   attend, sauf s'il ne reste vraiment plus de marge. */
+function watchToken(retour){
   if(document.hidden || !token) return;
-  if(tokenLeft() < TOKEN_SEUIL) reauth();
+  var reste = tokenLeft();
+  if(retour ? (reste < TOKEN_SEUIL) : (reste < 3 * 60 * 1000)) reauth();
 }
 
 function tokenValid(){ return !!token && Date.now() < tokenExp - 10000; }
@@ -936,11 +946,11 @@ async function boot(){
   majTimer = setTimeout(checkUpdate, 4000);
   majInt   = setInterval(checkUpdate, 30 * 60 * 1000);
   syncInt  = setInterval(function(){ if(tab === 'stock') stkSync(); }, 30000);
-  tokInt   = setInterval(watchToken, 2 * 60 * 1000);
+  tokInt   = setInterval(watchToken, 60 * 1000);
   if(!visBound){
     visBound = true;
     document.addEventListener('visibilitychange', function(){
-      if(document.visibilityState === 'visible'){ checkUpdate(); stkSync(true); watchToken(); }
+      if(document.visibilityState === 'visible'){ checkUpdate(); stkSync(true); watchToken(true); }
     });
   }
 
@@ -2580,15 +2590,16 @@ var STK_LEGACY = 'pkstk.json';    /* ancien fichier unique : lu, jamais reecrit 
 var MV_PREFIX  = 'pkstkmv_';      /* journal a part : il grossit sans fin, le stock non */
 var MV_LEGACY  = 'pkstkmv.json';
 var MV_CAP   = 4000;             /* mouvements conserves */
-var CARDS_VER = '7';   /* fichiers cards/ et pks_names.json */
+var CARDS_VER = '8';   /* fichiers cards/ et pks_names.json */
 var SETS_VER  = '12';
 var FAM_VER   = '1';   /* pks_familles.json */   /* pks_sets.json seul, pour ne pas invalider les cartes deja en cache */
 /* Quatre variantes possibles. Le cosmos ne s'active que depuis la fiche :
    aucune source ne le recense, il releve donc toujours d'une saisie manuelle. */
-var VAR_LBL = { n:'Norm', r:'Rev', h:'Holo', c:'Cosmos' };
-var VAR_FULL = { n:'Normale', r:'Reverse', h:'Holo', c:'Holo cosmos' };
-var VAR_BIT = { n:1, r:2, h:4, c:8 };
-var VAR_ORDRE = ['n','r','h','c'];
+var VAR_LBL  = { n:'Norm', r:'Rev', h:'Holo', c:'Cosmos', p:'Pokéball', m:'Masterball' };
+var VAR_FULL = { n:'Normale', r:'Reverse', h:'Holo', c:'Holo cosmos',
+                 p:'Reverse Pokéball', m:'Reverse Masterball' };
+var VAR_BIT  = { n:1, r:2, h:4, c:8, p:16, m:32 };
+var VAR_ORDRE = ['n','r','h','c','p','m'];
 var CHIPS_MAX = 3;   /* la vignette n'en montre jamais plus, faute de place */
 var ETS = [['nm','Near Mint'],['jo','Joué'],['ab','Abîmé']];
 var ET_LBL = { nm:'NM', jo:'Joué', ab:'Abîmé' };
@@ -3096,8 +3107,8 @@ function stkAdd(id, v, e, d, src){
 }
 
 /* ---- journal : un fichier par appareil, meme principe ---- */
-async function mvLoad(){
-  if(mvLoaded) return stkMoves;
+async function mvLoad(force){
+  if(mvLoaded && !force) return stkMoves;
   var tout = [];
   try{
     var files = await driveList(MV_PREFIX);
@@ -3263,6 +3274,7 @@ async function renderStock(){
   }
   if(!stkLoaded) await stkLoad();
   else stkSync();                      /* relire en arriere-plan a chaque entree */
+  if(stkNever) return stkRenderNever();
   if(stkInv) return stkRenderInv();
   if(stkJournal) return stkRenderJournal();
   if(stkSet) return stkRenderGrid();      /* la recherche se fait dans l'extension */
@@ -3744,11 +3756,11 @@ async function stkRenderJournal(){
     return '<div class="stkBar"><button class="stkBack" data-stkjb="1" aria-label="Retour">' + ico + '</button>' +
            '<div class="stkTit">Mouvements de stock<small>' + sub + '</small></div></div>';
   }
-  if(!mvLoaded){
-    stkView(head('chargement…'));
-    await mvLoad();
-    if(!stkJournal || tab !== 'stock') return;
-  }
+  /* toujours relire : le journal doit refleter ce que l'autre appareil a fait */
+  stkView(head('chargement…'));
+  if(mvNew.length){ clearTimeout(mvTimer); await mvSave(); }
+  await mvLoad(true);
+  if(!stkJournal || tab !== 'stock') return;
   if(!stkMoves.length){
     stkView(head('aucun mouvement') + '<div class="pkE">Rien n\'a encore été saisi.</div>');
     return;
