@@ -1,4 +1,4 @@
-const CACHE_VERSION = '3.57';
+const CACHE_VERSION = '3.58';
 const CACHE_NAME = 'pokoalashop-v' + CACHE_VERSION;
 /* cache non versionne : la base de cartes est versionnee par son URL (?v=N),
    inutile de re-telecharger 2,7 Mo a chaque montee de version */
@@ -57,7 +57,7 @@ self.addEventListener('fetch', e => {
   if (url.origin !== self.location.origin) return;
 
   /* donnees de cartes : cache d'abord, la cle inclut le ?v=N */
-  if (/\/(pks_sets|pks_names)\.json$/.test(url.pathname) || url.pathname.indexOf('/cards/') >= 0) {
+  if (/\/(pks_sets|pks_names|pks_familles)\.json$/.test(url.pathname) || url.pathname.indexOf('/cards/') >= 0) {
     e.respondWith(
       caches.open(CACHE_DATA).then(c =>
         c.match(e.request).then(hit => hit || fetch(e.request).then(r => {

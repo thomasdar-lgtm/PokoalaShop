@@ -561,6 +561,12 @@ background:#f85149;border:1.5px solid var(--surf);box-shadow:0 0 0 1px rgba(0,0,
 .diagL .dn small{display:block;color:var(--tx3);font-size:10px;font-weight:600}
 .diagOk{margin:0 18px 12px;padding:10px 12px;border-radius:9px;font-size:12px;font-weight:600;
 background:rgba(63,185,80,.11);border:1px solid rgba(63,185,80,.34);color:#3fb950}
+
+/* pastilles de famille dans le selecteur de cartes */
+.famB{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 12px}
+.famC{background:var(--surf2);border:1px solid var(--bd);color:var(--tx2);border-radius:9px;
+padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.famC.on{background:rgba(56,139,253,.16);border-color:var(--blu);color:var(--blu)}
 </style>
 <script>
 /* execute avant tout rendu : si un jeton valide ou une identite est
@@ -637,7 +643,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.57';
+var APP_VERSION = '3.58';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2575,7 +2581,8 @@ var MV_PREFIX  = 'pkstkmv_';      /* journal a part : il grossit sans fin, le st
 var MV_LEGACY  = 'pkstkmv.json';
 var MV_CAP   = 4000;             /* mouvements conserves */
 var CARDS_VER = '7';   /* fichiers cards/ et pks_names.json */
-var SETS_VER  = '12';   /* pks_sets.json seul, pour ne pas invalider les cartes deja en cache */
+var SETS_VER  = '12';
+var FAM_VER   = '1';   /* pks_familles.json */   /* pks_sets.json seul, pour ne pas invalider les cartes deja en cache */
 /* Quatre variantes possibles. Le cosmos ne s'active que depuis la fiche :
    aucune source ne le recense, il releve donc toujours d'une saisie manuelle. */
 var VAR_LBL = { n:'Norm', r:'Rev', h:'Holo', c:'Cosmos' };
@@ -4159,6 +4166,22 @@ function lotRestore(l){
 }
 
 /* ---- panneau de selection ---- */
+/* Familles d'evolution : chercher un Pokemon propose toute sa lignee.
+   Le fichier est charge a la premiere ouverture du selecteur. */
+var familles = null, famP = null, pickFam = null;
+function famLoad(){
+  if(familles) return Promise.resolve(familles);
+  if(famP) return famP;
+  famP = jgetv('./pks_familles.json', FAM_VER).then(function(j){ familles = j; return j; })
+    .catch(function(e){ famP = null; familles = {}; return {}; });
+  return famP;
+}
+function familleDe(nom){
+  var k = norm(nom || '');
+  if(!k || !familles) return null;
+  return familles[k] || null;
+}
+
 var pickLot = null;
 
 async function sheetPick(id){
@@ -4169,7 +4192,9 @@ async function sheetPick(id){
   if(!cdb){ try{ await cdbLoad(); }catch(e){} }
   if(!stkLoaded) await stkLoad();
   if(!nameIdx){ try{ await namesLoad(); }catch(e){} }
-  pickRender(l.poke || '');
+  if(!familles){ try{ await famLoad(); }catch(e){} }
+  pickFam = null;
+  pickRender('');
 }
 
 async function pickRender(q){
@@ -4178,14 +4203,25 @@ async function pickRender(q){
   var inLot = lotCards(l);
   var mine = Object.keys(inLot);
 
-  /* resultats disponibles en stock */
-  var n = norm(q || ''), avail = [];
-  if(n.length >= 2 && nameIdx){
+  /* Par defaut on propose toute la famille du Pokemon du lot ; les pastilles
+     permettent de se restreindre a un membre, et le champ de recherche sert
+     a chercher autre chose. */
+  var base = (q && q.trim()) ? q : (l.poke || '');
+  var fam = familleDe(base);
+  if(pickFam && (!fam || fam.indexOf(pickFam) < 0)) pickFam = null;
+  var cibles = pickFam ? [pickFam] : (fam || [base]);
+
+  var avail = [];
+  if(nameIdx){
     var ids = {};
-    for(var nm in nameIdx){
-      if(nm.indexOf(n) < 0) continue;
-      var a = nameIdx[nm];
-      for(var i=0;i<a.length;i++) ids[a[i]] = 1;
+    for(var t=0;t<cibles.length;t++){
+      var n = norm(cibles[t]);
+      if(n.length < 2) continue;
+      for(var nm in nameIdx){
+        if(nm.indexOf(n) < 0) continue;
+        var a = nameIdx[nm];
+        for(var i=0;i<a.length;i++) ids[a[i]] = 1;
+      }
     }
     for(var k in stock){
       var cid = k.split('|')[0];
@@ -4201,11 +4237,18 @@ async function pickRender(q){
   var nb = lotCardCount(l), s = nb > 1 ? 's' : '';
   var h = '<div class="shT">Cartes du lot</div>' +
           '<div class="shS">' + esc(lotTitle(l)) + ' — ' + nb + ' carte' + s + ' rattachée' + s + '</div>' +
-          '<div class="fld"><input class="inp" id="f_pick" placeholder="Chercher un Pokémon…" value="' + esc(q || '') + '"' + noAuto() + '></div>';
+          '<div class="fld"><input class="inp" id="f_pick" placeholder="Chercher un autre Pokémon…" value="' + esc(q || '') + '"' + noAuto() + '></div>';
+
+  if(fam && fam.length > 1){
+    h += '<div class="famB"><button class="famC' + (pickFam ? '' : ' on') + '" data-pkf="">Toute la famille</button>';
+    for(var z=0;z<fam.length;z++)
+      h += '<button class="famC' + (pickFam === fam[z] ? ' on' : '') + '" data-pkf="' + esc(fam[z]) + '">' + esc(fam[z]) + '</button>';
+    h += '</div>';
+  }
 
   if(mine.length) h += '<div class="pkH">Dans ce lot</div>' + pickRows(mine, inLot);
 
-  if(n.length >= 2){
+  if(cibles.length && norm(cibles[0]).length >= 2){
     h += '<div class="pkH">Disponible en stock</div>';
     h += avail.length ? pickRows(avail, inLot)
                       : '<div class="pkE">Aucun exemplaire en stock pour cette recherche.</div>';
@@ -4272,6 +4315,12 @@ function openSheetKeep(html){
 }
 
 document.addEventListener('click', function(e){
+  var tf = e.target.closest('[data-pkf]');
+  if(tf && pickLot){
+    pickFam = tf.getAttribute('data-pkf') || null;
+    pickRender($('f_pick') ? $('f_pick').value : '');
+    return;
+  }
   var t = e.target.closest('[data-pick]');
   if(!t || !pickLot) return;
   var raw = t.getAttribute('data-pick').split('|');
