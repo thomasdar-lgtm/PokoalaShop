@@ -525,7 +525,7 @@ html.sess #app{display:block!important}
 html{touch-action:pan-x pan-y}
 
 /* fiche d'une carte */
-.shHd2{position:relative;display:flex;align-items:center;gap:11px;padding:2px 18px 12px}
+.shHd2{position:relative;display:flex;align-items:center;gap:11px;padding:10px 18px 12px}
 .shHd2 .stkBack{width:38px;height:38px;flex:none}
 .shHd2 .stkBack svg{width:20px;height:20px}
 .shTi{min-width:0;flex:1}
@@ -546,6 +546,11 @@ background:var(--blu);color:#fff;font-size:14px;font-weight:800;line-height:1}
 .autreV{position:absolute;top:-3px;right:-3px;width:8px;height:8px;border-radius:50%;
 background:#f85149;border:1.5px solid var(--surf);box-shadow:0 0 0 1px rgba(0,0,0,.35)}
 .stkGrid.dense .autreV{width:7px;height:7px;top:-2px;right:-2px}
+
+@media (min-width:760px){
+  /* la poignee de glissement est masquee sur grand ecran : il faut compenser */
+  .shHd2{padding-top:20px}
+}
 </style>
 <script>
 /* execute avant tout rendu : si un jeton valide ou une identite est
@@ -622,7 +627,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.55';
+var APP_VERSION = '3.56';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
