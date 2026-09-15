@@ -573,6 +573,21 @@ padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowra
 .stkGrid .stkV .vl{font-size:7.5px;letter-spacing:0}
 @media (min-width:760px){ .stkGrid .stkV .vl{font-size:9px} }
 .addV{max-width:560px;margin:0 auto}
+
+/* bascules de version dans la fiche */
+.addV{display:flex;flex-wrap:wrap;gap:8px;padding:0 18px 4px;justify-content:center}
+.addB{position:relative;opacity:.72}
+.addB.on{opacity:1;border-color:var(--blu);background:rgba(56,139,253,.13);color:var(--tx)}
+.addB.on .pl{background:var(--blu)}
+.addB:not(.on) .pl{background:var(--surf3);color:var(--tx2)}
+.addB .qn{margin-left:6px;background:var(--blu);color:#fff;border-radius:7px;padding:1px 7px;font-size:11px;font-weight:800}
+.addB.plein{border-color:var(--blu)}
+
+/* total du bloc, a droite du bandeau */
+.stkSerie{justify-content:space-between}
+.blocN{flex:none;font-size:13px;font-weight:800;color:var(--blu);padding-left:12px}
+.blocN.z{color:var(--tx3);font-weight:600}
+@media (min-width:760px){ .blocN{font-size:15px} }
 </style>
 <script>
 /* execute avant tout rendu : si un jeton valide ou une identite est
@@ -649,7 +664,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.63';
+var APP_VERSION = '3.64';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -3062,6 +3077,24 @@ function stkTouchSets(){
   }
   var cells = document.querySelectorAll('.stkTot .cell b');
   if(cells[0] && cells[0].textContent !== String(tot)) cells[0].textContent = tot;
+  /* totaux des bandeaux de bloc */
+  var parBloc = {};
+  if(cdb){
+    for(var b=0;b<cdb.sets.length;b++){
+      var sb = cdb.sets[b], racine = sb.parent || sb.id, hote = null;
+      for(var y=0;y<cdb.sets.length;y++) if(cdb.sets[y].id === racine) hote = cdb.sets[y];
+      var srb = (hote || sb).serie;
+      parBloc[srb] = (parBloc[srb] || 0) + (per[sb.id] || 0);
+    }
+  }
+  var bands = document.querySelectorAll('.stkSerie[data-bloc]');
+  for(var z=0;z<bands.length;z++){
+    var nb = bands[z].querySelector('.blocN');
+    if(!nb) continue;
+    var vb = parBloc[bands[z].getAttribute('data-bloc')] || 0;
+    var tx = vb ? String(vb) : '—';
+    if(nb.textContent !== tx){ nb.textContent = tx; nb.className = 'blocN' + (vb ? '' : ' z'); }
+  }
   nvCountFill();
 }
 
@@ -3307,12 +3340,27 @@ function stkRenderSets(){
     if(rt !== sk){ per[rt] = (per[rt] || 0) + per[sk]; per[sk] = 0; }
   }
   h += '<div class="stkSets">';
+  /* total par bloc, affiche a droite du bandeau */
+  var parBloc = {};
+  for(var b=0;b<cdb.sets.length;b++){
+    var sb = cdb.sets[b];
+    var racine = sb.parent || sb.id;
+    var hote = null;
+    for(var y=0;y<cdb.sets.length;y++) if(cdb.sets[y].id === racine) hote = cdb.sets[y];
+    var srb = (hote || sb).serie;
+    parBloc[srb] = (parBloc[srb] || 0) + (per[sb.id] || 0);
+  }
   var cur = null;
   for(var i=0;i<cdb.sets.length;i++){
     var st = cdb.sets[i];
     if(st.parent) continue;                 /* fusionnee dans son parent */
     var n = per[st.id] || 0;
-    if(st.serie !== cur){ cur = st.serie; h += '<div class="stkSerie">' + esc(cur) + '</div>'; }
+    if(st.serie !== cur){
+      cur = st.serie;
+      var tb = parBloc[cur] || 0;
+      h += '<div class="stkSerie" data-bloc="' + esc(cur) + '">' + esc(cur) +
+           '<span class="blocN' + (tb ? '' : ' z') + '">' + (tb ? tb : '—') + '</span></div>';
+    }
     h += '<div class="stkSet" data-stkset="' + esc(st.id) + '">' + symHtml(st) +
          '<div class="sinfo"><b>' + esc(st.name) + '</b>' + codeHtml(st) + '</div>' +
          '<span class="sc' + (n ? '' : ' z') + '">' + (n ? n : '—') + '</span></div>';
@@ -3836,11 +3884,8 @@ function sheetStkCard(id, garder){
   for(var i=0;i<vs.length;i++){
     var v = vs[i];
     var vq = stkVarQ(id, v);
-    var canRm = !solo && vq === 0;
     h += '<div class="shV"><div class="vh"><span>' + (solo ? 'Exemplaires' : VAR_FULL[v]) +
-         '</span><span class="rr"><em>total ' + vq + '</em>' +
-         (canRm ? '<button class="vRm" data-stkrv="' + esc(id) + '|' + v + '" title="Retirer cette variante">×</button>' : '') +
-         '</span></div>';
+         '</span><span class="rr"><em>total ' + vq + '</em></span></div>';
     for(var e=0;e<ETS.length;e++){
       var et = ETS[e][0];
       h += '<div class="shE"><label>' + esc(ETS[e][1]) + '</label>' +
@@ -3853,14 +3898,17 @@ function sheetStkCard(id, garder){
   if(stkOv[id] != null){
     h += '<div class="acts" style="margin-bottom:9px"><button class="aBtn" data-stkreset="' + esc(id) + '">Rétablir les variantes d\'origine</button></div>';
   }
-  var miss = all.filter(function(x){ return vs.indexOf(x) < 0; });
-  if(miss.length){
-    h += '<div class="addTit">Ajouter une version</div><div class="addV">';
-    for(var m=0;m<miss.length;m++)
-      h += '<button class="addB" data-stkav="' + esc(id) + '|' + miss[m] + '">' +
-           '<span class="pl">+</span>' + VAR_FULL[miss[m]] + '</button>';
-    h += '</div>';
+  /* Toutes les versions sont gerees ici : un appui active ou desactive.
+     Une version contenant des exemplaires ne peut pas etre desactivee. */
+  h += '<div class="addTit">Versions de cette carte</div><div class="addV">';
+  for(var m=0;m<all.length;m++){
+    var va = all[m], actif = vs.indexOf(va) >= 0, qa = stkVarQ(id, va);
+    h += '<button class="addB' + (actif ? ' on' : '') + (actif && qa ? ' plein' : '') +
+         '" data-stkvt="' + esc(id) + '|' + va + '">' +
+         '<span class="pl">' + (actif ? '✓' : '+') + '</span>' + VAR_FULL[va] +
+         (qa ? '<span class="qn">' + qa + '</span>' : '') + '</button>';
   }
+  h += '</div>';
   if(garder) openSheetKeep(h); else openSheet(h);
   var b = document.getElementById('shBack');
   if(b) b.onclick = closeSheet;
@@ -4020,31 +4068,28 @@ function stkBind(){
       if(cz && typeof showLightbox === 'function') showLightbox(cdbImgBig(cz));
       return;
     }
-    if((t = e.target.closest('[data-stkrv]'))){
-      var pr = t.getAttribute('data-stkrv').split('|');
-      var cr = cdbById[pr[0]];
-      if(!cr) return;
-      var mr = (stkOv[pr[0]] != null) ? stkOv[pr[0]] : cr.v;
-      var nr = mr & ~VAR_BIT[pr[1]];
-      if(!nr) return;                       /* jamais zero variante */
-      stkSetOv(pr[0], nr === cr.v ? 0 : nr);
-      sheetStkCard(pr[0], true); stkRefresh(pr[0]);
+    if((t = e.target.closest('[data-stkvt]'))){
+      var pv = t.getAttribute('data-stkvt').split('|');
+      var cv = cdbById[pv[0]];
+      if(!cv) return;
+      var actuel = (stkOv[pv[0]] != null) ? stkOv[pv[0]] : masqueDefaut(cv);
+      var bit = VAR_BIT[pv[1]], est = !!(actuel & bit);
+      if(est){
+        if(stkVarQ(pv[0], pv[1])){ toast('Ramène d\'abord cette version à zéro'); return; }
+        var nv2 = actuel & ~bit;
+        if(!nv2){ toast('Garde au moins une version'); return; }
+        stkSetOv(pv[0], nv2 === masqueDefaut(cv) ? 0 : nv2);
+      } else {
+        var na = actuel | bit;
+        stkSetOv(pv[0], na === masqueDefaut(cv) ? 0 : na);
+      }
+      sheetStkCard(pv[0], true); stkRefresh(pv[0]);
       return;
     }
     if((t = e.target.closest('[data-stkreset]'))){
       var ir = t.getAttribute('data-stkreset');
       stkSetOv(ir, 0);
       sheetStkCard(ir, true); stkRefresh(ir);
-      return;
-    }
-    if((t = e.target.closest('[data-stkav]'))){
-      var q2 = t.getAttribute('data-stkav').split('|');
-      var c = cdbById[q2[0]];
-      var cur = (stkOv[q2[0]] != null) ? stkOv[q2[0]] : c.v;
-      var nm2 = cur | VAR_BIT[q2[1]];
-      stkSetOv(q2[0], nm2 === c.v ? 0 : nm2);
-      sheetStkCard(q2[0], true);
-      stkRefresh(q2[0]);
       return;
     }
   });
