@@ -588,6 +588,18 @@ padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowra
 .blocN{flex:none;font-size:13px;font-weight:800;color:var(--blu);padding-left:12px}
 .blocN.z{color:var(--tx3);font-weight:600}
 @media (min-width:760px){ .blocN{font-size:15px} }
+
+/* lignes cliquables de Jamais fait */
+.nvRow{cursor:pointer}
+.nvRow:active{background:var(--surf2)}
+
+/* sections et sous-titres dans les resultats de recherche */
+.stkSerie.sect{font-size:18px}
+.stkSerie.sous{font-size:14px;font-weight:800;margin:14px 0 8px;padding:0 0 6px 11px;border-bottom-width:1px}
+.stkSerie.sous::before{background:var(--tx3);width:3px;bottom:8px}
+/* variante et etat dans le selecteur de cartes */
+.pkV{background:rgba(56,139,253,.16);color:var(--blu);border-radius:5px;padding:1px 6px;font-size:10.5px;font-weight:800;margin-left:5px}
+.pkE2{background:rgba(210,153,34,.16);color:#d29922;border-radius:5px;padding:1px 6px;font-size:10.5px;font-weight:800;margin-left:4px}
 </style>
 <script>
 /* execute avant tout rendu : si un jeton valide ou une identite est
@@ -664,7 +676,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.64';
+var APP_VERSION = '3.66';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -707,7 +719,7 @@ function norm(s){
 }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function noAuto(){
-  return ' name="f' + Math.random().toString(36).slice(2,9) + '" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"';
+  return ' name="f' + Math.random().toString(36).slice(2,9) + '" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false"';
 }
 function clearInputs(ids){
   for(var i=0;i<ids.length;i++){
@@ -2605,9 +2617,9 @@ var STK_LEGACY = 'pkstk.json';    /* ancien fichier unique : lu, jamais reecrit 
 var MV_PREFIX  = 'pkstkmv_';      /* journal a part : il grossit sans fin, le stock non */
 var MV_LEGACY  = 'pkstkmv.json';
 var MV_CAP   = 4000;             /* mouvements conserves */
-var CARDS_VER = '10';   /* fichiers cards/ et pks_names.json */
+var CARDS_VER = '11';   /* fichiers cards/ et pks_names.json */
 var SETS_VER  = '12';
-var FAM_VER   = '3';   /* pks_familles.json */   /* pks_sets.json seul, pour ne pas invalider les cartes deja en cache */
+var FAM_VER   = '5';   /* pks_familles.json */   /* pks_sets.json seul, pour ne pas invalider les cartes deja en cache */
 /* Quatre variantes possibles. Le cosmos ne s'active que depuis la fiche :
    aucune source ne le recense, il releve donc toujours d'une saisie manuelle. */
 var VAR_LBL  = { n:'Norm', r:'Rev', h:'Holo', c:'Cosmos', p:'Pokéball', m:'Masterball' };
@@ -3431,7 +3443,7 @@ async function stkRenderGrid(){
     return '<div class="stkBar"><button class="stkBack" data-stkback="1" aria-label="Retour">' + ico + '</button>' +
            '<div class="stkTit"><span class="th">' + (s ? symHtml(s) : '') + esc(s ? s.name : sid) +
            codeHtml(s) + '</span>' +
-           '<small>' + sub + '</small></div></div>';
+           '<small id="stkSub">' + sub + '</small></div></div>';
   }
   var parts = [sid].concat(subsOf(sid));
   var todo = parts.filter(function(x){ return !setCards[x]; });
@@ -3585,13 +3597,30 @@ async function stkRenderSearch(q){
     h += '<div class="stkWarn">Aucun exemplaire en stock pour ce nom.</div>';
   }
   if(coupe) h += '<div class="stkWarn">' + cards.length + ' cartes correspondent, seules les ' + LIM + ' premières sont affichées. Affine la recherche.</div>';
+  /* Les cartes possedees d'abord : sans cela il faut parcourir toute la liste
+     pour retrouver ce qu'on a deja. */
+  var grpOui = {}, grpNon = {};
+  for(var g=0;g<show.length;g++){
+    var rg = rootSet(show[g].s);
+    var dest = (stkCardQ(show[g].i) > 0) ? grpOui : grpNon;
+    (dest[rg] = dest[rg] || []).push(show[g]);
+  }
+  var sections = [];
+  if(withQ.length) sections.push({ t: 'En stock', g: grpOui });
+  sections.push({ t: withQ.length ? 'Autres cartes' : '', g: grpNon });
+
   h += '<div class="stkRows">';
+  for(var sx=0;sx<sections.length;sx++){
+    var sec = sections[sx], rien = true;
+    for(var kk in sec.g){ rien = false; break; }
+    if(rien) continue;
+    if(sec.t) h += '<div class="stkSerie sect">' + esc(sec.t) + '</div>';
   for(var o=0;o<order.length;o++){
-    var a = grp[order[o]];
+    var a = sec.g[order[o]];
     if(!a) continue;
     var si = setInfo(order[o]);
     var sc = si && si.code && !(SYM_HAS_CODE[si.serie] || (si.date && si.date >= '2023-03-31'));
-    h += '<div class="stkSerie">' + esc(si ? si.name : order[o]) + (sc ? ' · ' + esc(si.code) : '') + '</div>';
+    h += '<div class="stkSerie sous">' + esc(si ? si.name : order[o]) + (sc ? ' · ' + esc(si.code) : '') + '</div>';
     for(var z=0;z<a.length;z++){
       var c2 = a[z], vs = stkVars(c2), det = [];
       for(var v=0;v<vs.length;v++){
@@ -3605,7 +3634,8 @@ async function stkRenderSearch(q){
            '<div class="rq">' + stkCardQ(c2.i) + '</div></div>';
     }
   }
-  stkView(h);
+  }
+  stkView(h + '</div>');
 }
 
 /* ---- inventaire complet : toutes les cartes possedees ---- */
@@ -3726,13 +3756,75 @@ function stockPokes(){
   }
   return g;
 }
+/* Un lot couvre toute une lignee : on regroupe donc les membres d'une famille
+   sur une seule ligne, portant le nom du Pokemon de base. */
 function neverList(){
-  var g = stockPokes(), faits = lotPokes(), out = [];
+  var g = stockPokes(), faits = lotPokes(), grp = {}, out = [];
   for(var n in g){
-    if(faits[n] || stkDone[n]) continue;
-    out.push(g[n]);
+    var p = g[n];
+    var b = familleBase(p.nom) || p.nom;
+    var cle = norm(b);
+    if(!grp[cle]) grp[cle] = { n: cle, nom: b, cartes: {}, ex: 0, img: p.img, membres: [] };
+    var o = grp[cle];
+    for(var ci in p.cartes) o.cartes[ci] = 1;
+    o.ex += p.ex;
+    o.membres.push(p.nom);
+    if(norm(p.nom) === cle) o.img = p.img;
+  }
+  for(var k in grp){
+    var o2 = grp[k];
+    var fait = false;
+    for(var m=0;m<o2.membres.length;m++){
+      var nm = norm(o2.membres[m]);
+      if(faits[nm] || stkDone[nm]) fait = true;
+    }
+    if(faits[k] || stkDone[k]) fait = true;
+    if(!fait){ o2.membres.sort(); out.push(o2); }
   }
   return out;
+}
+
+/* Detail d'une lignee jamais mise en lot : toutes les cartes en stock,
+   pour juger s'il y a de quoi constituer un lot. */
+async function sheetNeverPoke(cle){
+  var liste = neverList(), o = null;
+  for(var i=0;i<liste.length;i++) if(liste[i].n === cle) o = liste[i];
+  if(!o) return;
+  var ids = Object.keys(o.cartes);
+  openSheet('<div class="shT">' + esc(o.nom) + '</div><div class="ph">Chargement…</div>');
+  try{ await ensureCards(ids.map(function(x){ return x + '|n|nm'; })); }catch(e){}
+
+  var cartes = [];
+  for(var j=0;j<ids.length;j++){ var c = cdbById[ids[j]]; if(c) cartes.push(c); }
+  cartes.sort(function(a, b){
+    var sa = setInfo(rootSet(a.s)), sb = setInfo(rootSet(b.s));
+    var na = sa ? sa.name : a.s, nb = sb ? sb.name : b.s;
+    return na.localeCompare(nb, 'fr') || (parseInt(a.u,10) || 0) - (parseInt(b.u,10) || 0);
+  });
+
+  var h = '<div class="shT">' + esc(o.nom) + '</div>' +
+          '<div class="shS">' + cartes.length + ' carte' + (cartes.length > 1 ? 's' : '') +
+          ' · ' + o.ex + ' exemplaire' + (o.ex > 1 ? 's' : '') +
+          (o.membres && o.membres.length > 1 ? ' · ' + esc(o.membres.join(', ')) : '') + '</div>';
+  h += '<div class="fld">';
+  var setCur = null;
+  for(var k=0;k<cartes.length;k++){
+    var c2 = cartes[k], si = setInfo(rootSet(c2.s));
+    var nomSet = si ? si.name : c2.s;
+    if(nomSet !== setCur){ setCur = nomSet; h += '<div class="pkH">' + esc(nomSet) + '</div>'; }
+    var vs = stkVars(c2), det = [];
+    for(var v=0;v<vs.length;v++){
+      var q = stkVarQ(c2.i, vs[v]);
+      if(q) det.push(vs.length === 1 ? ('×' + q) : (VAR_FULL[vs[v]] + ' ×' + q));
+    }
+    h += '<div class="pkR">' + cardImg(c2, '') +
+         '<div class="pkT"><b>' + esc(c2.n) + '</b><small>N° ' + esc(c2.u) + '</small>' +
+         '<small class="pkD">' + esc(det.join(' · ')) + '</small></div>' +
+         '<div class="pkC"><span class="pkQ">' + stkCardQ(c2.i) + '</span></div></div>';
+  }
+  h += '</div><div class="shF"><button class="bP" id="nvx">Fermer</button></div>';
+  openSheetKeep(h);
+  $('nvx').onclick = closeSheet;
 }
 
 async function stkRenderNever(){
@@ -3755,13 +3847,16 @@ async function stkRenderNever(){
   var nFaits = 0;
   for(var d in stkDone) if(stkDone[d]) nFaits++;
 
-  liste.sort(nvTri === 'qty'
-    ? function(a, b){ return b.ex - a.ex || a.nom.localeCompare(b.nom, 'fr'); }
-    : function(a, b){ return a.nom.localeCompare(b.nom, 'fr'); });
+  function nbC(o){ return Object.keys(o.cartes).length; }
+  liste.sort(
+    nvTri === 'qty'  ? function(a, b){ return b.ex - a.ex || a.nom.localeCompare(b.nom, 'fr'); } :
+    nvTri === 'cart' ? function(a, b){ return nbC(b) - nbC(a) || a.nom.localeCompare(b.nom, 'fr'); } :
+                       function(a, b){ return a.nom.localeCompare(b.nom, 'fr'); });
 
   var bar = '<div class="stkFB"><div class="sg">' +
-    '<button class="' + (nvTri === 'az'  ? 'on' : '') + '" data-nvt="az">A → Z</button>' +
-    '<button class="' + (nvTri === 'qty' ? 'on' : '') + '" data-nvt="qty">Quantité</button>' +
+    '<button class="' + (nvTri === 'az'   ? 'on' : '') + '" data-nvt="az">A → Z</button>' +
+    '<button class="' + (nvTri === 'cart' ? 'on' : '') + '" data-nvt="cart">Cartes</button>' +
+    '<button class="' + (nvTri === 'qty'  ? 'on' : '') + '" data-nvt="qty">Exempl.</button>' +
     '</div></div>';
 
   var h = head(liste.length + ' Pokémon jamais mis en lot') + bar;
@@ -3771,9 +3866,10 @@ async function stkRenderNever(){
   h += '<div class="stkRows">';
   for(var i=0;i<liste.length;i++){
     var p = liste[i], nc = Object.keys(p.cartes).length;
-    h += '<div class="nvRow">' + cardImg(p.img, '') +
-         '<div class="nt"><b>' + esc(p.nom) + '</b><small>' + nc + ' carte' + (nc > 1 ? 's' : '') +
-         ' · ' + p.ex + ' exemplaire' + (p.ex > 1 ? 's' : '') + '</small></div>' +
+    var sousT = nc + ' carte' + (nc > 1 ? 's' : '') + ' · ' + p.ex + ' exemplaire' + (p.ex > 1 ? 's' : '');
+    if(p.membres && p.membres.length > 1) sousT += ' · ' + p.membres.join(', ');
+    h += '<div class="nvRow" data-nvo="' + esc(p.n) + '">' + cardImg(p.img, '') +
+         '<div class="nt"><b>' + esc(p.nom) + '</b><small>' + esc(sousT) + '</small></div>' +
          '<button class="nvOk" data-nvd="' + esc(p.n) + '">Déjà fait</button></div>';
   }
   h += '</div>';
@@ -3946,6 +4042,10 @@ function stkBind(){
       localStorage.setItem(LS + 'nvtri', nvTri);
       window.scrollTo(0,0); render(); return;
     }
+    if((t = e.target.closest('[data-nvo]')) && !e.target.closest('[data-nvd]')){
+      sheetNeverPoke(t.getAttribute('data-nvo'));
+      return;
+    }
     if((t = e.target.closest('[data-nvd]'))){
       var nd = t.getAttribute('data-nvd');
       stkDone[nd] = 1; doneDirty[nd] = 1;
@@ -4099,6 +4199,18 @@ function stkBind(){
 /* Met a jour le compteur sur lequel on vient d'appuyer. On tient deja
    l'element : aucune recherche dans la page, donc rien qui puisse echouer.
    Le reste de la vignette est rafraichi ensuite, sans consequence si ca rate. */
+/* compteurs sous le nom de l'extension */
+function majSousTitre(){
+  var e = document.getElementById('stkSub');
+  if(!e || !stkArr.length) return;
+  var tot = 0, poss = 0;
+  for(var i=0;i<stkArr.length;i++){
+    var q = stkCardQ(stkArr[i].i);
+    tot += q; if(q) poss++;
+  }
+  e.textContent = stkArr.length + ' cartes · ' + poss + ' possédées · ' + tot + ' en stock';
+}
+
 function majCompteur(el, id, v){
   try{
     var q = stkVarQ(id, v);
@@ -4113,6 +4225,7 @@ function majCompteur(el, id, v){
       var rq = ligne.querySelector('.rq');
       if(rq) rq.textContent = stkCardQ(id);
     }
+    majSousTitre();
   }catch(e){}
   stkRefresh(id);
 }
@@ -4236,7 +4349,13 @@ function famLoad(){
 function familleDe(nom){
   var k = norm(nom || '');
   if(!k || !familles) return null;
-  return familles[k] || null;
+  var f = familles[k];
+  return f ? (f.m || f) : null;
+}
+function familleBase(nom){
+  var k = norm(nom || '');
+  var f = familles && familles[k];
+  return f ? (f.b || (f.m || f)[0]) : null;
 }
 
 var pickLot = null;
@@ -4344,17 +4463,20 @@ function pickRows(keys, inLot){
     var c = cdbById[p[0]];
     var vs = c ? stkVars(c) : [p[1]];
     var vlbl = (vs.length === 1) ? '' : (VAR_FULL[p[1]] || p[1]);
-    var parts = [];
-    if(vlbl) parts.push(vlbl);
-    if(p[2] !== 'nm') parts.push(ET_LBL[p[2]] || p[2]);
+    var etat = (p[2] !== 'nm') ? (ET_LBL[p[2]] || p[2]) : '';
+    /* variante et etat dans le titre : une meme carte apparait une fois par
+       version, sans cela les lignes semblent identiques */
+    var titre = esc(c ? c.n : p[0]) +
+                (vlbl ? ' <span class="pkV">' + esc(vlbl) + '</span>' : '') +
+                (etat ? ' <span class="pkE2">' + esc(etat) + '</span>' : '');
     var si = c ? setInfo(c.s) : null;
-    var sub = (c ? 'N° ' + c.u : '') + (si ? ' · ' + si.name : '') + (parts.length ? ' · ' + parts.join(' ') : '');
+    var sub = (c ? 'N° ' + c.u : '') + (si ? ' · ' + si.name : '');
     var dispo = stkQ(p[0], p[1], p[2]);
     var qte = inLot[key] || 0;
 
     h += '<div class="pkR">' +
          (c ? cardImg(c, '') : '<span class="pkNo"></span>') +
-         '<div class="pkT"><b>' + esc(c ? c.n : p[0]) + '</b><small>' + esc(sub) + '</small>' +
+         '<div class="pkT"><b>' + titre + '</b><small>' + esc(sub) + '</small>' +
          '<small class="pkD">stock : ' + dispo + '</small></div>' +
          '<div class="pkC">' +
          '<button class="pkB" data-pick="' + esc(key) + '|-1"' + (qte ? '' : ' disabled') + '>−</button>' +
