@@ -600,6 +600,26 @@ padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowra
 /* variante et etat dans le selecteur de cartes */
 .pkV{background:rgba(56,139,253,.16);color:var(--blu);border-radius:5px;padding:1px 6px;font-size:10.5px;font-weight:800;margin-left:5px}
 .pkE2{background:rgba(210,153,34,.16);color:#d29922;border-radius:5px;padding:1px 6px;font-size:10.5px;font-weight:800;margin-left:4px}
+
+/* bandeau de resultats : il n'utilise pas les cellules cliquables,
+   la mise a zero des marges ne doit donc pas s'y appliquer */
+.stkTot > div:not(.cell){padding:11px 10px;min-width:0}
+.stkTot > div:not(.cell) + div:not(.cell){border-left:1px solid var(--bd)}
+.stkTot > div:not(.cell) b{font-size:19px}
+@media (min-width:760px){ .stkTot > div:not(.cell){padding:13px 14px} }
+
+/* abreviation d'extension dans les en-tetes */
+.serCode{margin-left:9px;font-size:10px;font-weight:900;letter-spacing:.6px;color:var(--tx3);
+background:#0c1428;border:1px solid var(--bd);border-radius:5px;padding:2px 6px;vertical-align:middle}
+.stkSerie.sous .serCode{font-size:9.5px}
+
+/* lien vers l'annonce */
+.vintB{display:flex;align-items:center;justify-content:center;gap:9px;background:var(--surf2);
+border:1px solid var(--bd);color:var(--tx);border-radius:11px;padding:13px;font-size:14px;
+font-weight:700;text-decoration:none}
+.vintB svg{width:17px;height:17px;flex:none;color:var(--blu)}
+.vintB:active{border-color:var(--blu)}
+.cPh.zoomable{cursor:zoom-in}
 </style>
 <script>
 /* execute avant tout rendu : si un jeton valide ou une identite est
@@ -676,7 +696,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.66';
+var APP_VERSION = '3.68';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -1163,6 +1183,12 @@ function hydratePhotos(){
         if(!u) return;
         var img = document.createElement('img');
         img.src = u; img.alt = '';
+        /* agrandissement au clic, sans ouvrir la fiche du lot */
+        el.classList.add('zoomable');
+        el.addEventListener('click', function(ev){
+          ev.stopPropagation(); ev.preventDefault();
+          showLightbox(u);
+        });
         el.insertBefore(img, el.firstChild);
         el.classList.add('has');
       });
@@ -1788,6 +1814,10 @@ function sheetView(id){
   openSheet('<div class="shT">' + esc(lotTitle(l)) + '</div>' + ph +
     '<div class="fld">' + rows + '</div>' +
     '<div id="roCards"></div>' +
+    (l.url ? '<div class="fld"><a class="vintB" href="' + esc(l.url) + '" target="_blank" rel="noopener">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>' +
+      'Ouvrir l\'annonce Vinted</a></div>' : '') +
     '<div class="shF"><button class="bS" id="rox">Fermer</button>' +
     '<button class="bP" id="roe">Modifier</button></div>');
   roCardsFill(l);
@@ -1825,6 +1855,7 @@ function sheetNew(defMode){
     '<div class="shHd"><div class="shT">Nouveau lot</div><button class="shC" id="x1t" aria-label="Annuler">×</button></div>' +
     '<div class="fld"><label class="lbl">Pokémon</label><input class="inp" id="f_poke" placeholder="Évoli"' + noAuto() + '></div>' +
     '<div class="fld"><label class="lbl">Nombre de cartes (optionnel)</label><input class="inp" id="f_nb" type="number" inputmode="numeric" placeholder="vide = choisir les cartes ensuite"' + noAuto() + '></div>' +
+    '<div class="fld"><label class="lbl">Lien Vinted (optionnel)</label><input class="inp" id="f_url" type="url" inputmode="url" placeholder="https://www.vinted.fr/items/…"' + noAuto() + '></div>' +
     '<div class="row2"><div class="fld"><label class="lbl">Prix affiché</label><input class="inp" id="f_pa" type="number" inputmode="decimal" step="0.5" placeholder="12"' + noAuto() + '></div>' +
     '<div class="fld"><label class="lbl">Prix mini accepté</label><input class="inp" id="f_pm" type="number" inputmode="decimal" step="0.5" placeholder="9"' + noAuto() + '></div></div>' +
     '<div class="fld"><label class="lbl">En ligne sur Vinted depuis le (si déjà publié)</label><input class="inp" id="f_dl" type="date" max="' + toDateInput(now()) + '"></div>' +
@@ -1833,7 +1864,7 @@ function sheetNew(defMode){
     '<div class="shF"><button class="bS" id="x1">Annuler</button><button class="bP" id="k1">' + lbl[main] + '</button></div>' +
     '<button class="dgr" id="k1b" style="border-color:var(--bd);color:var(--tx2)">' + lbl[alt] + '</button>'
   );
-  clearInputs(['f_poke','f_nb','f_pa','f_pm','f_dl']);
+  clearInputs(['f_poke','f_nb','f_url','f_pa','f_pm','f_dl']);
   bindPhoto();
   $('x1').onclick = closeSheet;
   $('x1t').onclick = closeSheet;
@@ -1905,6 +1936,7 @@ async function createLot(mode, btnId){
     id: nid(), poke: poke,
     nom: '',
     nb: parseInt($('f_nb').value, 10) || null, cards: {},
+    url: ($('f_url') ? $('f_url').value.trim() : ''),
     boite: '', sep: '',
     st: mode, pa: num($('f_pa').value), pm: num($('f_pm').value), pv: null,
     acheteur: '', notes: '', photo: photoId,
@@ -2007,6 +2039,7 @@ function sheetEdit(id){
     '<div class="shT">Modifier</div>' +
     '<div class="fld"><label class="lbl">Photo</label>' + photoZone(l) + '</div>' +
     '<div class="fld"><label class="lbl">Titre de l\'annonce</label><input class="inp" id="f_nom" value="' + esc(l.nom) + '" placeholder="' + esc(lotTitle(l)) + '"></div>' +
+    '<div class="fld"><label class="lbl">Lien Vinted</label><input class="inp" id="f_url" type="url" inputmode="url" value="' + esc(l.url || '') + '" placeholder="https://www.vinted.fr/items/…"></div>' +
     '<div class="row2"><div class="fld"><label class="lbl">Pokémon</label><input class="inp" id="f_poke" value="' + esc(l.poke) + '"></div>' +
     '<div class="fld"><label class="lbl">Nb cartes</label><input class="inp" id="f_nb" type="number" inputmode="numeric" value="' + (l.nb==null?'':l.nb) + '" placeholder="vide = compté"></div></div>' +
     '<div class="row2"><div class="fld"><label class="lbl">Prix affiché</label><input class="inp" id="f_pa" type="number" inputmode="decimal" step="0.5" value="' + (l.pa==null?'':l.pa) + '"></div>' +
@@ -2046,6 +2079,7 @@ function sheetEdit(id){
     l.nom = $('f_nom').value.trim();
     l.poke = $('f_poke').value.trim();
     l.nb = parseInt($('f_nb').value,10) || null;
+    if($('f_url')) l.url = $('f_url').value.trim();
     l.pa = num($('f_pa').value); l.pm = num($('f_pm').value);
     if($('f_pv')) l.pv = num($('f_pv').value);
     l.acheteur = $('f_ach').value.trim();
@@ -2618,7 +2652,7 @@ var MV_PREFIX  = 'pkstkmv_';      /* journal a part : il grossit sans fin, le st
 var MV_LEGACY  = 'pkstkmv.json';
 var MV_CAP   = 4000;             /* mouvements conserves */
 var CARDS_VER = '11';   /* fichiers cards/ et pks_names.json */
-var SETS_VER  = '12';
+var SETS_VER  = '13';
 var FAM_VER   = '5';   /* pks_familles.json */   /* pks_sets.json seul, pour ne pas invalider les cartes deja en cache */
 /* Quatre variantes possibles. Le cosmos ne s'active que depuis la fiche :
    aucune source ne le recense, il releve donc toujours d'une saisie manuelle. */
@@ -3619,8 +3653,9 @@ async function stkRenderSearch(q){
     var a = sec.g[order[o]];
     if(!a) continue;
     var si = setInfo(order[o]);
-    var sc = si && si.code && !(SYM_HAS_CODE[si.serie] || (si.date && si.date >= '2023-03-31'));
-    h += '<div class="stkSerie sous">' + esc(si ? si.name : order[o]) + (sc ? ' · ' + esc(si.code) : '') + '</div>';
+    /* ici aucun symbole n'est affiche : l'abreviation est donc toujours utile */
+    h += '<div class="stkSerie sous">' + esc(si ? si.name : order[o]) +
+         (si && si.code ? '<span class="serCode">' + esc(si.code) + '</span>' : '') + '</div>';
     for(var z=0;z<a.length;z++){
       var c2 = a[z], vs = stkVars(c2), det = [];
       for(var v=0;v<vs.length;v++){
@@ -3688,7 +3723,9 @@ async function stkRenderInv(){
       if(cdb.sets[s].parent || !a) continue;
       var st = 0;
       for(var q=0;q<a.length;q++) st += stkCardQ(a[q].i);
-      h += '<div class="stkSerie">' + esc(cdb.sets[s].name) + ' · ' + st + '</div>' + invRows(a);
+      h += '<div class="stkSerie">' + esc(cdb.sets[s].name) +
+           (cdb.sets[s].code ? '<span class="serCode">' + esc(cdb.sets[s].code) + '</span>' : '') +
+           '<span class="blocN">' + st + '</span></div>' + invRows(a);
     }
   }
   stkView(h);
@@ -3811,7 +3848,10 @@ async function sheetNeverPoke(cle){
   for(var k=0;k<cartes.length;k++){
     var c2 = cartes[k], si = setInfo(rootSet(c2.s));
     var nomSet = si ? si.name : c2.s;
-    if(nomSet !== setCur){ setCur = nomSet; h += '<div class="pkH">' + esc(nomSet) + '</div>'; }
+    if(nomSet !== setCur){
+      setCur = nomSet;
+      h += '<div class="pkH">' + esc(nomSet) + (si && si.code ? ' · ' + esc(si.code) : '') + '</div>';
+    }
     var vs = stkVars(c2), det = [];
     for(var v=0;v<vs.length;v++){
       var q = stkVarQ(c2.i, vs[v]);
