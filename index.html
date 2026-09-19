@@ -620,6 +620,14 @@ font-weight:700;text-decoration:none}
 .vintB svg{width:17px;height:17px;flex:none;color:var(--blu)}
 .vintB:active{border-color:var(--blu)}
 .cPh.zoomable{cursor:zoom-in}
+
+/* Le zoom du navigateur est desactive dans toute l'app : la visionneuse
+   gere donc son propre agrandissement, au pincement ou au double appui. */
+#lb img{touch-action:none;transform-origin:0 0;will-change:transform;user-select:none;-webkit-user-drag:none}
+#lb.zoomed img{border-radius:0}
+#lbHint{position:absolute;bottom:calc(18px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);
+background:rgba(255,255,255,.14);color:#fff;font-size:11.5px;font-weight:600;padding:7px 13px;border-radius:9px;
+pointer-events:none;opacity:.9}
 </style>
 <script>
 /* execute avant tout rendu : si un jeton valide ou une identite est
@@ -691,12 +699,12 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
     <button class="selX" id="selCancel">Annuler</button>
     <button class="selGo" id="selGo">Marquer vendus</button>
   </div>
-  <div id="lb"><button id="lbX" aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M18 6 6 18"/> <path d="m6 6 12 12"/></svg></button><img alt=""></div>
+  <div id="lb"><div id="lbHint">Pince ou double-tape pour agrandir</div><button id="lbX" aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M18 6 6 18"/> <path d="m6 6 12 12"/></svg></button><img alt=""></div>
 <div id="toast"></div>
 
 <script>
 'use strict';
-var APP_VERSION = '3.68';
+var APP_VERSION = '3.69';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -1137,12 +1145,12 @@ function shrink(file){
   return new Promise(function(res){
     var img = new Image();
     img.onload = function(){
-      var max = 900, w = img.width, h = img.height;
+      var max = 1600, w = img.width, h = img.height;   /* 900 avant : trop bas pour un zoom */
       if(w > h && w > max){ h = Math.round(h*max/w); w = max; }
       else if(h > max){ w = Math.round(w*max/h); h = max; }
       var c = document.createElement('canvas'); c.width = w; c.height = h;
       c.getContext('2d').drawImage(img, 0, 0, w, h);
-      c.toBlob(function(b){ res(b); }, 'image/jpeg', 0.82);
+      c.toBlob(function(b){ res(b); }, 'image/jpeg', 0.9);
     };
     img.onerror = function(){ res(null); };
     img.src = URL.createObjectURL(file);
@@ -1197,10 +1205,14 @@ function hydratePhotos(){
 }
 
 /* visionneuse plein écran */
+var lbReset = null;
 function showLightbox(src){
   var lb = $('lb');
   lb.querySelector('img').src = src;
+  if(typeof lbReset === 'function') lbReset();
   lb.classList.add('on');
+  var hint = document.getElementById('lbHint');
+  if(hint){ hint.style.display = ''; setTimeout(function(){ hint.style.display = 'none'; }, 2200); }
   history.pushState({ d:2 }, '');
 }
 function openLightbox(id){
@@ -2542,7 +2554,8 @@ $('btnAcc').onclick = sheetAcc;
 $('btnSignin').onclick = signIn;
 $('ovl').onclick = function(e){ if(e.target === $('ovl')) closeSheet(); };
 $('lbX').onclick = closeLightbox;
-$('lb').onclick = function(e){ if(e.target !== $('lbX')) closeLightbox(); };
+/* ne fermer qu'en touchant le fond : un appui sur l'image sert au zoom */
+$('lb').onclick = function(e){ if(e.target === $('lb')) closeLightbox(); };
 $('cfmN').onclick = closeCfm;
 $('cfmY').onclick = function(){ var c = cfmCb; closeCfm(); if(c) c(); };
 
@@ -4561,6 +4574,57 @@ closeSheet = function(){
   if(pickLot){ commit(pickLot); pickLot = null; }
   _closeSheetPick();
 };
+
+/* ═══ ZOOM DE LA VISIONNEUSE ═══
+   L'app interdit le zoom du navigateur, on l'implemente donc ici :
+   pincement a deux doigts, double appui, et deplacement une fois agrandi. */
+(function(){
+  var lb = $('lb'), img = lb ? lb.querySelector('img') : null;
+  if(!lb || !img) return;
+  var ech = 1, dx = 0, dy = 0;
+  var d0 = 0, e0 = 1, x0 = 0, y0 = 0, px = 0, py = 0, bouge = false, dernier = 0;
+
+  function applique(){
+    img.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(' + ech + ')';
+    lb.classList.toggle('zoomed', ech > 1.01);
+  }
+  function reset(){ ech = 1; dx = dy = 0; applique(); }
+  lbReset = reset;
+
+  function dist(t){
+    var a = t[0], b = t[1];
+    return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+  }
+  img.addEventListener('touchstart', function(e){
+    if(e.touches.length === 2){
+      d0 = dist(e.touches); e0 = ech; bouge = true; e.preventDefault();
+    } else if(e.touches.length === 1){
+      x0 = e.touches[0].clientX - dx; y0 = e.touches[0].clientY - dy;
+      px = e.touches[0].clientX; py = e.touches[0].clientY;
+      bouge = ech > 1.01;
+      var t = Date.now();
+      if(t - dernier < 300){        /* double appui */
+        if(ech > 1.01) reset(); else { ech = 2.5; applique(); }
+        e.preventDefault();
+      }
+      dernier = t;
+    }
+  }, { passive:false });
+
+  img.addEventListener('touchmove', function(e){
+    if(e.touches.length === 2 && d0){
+      ech = Math.min(6, Math.max(1, e0 * dist(e.touches) / d0));
+      applique(); e.preventDefault();
+    } else if(e.touches.length === 1 && bouge && ech > 1.01){
+      dx = e.touches[0].clientX - x0; dy = e.touches[0].clientY - y0;
+      applique(); e.preventDefault();
+    }
+  }, { passive:false });
+
+  img.addEventListener('touchend', function(e){
+    if(e.touches.length === 0){ d0 = 0; bouge = false; if(ech <= 1.01) reset(); }
+  });
+})();
 
 stkBind();
 </script>
