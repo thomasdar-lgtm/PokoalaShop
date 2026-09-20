@@ -704,7 +704,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.69';
+var APP_VERSION = '3.70';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -3597,8 +3597,19 @@ async function stkRenderSearch(q){
     try{ await namesLoad(); }catch(e){ stkView(empty(EMPTY_CMD, 'Recherche indisponible.')); return; }
     if(norm(query()) !== n || tab !== 'stock') return;
   }
-  var ids = [];
-  for(var nm in nameIdx){ if(nm.indexOf(n) >= 0){ ids = ids.concat(nameIdx[nm]); if(ids.length > 900) break; } }
+  /* Une carte peut correspondre a plusieurs entrees de l'index — son nom
+     francais et son nom anglais, par exemple « Arcanin » et « Arcanine ».
+     Sans dedoublonnage elle apparaitrait autant de fois. */
+  var vusId = {}, ids = [];
+  for(var nm in nameIdx){
+    if(nm.indexOf(n) < 0) continue;
+    var lst = nameIdx[nm];
+    for(var li=0;li<lst.length;li++){
+      if(vusId[lst[li]]) continue;
+      vusId[lst[li]] = 1; ids.push(lst[li]);
+    }
+    if(ids.length > 900) break;
+  }
   if(!ids.length){ stkView(noHit(EMPTY_CMD, 'ce Pokémon')); return; }
 
   /* ne charger que les extensions reellement concernees */
@@ -3614,8 +3625,11 @@ async function stkRenderSearch(q){
     if(norm(query()) !== n || tab !== 'stock') return;
   }
 
-  var cards = [];
-  for(var j=0;j<ids.length;j++){ var c = cdbById[ids[j]]; if(c) cards.push(c); }
+  var cards = [], vusC = {};
+  for(var j=0;j<ids.length;j++){
+    var c = cdbById[ids[j]];
+    if(c && !vusC[c.i]){ vusC[c.i] = 1; cards.push(c); }
+  }
   var withQ = cards.filter(function(c){ return stkCardQ(c.i) > 0; });
   var LIM = 400, coupe = cards.length > LIM;
   var show = cards.slice(0, LIM);          /* toujours tout, possede ou non */
