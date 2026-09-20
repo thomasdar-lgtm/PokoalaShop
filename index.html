@@ -169,8 +169,8 @@ main{padding:4px 16px 20px}
 .roRow:last-child{border-bottom:0}
 .roRow i{color:var(--tx2);font-style:normal;flex:none}
 .roRow b{text-align:right;font-weight:600;word-break:break-word}
-.roPh{width:100%;height:190px;border-radius:var(--r2);background:var(--surf2);overflow:hidden;position:relative;cursor:zoom-in;display:flex;align-items:center;justify-content:center;color:var(--tx3)}
-.roPh img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#00040f}
+.roPh{width:100%;border-radius:var(--r2);background:transparent;overflow:hidden;position:relative;cursor:zoom-in;display:flex;align-items:center;justify-content:center;color:var(--tx3);min-height:96px}
+.roPh img{position:static;width:100%;height:auto;max-height:62vh;object-fit:contain;border-radius:var(--r2);display:block}
 .roPh.has .ph-holder{display:none}
 .gToggle{display:flex;gap:6px;margin-bottom:10px}
 .gToggle button{flex:1;background:var(--surf);border:1px solid var(--bd);color:var(--tx2);font-size:12px;font-weight:700;padding:8px;border-radius:20px;cursor:pointer}
@@ -628,6 +628,16 @@ font-weight:700;text-decoration:none}
 #lbHint{position:absolute;bottom:calc(18px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);
 background:rgba(255,255,255,.14);color:#fff;font-size:11.5px;font-weight:600;padding:7px 13px;border-radius:9px;
 pointer-events:none;opacity:.9}
+
+/* raccourci vers l'annonce sur la vignette */
+.aBtn.vnt{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:var(--blu);
+border-color:rgba(56,139,253,.45)}
+.aBtn.vnt svg{width:14px;height:14px;flex:none}
+
+/* raccourci vers l'annonce sur la vignette */
+.aBtn.vint{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:var(--blu);
+border-color:rgba(56,139,253,.45)}
+.aBtn.vint svg{width:14px;height:14px;flex:none}
 </style>
 <script>
 /* execute avant tout rendu : si un jeton valide ou une identite est
@@ -704,7 +714,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.70';
+var APP_VERSION = '3.71';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -1191,12 +1201,15 @@ function hydratePhotos(){
         if(!u) return;
         var img = document.createElement('img');
         img.src = u; img.alt = '';
-        /* agrandissement au clic, sans ouvrir la fiche du lot */
-        el.classList.add('zoomable');
-        el.addEventListener('click', function(ev){
-          ev.stopPropagation(); ev.preventDefault();
-          showLightbox(u);
-        });
+        /* agrandissement uniquement depuis la fiche du lot : sur la vignette,
+           la photo doit continuer d'ouvrir le lot */
+        if(el.hasAttribute('data-zoom')){
+          el.classList.add('zoomable');
+          el.addEventListener('click', function(ev){
+            ev.stopPropagation(); ev.preventDefault();
+            showLightbox(u);
+          });
+        }
         el.insertBefore(img, el.firstChild);
         el.classList.add('has');
       });
@@ -1485,7 +1498,13 @@ function card(l){
   } else if(l.st === 'vendu' || l.st === 'expedie'){
     acts.push('<button class="aBtn p" data-again="' + l.id + '">Refaire ce lot</button>');
   }
+  if(l.url) acts.push('<a class="aBtn vnt" href="' + esc(l.url) + '" target="_blank" rel="noopener" data-stop="1">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>Vinted</a>');
   var nbc = lotCardCount(l);
+  if(l.url) acts.push('<a class="aBtn vint" href="' + esc(l.url) + '" target="_blank" rel="noopener" aria-label="Ouvrir l\'annonce">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>Vinted</a>');
   acts.push('<button class="aBtn" data-pk="' + l.id + '">Cartes' +
             (nbc ? '<span class="lotCB">' + nbc + '</span>' : '') + '</button>');
   acts.push('<button class="aBtn" data-open="' + l.id + '" aria-label="Modifier"><span style="width:13px;height:13px;display:inline-block;vertical-align:-2px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/> <path d="m15 5 4 4"/></svg></span></button>');
@@ -1808,7 +1827,7 @@ function sheetView(id){
   var jours = (l.dtListe && l.dtVente)
     ? Math.max(0, Math.round((new Date(l.dtVente) - new Date(l.dtListe)) / 86400000)) : null;
   var ph = l.photo
-    ? '<div class="fld"><div class="roPh" id="roPh" data-ph="' + l.photo + '"><span class="ph-holder" style="width:34px;height:34px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/> <path d="M12 22V12"/> <polyline points="3.29 7 12 12 20.71 7"/> <path d="m7.5 4.27 9 5.15"/></svg></span></div></div>'
+    ? '<div class="fld"><div class="roPh" id="roPh" data-zoom="1" data-ph="' + l.photo + '"><span class="ph-holder" style="width:34px;height:34px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/> <path d="M12 22V12"/> <polyline points="3.29 7 12 12 20.71 7"/> <path d="m7.5 4.27 9 5.15"/></svg></span></div></div>'
     : '';
   var rows =
     row('Pokémon', esc(l.poke)) +
@@ -1823,10 +1842,14 @@ function sheetView(id){
     row('Expédié le', l.dtExp ? dt(l.dtExp) : '') +
     row('Durée en ligne', jours != null ? (jours === 0 ? 'moins d’un jour' : jours + ' jour' + (jours>1?'s':'')) : '') +
     row('Notes', esc(l.notes));
-  openSheet('<div class="shT">' + esc(lotTitle(l)) + '</div>' + ph +
+  var lien = l.url ? '<div class="fld"><a class="vintB" href="' + esc(l.url) + '" target="_blank" rel="noopener">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>' +
+      'Ouvrir l\'annonce Vinted</a></div>' : '';
+  openSheet('<div class="shT">' + esc(lotTitle(l)) + '</div>' + ph + lien +
     '<div class="fld">' + rows + '</div>' +
     '<div id="roCards"></div>' +
-    (l.url ? '<div class="fld"><a class="vintB" href="' + esc(l.url) + '" target="_blank" rel="noopener">' +
+    (false ? '<div class="fld"><a class="vintB" href="' + esc(l.url) + '" target="_blank" rel="noopener">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
       '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>' +
       'Ouvrir l\'annonce Vinted</a></div>' : '') +
@@ -2664,7 +2687,7 @@ var STK_LEGACY = 'pkstk.json';    /* ancien fichier unique : lu, jamais reecrit 
 var MV_PREFIX  = 'pkstkmv_';      /* journal a part : il grossit sans fin, le stock non */
 var MV_LEGACY  = 'pkstkmv.json';
 var MV_CAP   = 4000;             /* mouvements conserves */
-var CARDS_VER = '11';   /* fichiers cards/ et pks_names.json */
+var CARDS_VER = '12';   /* fichiers cards/ et pks_names.json */
 var SETS_VER  = '13';
 var FAM_VER   = '5';   /* pks_familles.json */   /* pks_sets.json seul, pour ne pas invalider les cartes deja en cache */
 /* Quatre variantes possibles. Le cosmos ne s'active que depuis la fiche :
