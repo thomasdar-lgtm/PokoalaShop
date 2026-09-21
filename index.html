@@ -714,7 +714,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.72';
+var APP_VERSION = '3.73';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -3327,15 +3327,19 @@ function showMaj(v){
   document.getElementById('majGo').onclick = hardReload;
 }
 
-/* purge le cache de la coquille puis recharge : les caches d'images et de
-   donnees de cartes sont conserves, inutile de les retelecharger */
+/* purge tous les caches (coquille + donnees de cartes) puis recharge.
+   Le cache de donnees etait cense se renouveler seul via ?v=CARDS_VER
+   dans l'URL, mais s'est avere ne pas toujours suivre correctement sur
+   certains appareils (PWA installee) : on le vide donc explicitement a
+   chaque rechargement manuel plutot que de compter dessus. Cout : jusqu'a
+   2,7 Mo retelecharges a chaque appui sur "Recharger", au lieu de jamais -
+   c'est un geste explicite de l'utilisateur, pas automatique. */
 async function hardReload(){
   var b = document.getElementById('majGo');
   if(b){ b.textContent = '…'; b.disabled = true; }
   try{
     var keys = await caches.keys();
-    await Promise.all(keys.filter(function(k){ return k.indexOf('-v') > 0; })
-                          .map(function(k){ return caches.delete(k); }));
+    await Promise.all(keys.map(function(k){ return caches.delete(k); }));
   }catch(e){}
   try{
     var reg = await navigator.serviceWorker.getRegistration();
