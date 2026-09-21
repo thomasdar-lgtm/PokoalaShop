@@ -723,7 +723,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.78';
+var APP_VERSION = '3.79';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2346,6 +2346,7 @@ function sheetAcc(){
 
     '<div class="accSec">Stock</div>' +
     '<button class="accBtn" id="a_stk">Vérifier le stock<span>' + stkTotalEx() + ' exemplaires</span></button>' +
+    '<button class="accBtn" id="a_holo">Désélectionner Normal sur les holos<span>nettoyage en un clic</span></button>' +
 
     '<div class="accSec">Synchronisation</div>' +
     '<button class="accBtn" id="a_ref">Rafraîchir maintenant<span>' + lots.length + ' lots</span></button>' +
@@ -2384,6 +2385,7 @@ function sheetAcc(){
   $('x7').onclick = closeSheet;
   $('a_maj').onclick = hardReload;
   $('a_stk').onclick = sheetStkDiag;
+  $('a_holo').onclick = function(){ closeSheet(); stkAutoHideNormal(); };
   $('a_ref').onclick = function(){ closeSheet(); sync(true); toast('Synchronisation…'); };
   $('a_js').onclick = exportJson;
   $('a_cs').onclick = exportCsv;
@@ -3326,6 +3328,49 @@ function stkSetOv(id, mask){
      sur le meme principe que le marquage "jamais fait" (data-nvd/nvu). */
   stkPending.push({ t: now(), c: id, v:'-', e:'-', d:0, w: who || '', s:'variantes' });
   stkQueue(); stkSaveCache();
+}
+
+/* Nettoyage en un clic : sur toute carte ou du Holo a ete saisi mais dont
+   le Normal (active par defaut sur les raretes classiques) n'a jamais
+   recu le moindre exemplaire, on desactive Normal. Rien n'est supprime :
+   les quantites restent identiques, seul l'interrupteur "actif" change,
+   donc une carte qui possede reellement les deux n'est jamais touchee. */
+async function stkAutoHideNormal(){
+  toast('Recherche des holos…');
+  try{ await stkLoad(); }catch(e){}
+  try{ await cdbLoad(); }catch(e){}
+  var idsH = {};
+  for(var k in stock){
+    if(!stock[k]) continue;
+    var p = k.split('|');
+    if(p[1] === 'h') idsH[p[0]] = 1;
+  }
+  var ids = Object.keys(idsH);
+  if(!ids.length){ toast('Aucun holo en stock'); return; }
+  var need = {}, sids = [];
+  for(var i=0;i<ids.length;i++){
+    var d2 = ids[i].lastIndexOf('-'), sid = d2 > 0 ? ids[i].slice(0, d2) : ids[i];
+    if(!need[sid]){ need[sid] = 1; sids.push(sid); }
+  }
+  var missing = sids.filter(function(s){ return !setCards[s]; });
+  if(missing.length){
+    toast('Chargement de ' + missing.length + ' extension(s)…');
+    try{ await Promise.all(missing.map(setLoad)); }catch(e){}
+  }
+  var n = 0;
+  for(var j=0;j<ids.length;j++){
+    var id = ids[j], c = cdbById[id];
+    if(!c) continue;
+    if(stkVarQ(id, 'n') > 0) continue;   /* du normal reellement possede : on n'y touche pas */
+    var m = (stkOv[id] != null) ? stkOv[id] : masqueDefaut(c);
+    if(!(m & VAR_BIT.n)) continue;       /* deja desactive */
+    var nv = m & ~VAR_BIT.n;
+    if(!nv) continue;                     /* garde-fou : jamais tout desactiver */
+    stkSetOv(id, nv === masqueDefaut(c) ? 0 : nv);
+    n++;
+  }
+  toast(n ? ('Normal désélectionné sur ' + n + ' carte' + (n > 1 ? 's' : '')) : 'Rien à changer');
+  if(tab === 'stock') render();
 }
 
 /* ---- rendu ---- */
