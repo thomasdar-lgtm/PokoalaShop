@@ -727,7 +727,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.82';
+var APP_VERSION = '3.83';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -766,7 +766,13 @@ var tagTpl = '#pokemon #cartepokemon #lotpokemon #{poke} #carte{poke} #pokemontc
 /* ═══ UTIL ═══ */
 function $(id){ return document.getElementById(id); }
 function norm(s){
-  return String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+  /* retire aussi les tirets et apostrophes : sans ca, chercher "hooh" ou
+     "farfetchd" ne trouve pas "Ho-Oh" ou "Farfetch'd" tant que le tiret ou
+     l'apostrophe n'est pas saisi. L'index pks_names.json (recherche multi-
+     extensions) les retire deja de son cote ; ceci aligne la recherche
+     locale (dans une extension) sur le meme comportement. */
+  return String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase().replace(/[-']/g,'').trim();
 }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function noAuto(){
