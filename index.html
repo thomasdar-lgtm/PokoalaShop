@@ -370,16 +370,23 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 .stkRow .rvs .stkV .vq{font-size:13px}
 .shImg{display:block;width:100%;max-width:196px;margin:2px auto 12px;border-radius:9px;background:#0c1428;aspect-ratio:245/342;object-fit:cover;box-shadow:0 6px 20px rgba(0,0,0,.42);cursor:zoom-in}
 .shImg.gone{display:none}
-.shV{border:1px solid var(--bd);border-radius:10px;padding:10px 11px;margin-bottom:9px}
-.shV .vh{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:800;margin-bottom:8px}
-.shV .vh em{font-style:normal;color:var(--tx3);font-weight:700;font-size:11px}
-.shV .vh .rr{display:flex;align-items:center;gap:8px}
 .vRm{width:24px;height:24px;border-radius:6px;border:1px solid var(--bd);background:#0c1428;color:var(--tx3);font-size:14px;font-weight:800;line-height:1;cursor:pointer;padding:0;flex:none}
 .vRm:active{color:#f85149;border-color:rgba(248,81,73,.5)}
-.shE{display:flex;align-items:center;gap:9px;margin-top:6px}
-.shE label{flex:1;font-size:12px;font-weight:600;color:var(--tx2)}
-.shE button{width:31px;height:31px;border-radius:8px;border:1px solid var(--bd);background:#0c1428;color:var(--tx);font-size:16px;font-weight:800;cursor:pointer;flex:none;line-height:1}
-.shE .qv{width:30px;text-align:center;font-size:15px;font-weight:900;flex:none}
+/* zone de saisie des exemplaires : hauteur fixe (n'importe le nombre de
+   variantes actives) pour que l'ouverture/fermeture d'une variante ne fasse
+   jamais changer la taille de l'overlay, et assez haute pour les 6 variantes
+   possibles sans avoir a faire defiler. */
+.shVWrap{margin:0 18px 12px;border:1px solid var(--bd);border-radius:10px;height:222px;overflow-y:auto}
+.shVHead{display:grid;grid-template-columns:52px repeat(3,1fr);gap:4px;padding:8px 9px 5px;
+font-size:9px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;color:var(--tx3);text-align:center}
+.shVHead span:first-child{text-align:left}
+.shVr{display:grid;grid-template-columns:52px repeat(3,1fr);gap:4px;align-items:center;
+padding:5px 9px;border-top:1px solid var(--bd)}
+.shVrN{font-size:11.5px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shVrC{display:flex;align-items:center;justify-content:center;gap:3px}
+.shVrC button{width:22px;height:22px;border-radius:6px;border:1px solid var(--bd);background:#0c1428;
+color:var(--tx);font-size:14px;font-weight:800;cursor:pointer;flex:none;line-height:1;padding:0}
+.shVrC .qv{min-width:16px;text-align:center;font-size:12.5px;font-weight:900;flex:none}
 .stkWarn{background:rgba(210,153,34,.11);border:1px solid rgba(210,153,34,.34);color:#d29922;border-radius:9px;padding:8px 11px;font-size:11px;font-weight:600;margin-bottom:11px;line-height:1.4}
 .stkTot{gap:0;padding:0}
 .stkTot .cell{flex:1;min-width:0;position:relative;padding:11px 13px;cursor:pointer;text-align:left}
@@ -716,7 +723,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.75';
+var APP_VERSION = '3.76';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2709,7 +2716,7 @@ var VAR_LBL  = { n:'Norm', r:'Rev', h:'Holo', c:'Cosmos', p:'Pokéball', m:'Mast
 var VAR_FULL = { n:'Normale', r:'Reverse', h:'Holo', c:'Holo cosmos',
                  p:'Reverse Pokéball', m:'Reverse Masterball' };
 var VAR_BIT  = { n:1, r:2, h:4, c:8, p:16, m:32 };
-var VAR_ORDRE = ['n','r','h','c','p','m'];
+var VAR_ORDRE = ['n','h','r','c','p','m'];
 var CHIPS_MAX = 3;   /* la vignette n'en montre jamais plus, faute de place */
 var ETS = [['nm','Near Mint'],['jo','Joué'],['ab','Abîmé']];
 var ET_LBL = { nm:'NM', jo:'Joué', ab:'Abîmé' };
@@ -3301,8 +3308,17 @@ function mvQueue(){ clearTimeout(mvTimer); mvTimer = setTimeout(mvSave, 20000); 
 
 
 function stkSetOv(id, mask){
+  /* stkOv n'est qu'une vue reconstruite a chaque stkApplyStates() (lecture
+     reseau ou cache) a partir de myOv : ne modifier que stkOv laissait le
+     changement disparaitre au premier rechargement, puisque myOv - la seule
+     copie vraiment sauvegardee - ne le voyait jamais passer. */
   if(mask) stkOv[id] = mask; else delete stkOv[id];
-  stkQueue();
+  if(mask) myOv[id] = mask; else delete myOv[id];
+  /* stkSave() ne se declenche que s'il y a un mouvement en attente : un
+     changement de variantes seul n'en cree aucun, d'ou ce repere factice,
+     sur le meme principe que le marquage "jamais fait" (data-nvd/nvu). */
+  stkPending.push({ t: now(), c: id, v:'-', e:'-', d:0, w: who || '', s:'variantes' });
+  stkQueue(); stkSaveCache();
 }
 
 /* ---- rendu ---- */
@@ -4083,20 +4099,19 @@ function sheetStkCard(id, garder){
       'data-cs="' + esc(JSON.stringify(big)) + '" data-ci="0" onerror="cardImgErr(this)" ' +
       'data-stkzoom="' + esc(c.i) + '">';
   var solo = vs.length === 1;
+  h += '<div class="shVWrap"><div class="shVHead"><span></span><span>NM</span><span>Joué</span><span>Abîmé</span></div>';
   for(var i=0;i<vs.length;i++){
     var v = vs[i];
-    var vq = stkVarQ(id, v);
-    h += '<div class="shV"><div class="vh"><span>' + (solo ? 'Exemplaires' : VAR_FULL[v]) +
-         '</span><span class="rr"><em>total ' + vq + '</em></span></div>';
+    h += '<div class="shVr"><b class="shVrN">' + (solo ? 'Total' : esc(VAR_LBL[v])) + '</b>';
     for(var e=0;e<ETS.length;e++){
       var et = ETS[e][0];
-      h += '<div class="shE"><label>' + esc(ETS[e][1]) + '</label>' +
-           '<button data-stkd="' + esc(id) + '|' + v + '|' + et + '|-1">−</button>' +
+      h += '<div class="shVrC"><button data-stkd="' + esc(id) + '|' + v + '|' + et + '|-1">−</button>' +
            '<span class="qv" id="sq_' + v + '_' + et + '">' + stkQ(id, v, et) + '</span>' +
            '<button data-stkd="' + esc(id) + '|' + v + '|' + et + '|1">+</button></div>';
     }
     h += '</div>';
   }
+  h += '</div>';
   if(stkOv[id] != null){
     h += '<div class="acts" style="margin-bottom:9px"><button class="aBtn" data-stkreset="' + esc(id) + '">Rétablir les variantes d\'origine</button></div>';
   }
@@ -4263,8 +4278,6 @@ function stkBind(){
       if(stkAdd(p[0], p[1], p[2], parseInt(p[3],10))){
         var q = $('sq_' + p[1] + '_' + p[2]);
         if(q) q.textContent = stkQ(p[0], p[1], p[2]);
-        var hd = t.closest('.shV');
-        if(hd) hd.querySelector('em').textContent = 'total ' + stkVarQ(p[0], p[1]);
         stkRefresh(p[0]);
       }
       return;
