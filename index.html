@@ -587,8 +587,12 @@ padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowra
 .addB.on{opacity:1;border-color:var(--blu);background:rgba(56,139,253,.13);color:var(--tx)}
 .addB.on .pl{background:var(--blu)}
 .addB:not(.on) .pl{background:var(--surf3);color:var(--tx2)}
-.addB .qn{margin-left:6px;background:var(--blu);color:#fff;border-radius:7px;padding:1px 7px;font-size:11px;font-weight:800}
+.addB .qn{margin-left:6px;background:var(--blu);color:#fff;border-radius:7px;padding:1px 7px;
+font-size:11px;font-weight:800;min-width:9px;display:inline-block;text-align:center}
 .addB.plein{border-color:var(--blu)}
+/* garde la place occupee sans l'afficher : evite que l'overlay change de
+   taille selon qu'un bouton ou un badge s'applique ou non a cet instant */
+.ghost{visibility:hidden}
 
 /* total du bloc, a droite du bandeau */
 .stkSerie{justify-content:space-between}
@@ -723,7 +727,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.80';
+var APP_VERSION = '3.81';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -4164,18 +4168,23 @@ function sheetStkCard(id, garder){
     h += '</div>';
   }
   h += '</div>';
-  if(stkOv[id] != null){
-    h += '<div class="acts" style="margin-bottom:9px"><button class="aBtn" data-stkreset="' + esc(id) + '">Rétablir les variantes d\'origine</button></div>';
-  }
-  /* Toutes les versions sont gerees ici : un appui active ou desactive.
-     Une version contenant des exemplaires ne peut pas etre desactivee. */
+  /* Le bouton et les badges de quantite sont toujours generes, juste rendus
+     invisibles (visibility, pas display) quand ils ne s'appliquent pas :
+     l'espace qu'ils occupent reste reserve, et le passage d'un etat a
+     l'autre (activer/desactiver une variante, vider une quantite) ne fait
+     donc plus jamais bouger la taille de l'overlay - ni par apparition du
+     bouton, ni par un retour a la ligne different dans la liste de
+     versions selon que le badge est present ou non. */
+  h += '<div class="acts" style="margin-bottom:9px"><button class="aBtn' +
+       (stkOv[id] != null ? '' : ' ghost') + '" data-stkreset="' + esc(id) +
+       '"' + (stkOv[id] != null ? '' : ' disabled') + '>Rétablir les variantes d\'origine</button></div>';
   h += '<div class="addTit">Versions de cette carte</div><div class="addV">';
   for(var m=0;m<all.length;m++){
     var va = all[m], actif = vs.indexOf(va) >= 0, qa = stkVarQ(id, va);
     h += '<button class="addB' + (actif ? ' on' : '') + (actif && qa ? ' plein' : '') +
          '" data-stkvt="' + esc(id) + '|' + va + '">' +
          '<span class="pl">' + (actif ? '✓' : '+') + '</span>' + VAR_FULL[va] +
-         (qa ? '<span class="qn">' + qa + '</span>' : '') + '</button>';
+         '<span class="qn' + (qa ? '' : ' ghost') + '">' + (qa || 0) + '</span></button>';
   }
   h += '</div>';
   if(garder) openSheetKeep(h); else openSheet(h);
