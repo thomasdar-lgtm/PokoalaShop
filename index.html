@@ -714,7 +714,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.73';
+var APP_VERSION = '3.74';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2320,6 +2320,10 @@ function sheetAcc(){
   openSheet(
     '<div class="shT">' + (SOLO ? 'PoKoalaShop' : 'Cet appareil : ' + esc(WHOS[who] || '?')) + '</div>' +
     '<div class="shS">v' + APP_VERSION + '</div>' +
+
+    '<div class="accSec">Applications</div>' +
+    '<a class="accBtn" style="text-decoration:none" href="https://thomasdar-lgtm.github.io/PokoalaShop/" target="_blank" rel="noopener">PokoalaShop<span>Gestion boutique</span></a>' +
+    '<a class="accBtn" style="text-decoration:none" href="https://thomasdar-lgtm.github.io/Pokoala/" target="_blank" rel="noopener">Pokoala<span>Application liée</span></a>' +
 
     '<div class="accSec">Compte Google</div>' +
     '<div class="fld"><div class="gAcc' + (etatOk ? ' ok' : ' ko') + '">' +
