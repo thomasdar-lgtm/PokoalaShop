@@ -602,7 +602,7 @@ padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowra
 
 /* sections et sous-titres dans les resultats de recherche */
 .stkSerie.sect{font-size:18px}
-.stkSerie.sous{font-size:14px;font-weight:800;margin:14px 0 8px;padding:0 0 6px 11px;border-bottom-width:1px}
+.stkSerie.sous{font-size:14px;font-weight:800;margin:14px 0 8px;padding:0 0 6px 11px;border-bottom-width:1px;justify-content:flex-start}
 .stkSerie.sous::before{background:var(--tx3);width:3px;bottom:8px}
 /* variante et etat dans le selecteur de cartes */
 .pkV{background:rgba(56,139,253,.16);color:var(--blu);border-radius:5px;padding:1px 6px;font-size:10.5px;font-weight:800;margin-left:5px}
@@ -620,7 +620,7 @@ padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowra
 background:#0c1428;border:1px solid var(--bd);border-radius:5px;padding:2px 6px;vertical-align:middle}
 .stkSerie.sous .serCode{font-size:9.5px}
 /* logo d'extension a cote du nom, dans les en-tetes de resultats de recherche */
-.serSym{margin-left:9px;vertical-align:middle}
+.serSym{margin-right:9px;vertical-align:middle}
 
 /* lien vers l'annonce */
 .vintB{display:flex;align-items:center;justify-content:center;gap:9px;background:var(--surf2);
@@ -723,7 +723,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.77';
+var APP_VERSION = '3.78';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -3743,8 +3743,8 @@ async function stkRenderSearch(q){
     var a = sec.g[order[o]];
     if(!a) continue;
     var si = setInfo(order[o]);
-    h += '<div class="stkSerie sous">' + esc(si ? si.name : order[o]) +
-         (si ? symHtml(si, 'serSym') : '') + '</div>';
+    h += '<div class="stkSerie sous">' + (si ? symHtml(si, 'serSym') : '') +
+         esc(si ? si.name : order[o]) + '</div>';
     for(var z=0;z<a.length;z++){
       var c2 = a[z], vs = stkVars(c2), det = [];
       for(var v=0;v<vs.length;v++){
