@@ -723,7 +723,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.76';
+var APP_VERSION = '3.77';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2776,7 +2776,14 @@ function masqueDefaut(c){
 }
 function stkVars(c){
   var m = (stkOv[c.i] != null) ? stkOv[c.i] : masqueDefaut(c), r = [];
-  for(var i=0;i<VAR_ORDRE.length;i++) if(m & VAR_BIT[VAR_ORDRE[i]]) r.push(VAR_ORDRE[i]);
+  for(var i=0;i<VAR_ORDRE.length;i++){
+    var v = VAR_ORDRE[i];
+    /* une variante avec des exemplaires enregistres reste toujours visible,
+       meme si le masque actif ne la contient pas (ex. reglage jamais
+       sauvegarde avant le correctif de stkSetOv) : la quantite ne doit
+       jamais rester invisible derriere un interrupteur incoherent */
+    if((m & VAR_BIT[v]) || stkVarQ(c.i, v)) r.push(v);
+  }
   return r.length ? r : ['n'];
 }
 /* variantes reellement affichees sur une vignette */
