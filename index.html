@@ -723,7 +723,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.79';
+var APP_VERSION = '3.80';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -4346,7 +4346,15 @@ function stkBind(){
       var actuel = (stkOv[pv[0]] != null) ? stkOv[pv[0]] : masqueDefaut(cv);
       var bit = VAR_BIT[pv[1]], est = !!(actuel & bit);
       if(est){
-        if(stkVarQ(pv[0], pv[1])){ toast('Ramène d\'abord cette version à zéro'); return; }
+        if(stkVarQ(pv[0], pv[1])){
+          var det = [];
+          for(var de=0;de<ETS.length;de++){
+            var dq = stkQ(pv[0], pv[1], ETS[de][0]);
+            if(dq) det.push(ET_LBL[ETS[de][0]] + ' ' + dq);
+          }
+          toast(VAR_LBL[pv[1]] + ' à zéro d\'abord : ' + det.join(', '));
+          return;
+        }
         var nv2 = actuel & ~bit;
         if(!nv2){ toast('Garde au moins une version'); return; }
         stkSetOv(pv[0], nv2 === masqueDefaut(cv) ? 0 : nv2);
