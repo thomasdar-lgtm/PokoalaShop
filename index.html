@@ -2362,6 +2362,7 @@ function sheetAcc(){
     '<div class="accSec">Stock</div>' +
     '<button class="accBtn" id="a_stk">Vérifier le stock<span>' + stkTotalEx() + ' exemplaires</span></button>' +
     '<button class="accBtn" id="a_holo">Désélectionner Normal sur les holos<span>nettoyage en un clic</span></button>' +
+    '<button class="accBtn" id="a_imgchk">Vérifier les images 30ᵉ Anniversaire<span>teste la disponibilité sur TCGdex</span></button>' +
 
     '<div class="accSec">Synchronisation</div>' +
     '<button class="accBtn" id="a_ref">Rafraîchir maintenant<span>' + lots.length + ' lots</span></button>' +
@@ -2401,6 +2402,24 @@ function sheetAcc(){
   $('a_maj').onclick = hardReload;
   $('a_stk').onclick = sheetStkDiag;
   $('a_holo').onclick = function(){ closeSheet(); stkAutoHideNormal(); };
+  $('a_imgchk').onclick = function(){
+    var btn = this;
+    btn.disabled = true;
+    btn.innerHTML = 'Vérification…<span>connexion à TCGdex</span>';
+    var img = new Image();
+    var done = false;
+    img.onload = function(){
+      if(done) return; done = true;
+      btn.disabled = false;
+      btn.innerHTML = 'Vérifier les images 30ᵉ Anniversaire<span>✓ Images disponibles — rechargez l\'app pour les voir</span>';
+    };
+    img.onerror = function(){
+      if(done) return; done = true;
+      btn.disabled = false;
+      btn.innerHTML = 'Vérifier les images 30ᵉ Anniversaire<span>Pas encore disponibles sur TCGdex</span>';
+    };
+    img.src = 'https://assets.tcgdex.net/fr/me/30th/001/low.webp?' + Date.now();
+  };
   $('a_ref').onclick = function(){ closeSheet(); sync(true); toast('Synchronisation…'); };
   $('a_js').onclick = exportJson;
   $('a_cs').onclick = exportCsv;
