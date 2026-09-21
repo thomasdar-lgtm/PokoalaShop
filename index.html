@@ -612,6 +612,8 @@ padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowra
 .serCode{margin-left:9px;font-size:10px;font-weight:900;letter-spacing:.6px;color:var(--tx3);
 background:#0c1428;border:1px solid var(--bd);border-radius:5px;padding:2px 6px;vertical-align:middle}
 .stkSerie.sous .serCode{font-size:9.5px}
+/* logo d'extension a cote du nom, dans les en-tetes de resultats de recherche */
+.serSym{margin-left:9px;vertical-align:middle}
 
 /* lien vers l'annonce */
 .vintB{display:flex;align-items:center;justify-content:center;gap:9px;background:var(--surf2);
@@ -714,7 +716,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.74';
+var APP_VERSION = '3.75';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -744,7 +746,7 @@ var WHOS = { thomas:'Thomas', cindy:'Cindy' };
    n'est perdu si un ancien fichier existe. Mettre SOLO a null retablit le
    fonctionnement a deux comptes. */
 var SOLO = 'cindy';
-var dirty = false, saving = false, pollTimer = null, sheetOpen = false;
+var dirty = false, saving = false, pollTimer = null, sheetOpen = false, suppressPop = false;
 var majTimer = null, majInt = null, syncInt = null, tokInt = null, visBound = false;
 var refreshTimer = null, booted = false, offline = false;
 var cfmCb = null;
@@ -1699,8 +1701,12 @@ function closeSheet(){
   var was = sheetOpen;
   $('ovl').classList.remove('on'); sheetOpen = false;
   /* on ne depile qu'une entree : si plusieurs ont ete empilees par erreur,
-     le garde-fou du gestionnaire de retour empeche de sortir de la vue */
-  if(was && history.state && history.state.d === 1) history.back();
+     le garde-fou du gestionnaire de retour empeche de sortir de la vue.
+     suppressPop evite que ce depilement programmatique ne retombe dans le
+     gestionnaire popstate : sheetOpen est deja a false a ce moment-la, donc
+     sans ce garde-fou le popstate croit a un retour "normal" et applique sa
+     regle suivante (effacer la recherche en cours). */
+  if(was && history.state && history.state.d === 1){ suppressPop = true; history.back(); }
 }
 
 var pendingPhoto = null;
@@ -2324,6 +2330,7 @@ function sheetAcc(){
     '<div class="accSec">Applications</div>' +
     '<a class="accBtn" style="text-decoration:none" href="https://thomasdar-lgtm.github.io/PokoalaShop/" target="_blank" rel="noopener">PokoalaShop<span>Gestion boutique</span></a>' +
     '<a class="accBtn" style="text-decoration:none" href="https://thomasdar-lgtm.github.io/Pokoala/" target="_blank" rel="noopener">Pokoala<span>Application liée</span></a>' +
+    '<button class="accBtn" id="a_maj">Recharger l\'app<span>vide le cache et redémarre</span></button>' +
 
     '<div class="accSec">Compte Google</div>' +
     '<div class="fld"><div class="gAcc' + (etatOk ? ' ok' : ' ko') + '">' +
@@ -2368,6 +2375,7 @@ function sheetAcc(){
     };
   }
   $('x7').onclick = closeSheet;
+  $('a_maj').onclick = hardReload;
   $('a_stk').onclick = sheetStkDiag;
   $('a_ref').onclick = function(){ closeSheet(); sync(true); toast('Synchronisation…'); };
   $('a_js').onclick = exportJson;
@@ -2589,6 +2597,7 @@ $('cfmY').onclick = function(){ var c = cfmCb; closeCfm(); if(c) c(); };
 /* back Android : ferme les feuilles avant de quitter */
 history.replaceState({ d:0 }, '');
 window.addEventListener('popstate', function(){
+  if(suppressPop){ suppressPop = false; return; }
   if($('lb').classList.contains('on')){ $('lb').classList.remove('on'); return; }
   if(selMode && !sheetOpen){ exitSel(); history.pushState({d:1},''); return; }
   if($('cfm').classList.contains('on')){ closeCfm(); history.pushState({d:1},''); return; }
@@ -3711,9 +3720,8 @@ async function stkRenderSearch(q){
     var a = sec.g[order[o]];
     if(!a) continue;
     var si = setInfo(order[o]);
-    /* ici aucun symbole n'est affiche : l'abreviation est donc toujours utile */
     h += '<div class="stkSerie sous">' + esc(si ? si.name : order[o]) +
-         (si && si.code ? '<span class="serCode">' + esc(si.code) + '</span>' : '') + '</div>';
+         (si ? symHtml(si, 'serSym') : '') + '</div>';
     for(var z=0;z<a.length;z++){
       var c2 = a[z], vs = stkVars(c2), det = [];
       for(var v=0;v<vs.length;v++){
