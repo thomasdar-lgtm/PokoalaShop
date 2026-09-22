@@ -189,6 +189,10 @@ main{padding:4px 16px 20px}
 /* SHEET */
 .ovl{display:none;position:fixed;inset:0;z-index:200;background:rgba(6,6,12,.72);align-items:flex-end;justify-content:center}
 .ovl.on{display:flex}
+/* overlay ouvert : la page dessous ne defile plus, et le defilement du
+   panneau ne se propage pas a la page une fois arrive en butee */
+html:has(.ovl.on),html:has(.cfm.on),html:has(#lb.on){overflow:hidden}
+.ovl,.cfm,#lb,.sheet{overscroll-behavior:contain}
 .sheet{background:var(--surf);border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:93vh;overflow-y:auto;padding-bottom:calc(26px + env(safe-area-inset-bottom));animation:up .22s ease}
 @keyframes up{from{transform:translateY(30px);opacity:.4}to{transform:none;opacity:1}}
 .grab{width:36px;height:4px;background:var(--surf3);border-radius:3px;margin:11px auto 4px}
@@ -727,7 +731,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.94';
+var APP_VERSION = '3.95';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
