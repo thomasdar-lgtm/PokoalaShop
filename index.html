@@ -732,7 +732,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.97';
+var APP_VERSION = '3.98';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -4748,7 +4748,12 @@ closeSheet = function(){
   var lb = $('lb'), img = lb ? lb.querySelector('img') : null;
   if(!lb || !img) return;
   var ech = 1, dx = 0, dy = 0;
-  var d0 = 0, e0 = 1, x0 = 0, y0 = 0, px = 0, py = 0, bouge = false, dernier = 0;
+  var d0 = 0, e0 = 1, x0 = 0, y0 = 0, bouge = false, dernier = 0;
+  /* lx, ly : position de l'image hors transformation. qx, qy : point de
+     l'image (en pixels non agrandis) maintenu sous les doigts. Avec une
+     origine en haut a gauche, un point q de l'image s'affiche en
+     l + d + q * echelle : on recalcule d pour que q reste sous le geste. */
+  var lx = 0, ly = 0, qx = 0, qy = 0;
 
   function applique(){
     img.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(' + ech + ')';
@@ -4757,20 +4762,35 @@ closeSheet = function(){
   function reset(){ ech = 1; dx = dy = 0; applique(); }
   lbReset = reset;
 
+  function base(){
+    var r = img.getBoundingClientRect();
+    lx = r.left - dx; ly = r.top - dy;
+  }
+  function ancre(fx, fy){ qx = (fx - lx - dx) / ech; qy = (fy - ly - dy) / ech; }
+  function place(fx, fy){ dx = fx - lx - qx * ech; dy = fy - ly - qy * ech; }
   function dist(t){
     var a = t[0], b = t[1];
     return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
   }
+  function milieu(t){
+    return [(t[0].clientX + t[1].clientX) / 2, (t[0].clientY + t[1].clientY) / 2];
+  }
+  function panDepuis(t){ x0 = t.clientX - dx; y0 = t.clientY - dy; }
+
   img.addEventListener('touchstart', function(e){
+    base();
     if(e.touches.length === 2){
-      d0 = dist(e.touches); e0 = ech; bouge = true; e.preventDefault();
+      var m = milieu(e.touches);
+      d0 = dist(e.touches); e0 = ech; ancre(m[0], m[1]);
+      bouge = true; e.preventDefault();
     } else if(e.touches.length === 1){
-      x0 = e.touches[0].clientX - dx; y0 = e.touches[0].clientY - dy;
-      px = e.touches[0].clientX; py = e.touches[0].clientY;
+      var t0 = e.touches[0];
+      panDepuis(t0);
       bouge = ech > 1.01;
       var t = Date.now();
-      if(t - dernier < 300){        /* double appui */
-        if(ech > 1.01) reset(); else { ech = 2.5; applique(); }
+      if(t - dernier < 300){        /* double appui : agrandit a l'endroit touche */
+        if(ech > 1.01) reset();
+        else { ancre(t0.clientX, t0.clientY); ech = 2.5; place(t0.clientX, t0.clientY); applique(); }
         e.preventDefault();
       }
       dernier = t;
@@ -4779,7 +4799,9 @@ closeSheet = function(){
 
   img.addEventListener('touchmove', function(e){
     if(e.touches.length === 2 && d0){
+      var m = milieu(e.touches);
       ech = Math.min(6, Math.max(1, e0 * dist(e.touches) / d0));
+      place(m[0], m[1]);
       applique(); e.preventDefault();
     } else if(e.touches.length === 1 && bouge && ech > 1.01){
       dx = e.touches[0].clientX - x0; dy = e.touches[0].clientY - y0;
@@ -4789,6 +4811,11 @@ closeSheet = function(){
 
   img.addEventListener('touchend', function(e){
     if(e.touches.length === 0){ d0 = 0; bouge = false; if(ech <= 1.01) reset(); }
+    else if(e.touches.length === 1){
+      /* un doigt leve pendant le pincement : on continue a deplacer
+         depuis la position actuelle, sans saut */
+      d0 = 0; panDepuis(e.touches[0]); bouge = ech > 1.01;
+    }
   });
 })();
 
