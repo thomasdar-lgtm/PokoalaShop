@@ -1,4 +1,4 @@
-const CACHE_VERSION = '3.92';
+const CACHE_VERSION = '3.93';
 const CACHE_NAME = 'pokoalashop-v' + CACHE_VERSION;
 /* cache non versionne : la base de cartes est versionnee par son URL (?v=N),
    inutile de re-telecharger 2,7 Mo a chaque montee de version */
@@ -10,6 +10,9 @@ const CACHE_IMG = 'pokoalashop-img2';
    affichage une image qui n'existe pas, tout en retentant regulierement pour
    recuperer le scan francais TCGdex des qu'il est publie */
 const CACHE_MISS = 'pokoalashop-miss';
+/* symboles d'extension : cache propre, rempli uniquement par le code d'origine.
+   Le cache images contient des symboles stockes en mode CORS (3.88 a 3.91). */
+const CACHE_SYM = 'pokoalashop-sym';
 const MISS_TTL = 3 * 24 * 3600 * 1000;
 /* hebergeurs qui refusent le mode CORS pendant la vie de ce service worker */
 const noCors = new Set();
@@ -36,7 +39,7 @@ self.addEventListener('message', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME && k !== CACHE_DATA && k !== CACHE_IMG && k !== CACHE_MISS).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME && k !== CACHE_DATA && k !== CACHE_IMG && k !== CACHE_MISS && k !== CACHE_SYM).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -53,7 +56,7 @@ self.addEventListener('fetch', e => {
        scintiller a chaque affichage de l'onglet Stock. */
     if (url.pathname.indexOf('symbol') >= 0) {
       e.respondWith(
-        caches.open(CACHE_IMG).then(c =>
+        caches.open(CACHE_SYM).then(c =>
           c.match(e.request).then(hit => hit || fetch(e.request).then(r => {
             if (r.ok || r.type === 'opaque') c.put(e.request, r.clone());
             return r;
