@@ -727,7 +727,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.89';
+var APP_VERSION = '3.90';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2909,10 +2909,13 @@ function codeHtml(st){
   return '<span class="scode">' + esc(st.code) + '</span>';
 }
 /* symbole d'extension : essaie les sources dans l'ordre, pokemontcg.io en dernier */
+/* pas de loading="lazy" : un symbole differe s'affiche vide une image avant
+   d'etre dessine, meme depuis le cache, et la liste du Stock est reconstruite
+   a chaque visite, d'ou un scintillement systematique */
 function symHtml(st, cls){
   var l = st.syms || [];
   if(!l.length) return '<span class="sfb ' + (cls||'') + '">' + esc((st.code || '?').slice(0,3)) + '</span>';
-  return '<img class="ssym ' + (cls||'') + '" loading="lazy" src="' + esc(l[0]) + '" alt="" ' +
+  return '<img class="ssym ' + (cls||'') + '" decoding="sync" src="' + esc(l[0]) + '" alt="" ' +
          'data-sy="' + esc(JSON.stringify(l)) + '" data-syi="0" data-code="' + esc(st.code || '') + '" onerror="symNext(this)">';
 }
 function symNext(img){
