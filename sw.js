@@ -1,4 +1,4 @@
-const CACHE_VERSION = '3.90';
+const CACHE_VERSION = '3.92';
 const CACHE_NAME = 'pokoalashop-v' + CACHE_VERSION;
 /* cache non versionne : la base de cartes est versionnee par son URL (?v=N),
    inutile de re-telecharger 2,7 Mo a chaque montee de version */
@@ -46,8 +46,23 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   if (url.hostname.indexOf('googleapis.com') >= 0 || url.hostname.indexOf('accounts.google.com') >= 0 || url.hostname.indexOf('gstatic.com') >= 0) return;
 
-  /* images externes : cache d'abord, voir imgFetch */
+  /* images externes */
   if (IMAGE_HOSTS.some(hh => url.hostname.indexOf(hh) >= 0)) {
+    /* symboles d'extension : fonctionnement d'origine (avant 3.88), cache
+       d'abord et conserve indefiniment. Le mode CORS de imgFetch les faisait
+       scintiller a chaque affichage de l'onglet Stock. */
+    if (url.pathname.indexOf('symbol') >= 0) {
+      e.respondWith(
+        caches.open(CACHE_IMG).then(c =>
+          c.match(e.request).then(hit => hit || fetch(e.request).then(r => {
+            if (r.ok || r.type === 'opaque') c.put(e.request, r.clone());
+            return r;
+          }).catch(() => hit))
+        )
+      );
+      return;
+    }
+    /* visuels de cartes : voir imgFetch */
     e.respondWith(imgFetch(e.request));
     return;
   }
