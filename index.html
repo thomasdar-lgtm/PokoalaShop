@@ -727,7 +727,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.86';
+var APP_VERSION = '3.87';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2932,10 +2932,25 @@ function ptcgImg(c, big){
   if(!c || !c.s || c.u == null) return '';
   return 'https://images.pokemontcg.io/' + c.s + '/' + c.u + (big ? '_hires' : '') + '.png';
 }
+/* Scans officiels francais (encyclopedie pokemon.fr) : source intermediaire
+   entre TCGdex FR et pokemontcg.io (anglais). TCGdex reste prioritaire et
+   reprend la main des qu'il publie le scan. Codes ajoutes bloc par bloc,
+   apres verification. */
+var PKM_CODES = {
+  sv1:'SV01', sv2:'SV02', sv3:'SV03', sv4:'SV04', sv5:'SV05',
+  sv6:'SV06', sv7:'SV07', sv8:'SV08', sv9:'SV09', sv10:'SV10'
+};
+function pkmImg(c){
+  var k = c && PKM_CODES[c.s];
+  if(!k || c.u == null) return '';
+  return 'https://assets.pokemon.com/assets/cms2-fr-fr/img/cards/web/' + k + '/' + k + '_FR_' + c.u + '.png';
+}
 function cardSrcs(c, big){
   var l = [];
   if(c.g) l.push(c.g + (big ? '/high.webp' : '/low.webp'));
   if(c.g && big) l.push(c.g + '/low.webp');
+  var pk = pkmImg(c);
+  if(pk) l.push(pk);
   var pt = ptcgImg(c, big);
   if(pt) l.push(pt);
   if(big){ var pl = ptcgImg(c, false); if(pl) l.push(pl); }
