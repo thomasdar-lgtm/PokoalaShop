@@ -680,7 +680,6 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
       <div class="brand"><img src="icons/logo.png" alt=""><div class="wm"><span class="p">Po</span><span class="k">Koala</span><span class="s">Shop</span></div></div>
       <div class="hRight">
         <div class="sync"><span class="syncDot" id="syncDot"></span><span id="syncTx"></span></div>
-        <button class="iBtn" id="btnTags" title="Hashtags">#</button>
         <button class="iBtn" id="btnAcc" aria-label="Compte"><span style="width:16px;height:16px;display:block"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><circle cx="12" cy="12" r="10"/> <circle cx="12" cy="10" r="3"/> <path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/></svg></span></button>
       </div>
     </div>
@@ -731,7 +730,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.95';
+var APP_VERSION = '3.96';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -765,7 +764,6 @@ var dirty = false, saving = false, pollTimer = null, sheetOpen = false, suppress
 var majTimer = null, majInt = null, syncInt = null, tokInt = null, visBound = false;
 var refreshTimer = null, booted = false, offline = false;
 var cfmCb = null;
-var tagTpl = '#pokemon #cartepokemon #lotpokemon #{poke} #carte{poke} #pokemontcg #collectionpokemon #cartesapokemon #dracaufeu #pikachu #evoli #boosterpokemon #lotcartes';
 
 /* ═══ UTIL ═══ */
 function $(id){ return document.getElementById(id); }
@@ -1094,7 +1092,6 @@ async function sync(full){
       var data = await rr.json().catch(function(){ return {}; });
       if(data && data.lots) mergeInto(map, data.lots);
       if(f.name === myFile && data){
-        if(data.tagTpl) tagTpl = data.tagTpl;
         var own = data.lots || [];
         for(var z=0;z<own.length;z++){
           var cur = savedLots[own[z].id];
@@ -1141,7 +1138,7 @@ async function save(){
         }
       }catch(e0){ /* distant illisible : on ecrit ce qu'on a */ }
     }
-    var body = { v: APP_VERSION, tagTpl: tagTpl, updated: now(), lots: [] };
+    var body = { v: APP_VERSION, updated: now(), lots: [] };
     for(var k in savedLots) body.lots.push(savedLots[k]);
     var json = JSON.stringify(body);
     if(!myFileId){
@@ -1522,7 +1519,6 @@ function card(l){
     acts.push('<button class="aBtn p" data-list="' + l.id + '">Mettre en ligne</button>');
   } else if(l.st === 'vitrine'){
     acts.push('<button class="aBtn g" data-sell="' + l.id + '" draggable="false" style="-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none">Marquer vendu</button>');
-    acts.push('<button class="aBtn" data-tag="' + l.id + '">Hashtags</button>');
   } else if(l.st === 'vendu' || l.st === 'expedie'){
     acts.push('<button class="aBtn p" data-again="' + l.id + '">Refaire ce lot</button>');
   }
@@ -2045,12 +2041,10 @@ function sheetList(id){
     '<div class="fld"><label class="lbl">Prix mini accepté</label><input class="inp" id="f_pm" type="number" inputmode="decimal" step="0.5" value="' + (l.pm==null?'':l.pm) + '" placeholder="9"></div></div>' +
     '<div class="fld"><label class="lbl">En ligne depuis le</label><input class="inp" id="f_dl" type="date" value="' + toDateInput(l.dtListe || now()) + '" max="' + toDateInput(now()) + '"></div>' +
     hint +
-    '<div class="shF"><button class="bS" id="x2">Annuler</button><button class="bP" id="k2">Mettre en vitrine</button></div>' +
-    '<button class="dgr" id="k2b" style="border-color:var(--bd);color:var(--tx2)">Copier les hashtags</button>'
+    '<div class="shF"><button class="bS" id="x2">Annuler</button><button class="bP" id="k2">Mettre en vitrine</button></div>'
   );
   bindPhoto();
   $('x2').onclick = closeSheet;
-  $('k2b').onclick = function(){ copyTags(l); };
   $('k2').onclick = async function(){
     $('k2').textContent = '…'; $('k2').disabled = true;
     if(pendingPhoto){ try{ l.photo = await uploadPhoto(pendingPhoto); }catch(e){} }
@@ -2120,12 +2114,10 @@ function sheetEdit(id){
     '<div class="fld"><label class="lbl">Date de vente</label><input class="inp" id="f_dv" type="date" value="' + toDateInput(l.dtVente) + '" max="' + toDateInput(now()) + '"></div></div>' +
     '<div class="fld"><label class="lbl">Notes</label><textarea class="inp" id="f_notes" placeholder="Contenu, état, remarques…">' + esc(l.notes) + '</textarea></div>' +
     '<div class="shF"><button class="bS" id="x4">Annuler</button><button class="bP" id="k4">Enregistrer</button></div>' +
-    '<button class="dgr" id="k4t" style="border-color:var(--bd);color:var(--tx2)">Copier les hashtags</button>' +
     '<button class="dgr" id="k4d">Supprimer ce lot</button>'
   );
   bindPhoto();
   $('x4').onclick = closeSheet;
-  $('k4t').onclick = function(){ copyTags(l); };
   $('k4d').onclick = function(){
     var nbk = lotCardCount(l);
     var parti = (l.st === 'vendu' || l.st === 'expedie');   /* deja vendu : les cartes sont parties */
@@ -2251,39 +2243,6 @@ function sheetAgain(id){
     };
     closeSheet(); commit(l); toast('Nouveau lot à préparer');
   };
-}
-
-/* hashtags */
-function buildTags(l){
-  var p = (l && l.poke) ? l.poke.toLowerCase().replace(/[^a-z0-9àâäéèêëïîôöùûüç]/gi,'') : 'pokemon';
-  return tagTpl.replace(/\{poke\}/g, p);
-}
-function copyTags(l){
-  var t = buildTags(l);
-  if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(t).then(function(){ toast('Hashtags copiés'); },
-      function(){ fallbackCopy(t); });
-  } else fallbackCopy(t);
-}
-function fallbackCopy(t){
-  var ta = document.createElement('textarea');
-  ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
-  document.body.appendChild(ta); ta.select();
-  try{ document.execCommand('copy'); toast('Hashtags copiés'); }catch(e){ toast('Copie impossible'); }
-  document.body.removeChild(ta);
-}
-function sheetTags(){
-  openSheet(
-    '<div class="shT">Modèle de hashtags</div>' +
-    '<div class="shS">Utilise <b>{poke}</b> — il sera remplacé par le Pokémon du lot.</div>' +
-    '<div class="fld"><textarea class="inp" id="f_tpl" style="height:150px">' + esc(tagTpl) + '</textarea></div>' +
-    '<div class="lbl" style="padding:0 18px 5px">Aperçu pour « Évoli »</div>' +
-    '<div class="tagBox" id="tagPrev">' + esc(tagTpl.replace(/\{poke\}/g,'evoli')) + '</div>' +
-    '<div class="shF"><button class="bS" id="x6">Fermer</button><button class="bP" id="k6">Enregistrer</button></div>'
-  );
-  $('f_tpl').oninput = function(){ $('tagPrev').textContent = this.value.replace(/\{poke\}/g,'evoli'); };
-  $('x6').onclick = closeSheet;
-  $('k6').onclick = function(){ tagTpl = $('f_tpl').value; closeSheet(); save(); toast('Modèle enregistré'); };
 }
 
 /* Verification du stock : detaille chaque source lue et signale deux sources
@@ -2575,7 +2534,7 @@ document.addEventListener('click', function(e){
     render();
     return;
   }
-  var t = e.target.closest('[data-open],[data-mv],[data-list],[data-sell],[data-again],[data-tag],[data-pk]');
+  var t = e.target.closest('[data-open],[data-mv],[data-list],[data-sell],[data-again],[data-pk]');
   if(!t) return;
   var v;
   if((v = t.getAttribute('data-open'))){ sheetEdit(v); return; }
@@ -2583,11 +2542,6 @@ document.addEventListener('click', function(e){
   if((v = t.getAttribute('data-sell'))){ sheetSell(v); return; }
   if((v = t.getAttribute('data-again'))){ sheetAgain(v); return; }
   if((v = t.getAttribute('data-pk'))){ sheetPick(v); return; }
-  if((v = t.getAttribute('data-tag'))){
-    var lt = lots.filter(function(x){ return x.id === v; })[0];
-    if(lt) copyTags(lt);
-    return;
-  }
   if((v = t.getAttribute('data-mv'))){
     var p = v.split('|'), l = lots.filter(function(x){ return x.id === p[0]; })[0];
     if(!l) return;
@@ -2631,7 +2585,6 @@ $('qClr').onclick = function(){ $('q').value = ''; $('q').blur(); render(); };
 $('selCancel').onclick = exitSel;
 $('selGo').onclick = sheetMultiSell;
 $('fab').onclick = function(){ if(tab === 'afaire') sheetQuick(); else sheetNew('vitrine'); };
-$('btnTags').onclick = sheetTags;
 $('btnAcc').onclick = sheetAcc;
 $('btnSignin').onclick = signIn;
 $('ovl').onclick = function(e){ if(e.target === $('ovl')) closeSheet(); };
