@@ -1,11 +1,18 @@
-const CACHE_VERSION = '3.87';
+const CACHE_VERSION = '3.88';
 const CACHE_NAME = 'pokoalashop-v' + CACHE_VERSION;
 /* cache non versionne : la base de cartes est versionnee par son URL (?v=N),
    inutile de re-telecharger 2,7 Mo a chaque montee de version */
 const CACHE_DATA = 'pokoalashop-data';
 /* cache images non versionne : les visuels de cartes et les symboles d'extension
    ne changent jamais, inutile de les retelecharger a chaque montee de version */
-const CACHE_IMG = 'pokoalashop-img';
+const CACHE_IMG = 'pokoalashop-img2';
+/* absences d'images memorisees quelques jours : evite de redemander a chaque
+   affichage une image qui n'existe pas, tout en retentant regulierement pour
+   recuperer le scan francais TCGdex des qu'il est publie */
+const CACHE_MISS = 'pokoalashop-miss';
+const MISS_TTL = 3 * 24 * 3600 * 1000;
+/* hebergeurs qui refusent le mode CORS pendant la vie de ce service worker */
+const noCors = new Set();
 const IMAGE_HOSTS = ['assets.tcgdex.net', 'images.pokemontcg.io', 'images.scrydex.com', 'archives.bulbagarden.net'];
 const ASSETS = ['./', './index.html', './manifest.json', './icons/logo.png', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'];
 
@@ -29,7 +36,7 @@ self.addEventListener('message', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME && k !== CACHE_DATA && k !== CACHE_IMG).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME && k !== CACHE_DATA && k !== CACHE_IMG && k !== CACHE_MISS).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -39,18 +46,9 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   if (url.hostname.indexOf('googleapis.com') >= 0 || url.hostname.indexOf('accounts.google.com') >= 0 || url.hostname.indexOf('gstatic.com') >= 0) return;
 
-  /* images externes : cache d'abord, conserve indefiniment */
+  /* images externes : cache d'abord, voir imgFetch */
   if (IMAGE_HOSTS.some(hh => url.hostname.indexOf(hh) >= 0)) {
-    e.respondWith(
-      caches.open(CACHE_IMG).then(c =>
-        c.match(e.request).then(hit => hit || fetch(e.request).then(r => {
-          /* une image cross-origin sans CORS renvoie une reponse OPAQUE
-             (status 0, ok=false) : il faut la cacher explicitement */
-          if (r.ok || r.type === 'opaque') c.put(e.request, r.clone());
-          return r;
-        }).catch(() => hit))
-      )
-    );
+    e.respondWith(imgFetch(e.request));
     return;
   }
 
@@ -88,3 +86,44 @@ self.addEventListener('fetch', e => {
       .catch(() => caches.match(e.request).then(m => m || caches.match('./index.html')))
   );
 });
+
+/* Une image demandee par <img> sans CORS revient OPAQUE : impossible de
+   distinguer une vraie image d'une erreur 404. Mettre ces reponses en cache
+   figeait donc definitivement les absences TCGdex. On demande en CORS pour
+   connaitre le vrai statut : seules les vraies images sont conservees, les
+   absences sont retentees apres MISS_TTL. */
+async function imgFetch(req) {
+  const url = req.url;
+  const c = await caches.open(CACHE_IMG);
+  const hit = await c.match(url);
+  if (hit) return hit;
+  const m = await caches.open(CACHE_MISS);
+  const miss = await m.match(url);
+  if (miss && Date.now() - Number(miss.headers.get('x-t') || 0) < MISS_TTL) {
+    return new Response('', { status: 404 });
+  }
+  const host = new URL(url).hostname;
+  if (!noCors.has(host)) {
+    try {
+      const r = await fetch(url, { mode: 'cors', credentials: 'omit' });
+      if (r.ok) {
+        c.put(url, r.clone()).catch(() => null);
+        if (miss) m.delete(url).catch(() => null);
+      } else if (r.status === 404 || r.status === 403 || r.status === 410) {
+        m.put(url, new Response('', { headers: { 'x-t': String(Date.now()) } })).catch(() => null);
+      }
+      return r;
+    } catch (err) {
+      /* echec CORS (et non coupure reseau) : cet hebergeur passe en mode opaque */
+      if (self.navigator.onLine) noCors.add(host);
+      else return new Response('', { status: 504 });
+    }
+  }
+  try {
+    const r = await fetch(req);
+    if (r.ok || r.type === 'opaque') c.put(url, r.clone()).catch(() => null);
+    return r;
+  } catch (err) {
+    return new Response('', { status: 504 });
+  }
+}
