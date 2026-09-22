@@ -727,7 +727,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.93';
+var APP_VERSION = '3.94';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -3542,6 +3542,21 @@ async function renderStock(){
 }
 
 function stkRenderSets(){
+  /* La liste est conservee d'une visite a l'autre : la reconstruire recreait
+     tous les logos, que le navigateur redessine avec plusieurs images de
+     retard (scintillement mesure, deja present en 3.84). Seuls les compteurs
+     sont rafraichis ; reconstruction uniquement si la liste des extensions
+     elle-meme a change. */
+  if(stkSetsEl && stkSetsCdb === cdb){
+    var vw = $('view');
+    vw.innerHTML = '';
+    vw.appendChild(stkSetsEl);
+    majHdrH();
+    stkTouchSets();
+    var jc = stkSetsEl.querySelector('.stkJB .jc');
+    if(jc) jc.textContent = mvLoaded ? stkMoves.length : mvCount;
+    return;
+  }
   var tot = 0, uniq = 0;
   for(var k in stock){ tot += stock[k]; uniq++; }
   var per = {};
@@ -3591,8 +3606,11 @@ function stkRenderSets(){
          '<span class="sc' + (n ? '' : ' z') + '">' + (n ? n : '—') + '</span></div>';
   }
   stkView(h + '</div>');
+  stkSetsEl = $('view').firstChild;
+  stkSetsCdb = cdb;
   nvCountFill();
 }
+var stkSetsEl = null, stkSetsCdb = null;
 
 /* compteurs de variantes, partages entre la grille et les resultats de recherche */
 /* Symbole de rarete : rond pour commune, losange pour peu commune,
