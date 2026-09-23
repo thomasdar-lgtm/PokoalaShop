@@ -732,7 +732,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.98';
+var APP_VERSION = '3.99';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2904,6 +2904,10 @@ function pkmImg(c){
   if(!k || c.u == null) return '';
   return 'https://assets.pokemon.com/assets/cms2-fr-fr/img/cards/web/' + k + '/' + k + '_FR_' + c.u + '.png';
 }
+/* extensions inconnues de pokemontcg.io : leur demander une image renvoie un
+   DOS DE CARTE et non une erreur, la source suivante n'est donc jamais
+   essayee et le dos reste affiche. On n'interroge pas ce site pour elles. */
+var NO_PTCG = { mep:1 };
 function cardSrcs(c, big){
   var l = [];
   if(c.g) l.push(c.g + (big ? '/high.webp' : '/low.webp'));
@@ -2919,9 +2923,9 @@ function cardSrcs(c, big){
     if(big) l.push(sx + '/small');
     return l;
   }
-  var pt = ptcgImg(c, big);
+  var pt = NO_PTCG[c.s] ? '' : ptcgImg(c, big);
   if(pt) l.push(pt);
-  if(big){ var pl = ptcgImg(c, false); if(pl) l.push(pl); }
+  if(big && !NO_PTCG[c.s]){ var pl = ptcgImg(c, false); if(pl) l.push(pl); }
   return l;
 }
 function cdbImg(c){ return cardSrcs(c, false)[0] || ''; }
