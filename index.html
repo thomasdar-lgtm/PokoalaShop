@@ -732,7 +732,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.01';
+var APP_VERSION = '4.02';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -1031,6 +1031,10 @@ async function boot(){
      du cache du service worker, le stock du cache local puis de Drive.
      Quand l'utilisateur ouvre l'onglet, tout est deja pret. */
   stkPreload();
+
+  /* nouvelles cartes : une seule requete, en arriere-plan, sans bloquer */
+  xLoad();
+  setTimeout(function(){ majCartes(false); }, 6000);
 
   /* toujours annuler avant d'installer : un second passage dans boot()
      multiplierait les minuteries au lieu de les remplacer */
@@ -2327,7 +2331,7 @@ function sheetAcc(){
     '<div class="accSec">Stock</div>' +
     '<button class="accBtn" id="a_stk">Vérifier le stock<span>' + stkTotalEx() + ' exemplaires</span></button>' +
     '<button class="accBtn" id="a_holo">Désélectionner Normal sur les holos<span>nettoyage en un clic</span></button>' +
-    '<button class="accBtn" id="a_imgchk">Vérifier les images 30ᵉ Anniversaire<span>teste la disponibilité sur TCGdex</span></button>' +
+    '<button class="accBtn" id="a_maj">Vérifier les nouvelles cartes<span>interroge TCGdex et complète les extensions</span></button>' +
 
     '<div class="accSec">Synchronisation</div>' +
     '<button class="accBtn" id="a_ref">Rafraîchir maintenant<span>' + lots.length + ' lots</span></button>' +
@@ -2367,24 +2371,8 @@ function sheetAcc(){
   $('a_maj').onclick = hardReload;
   $('a_stk').onclick = sheetStkDiag;
   $('a_holo').onclick = function(){ closeSheet(); stkAutoHideNormal(); };
-  $('a_imgchk').onclick = function(){
-    var btn = this;
-    btn.disabled = true;
-    btn.innerHTML = 'Vérification…<span>connexion à TCGdex</span>';
-    var img = new Image();
-    var done = false;
-    img.onload = function(){
-      if(done) return; done = true;
-      btn.disabled = false;
-      btn.innerHTML = 'Vérifier les images 30ᵉ Anniversaire<span>✓ Images disponibles — rechargez l\'app pour les voir</span>';
-    };
-    img.onerror = function(){
-      if(done) return; done = true;
-      btn.disabled = false;
-      btn.innerHTML = 'Vérifier les images 30ᵉ Anniversaire<span>Pas encore disponibles sur TCGdex</span>';
-    };
-    img.src = 'https://assets.tcgdex.net/fr/me/30th/001/low.webp?' + Date.now();
-  };
+  $('a_maj').onclick = function(){ closeSheet(); majCartes(true); };
+
   $('a_ref').onclick = function(){ closeSheet(); sync(true); toast('Synchronisation…'); };
   $('a_js').onclick = exportJson;
   $('a_cs').onclick = exportCsv;
@@ -2836,10 +2824,27 @@ function cdbLoad(){
   }).catch(function(e){ cdbP = null; toast('Liste des extensions introuvable'); throw e; });
   return cdbP;
 }
+/* Surcouche de cartes : les cartes reperees sur TCGdex et absentes de nos
+   fichiers sont conservees ici, en local, jusqu'a ce que les fichiers du
+   depot soient regeneres. Elles se fondent dans l'extension a l'affichage. */
+var xCards = {};
+function xLoad(){
+  try{ xCards = JSON.parse(localStorage.getItem(LS + 'xc') || '{}') || {}; }catch(e){ xCards = {}; }
+}
+function xSave(){ try{ localStorage.setItem(LS + 'xc', JSON.stringify(xCards)); }catch(e){} }
+function xFusion(sid, arr){
+  var sup = xCards[sid];
+  if(!sup || !sup.length) return arr;
+  var vus = {};
+  for(var i=0;i<arr.length;i++) vus[arr[i].i] = 1;
+  for(var j=0;j<sup.length;j++) if(!vus[sup[j].i]) arr.push(sup[j]);
+  return arr;
+}
 function setLoad(sid){
   if(setCards[sid]) return Promise.resolve(setCards[sid]);
   if(setP[sid]) return setP[sid];
-  setP[sid] = jget('./cards/' + sid + '.json').then(function(arr){
+  setP[sid] = jget('./cards/' + sid + '.json').catch(function(){ return []; }).then(function(arr){
+    arr = xFusion(sid, arr.slice());
     setCards[sid] = arr;
     for(var i=0;i<arr.length;i++) cdbById[arr[i].i] = arr[i];
     delete setP[sid];
@@ -2847,10 +2852,89 @@ function setLoad(sid){
   }).catch(function(e){ delete setP[sid]; toast('Extension indisponible'); throw e; });
   return setP[sid];
 }
+/* Ajout des nouvelles cartes depuis TCGdex, sans attendre une regeneration
+   des fichiers : une requete donne le nombre de cartes de chaque extension,
+   seules celles qui en ont gagne sont examinees en detail. */
+var TCGDEX = 'https://api.tcgdex.net/v2/fr';
+var majEnCours = false;
+function xIndex(){
+  if(!nameIdx) return;
+  for(var sid in xCards){
+    var a = xCards[sid];
+    for(var i=0;i<a.length;i++){
+      var k = norm(a[i].n || '');
+      if(!k) continue;
+      if(!nameIdx[k]) nameIdx[k] = [];
+      if(nameIdx[k].indexOf(a[i].i) < 0) nameIdx[k].push(a[i].i);
+    }
+  }
+}
+function xMasque(rarete){
+  /* meme regle que masqueDefaut : classiques en normale + reverse, le reste
+     en holo, les autres versions restant activables depuis la fiche */
+  return RAR_CLASSIQUE[rarete || ''] ? 3 : 4;
+}
+async function majCartes(manuel){
+  if(majEnCours) return;
+  majEnCours = true;
+  if(manuel) toast('Vérification des nouvelles cartes…');
+  var ajouts = 0, inconnues = [];
+  try{
+    if(!cdb) await cdbLoad();
+    var dist = await fetch(TCGDEX + '/sets').then(function(r){ return r.json(); });
+    var locaux = {};
+    for(var i=0;i<cdb.sets.length;i++) locaux[cdb.sets[i].id] = cdb.sets[i];
+    for(var d=0;d<dist.length;d++){
+      var sd = dist[d], sl = locaux[sd.id];
+      var total = (sd.cardCount && (sd.cardCount.total || sd.cardCount.official)) || 0;
+      if(!sl){ if(total) inconnues.push(sd.name || sd.id); continue; }
+      var connues = (sl.n || 0) + ((xCards[sd.id] || []).length);
+      if(total <= connues) continue;
+      var det = await fetch(TCGDEX + '/sets/' + sd.id).then(function(r){ return r.json(); });
+      var liste = det.cards || [];
+      var arr = await setLoad(sd.id).catch(function(){ return []; });
+      var vus = {};
+      for(var v=0;v<arr.length;v++) vus[arr[v].i] = 1;
+      for(var c=0;c<liste.length;c++){
+        var br = liste[c];
+        if(vus[br.id]) continue;
+        var fi = await fetch(TCGDEX + '/cards/' + br.id).then(function(r){ return r.json(); }).catch(function(){ return null; });
+        var carte = {
+          i: br.id,
+          n: (fi && fi.name) || br.name || br.localId,
+          e: (fi && fi.name) || br.name || '',
+          u: String(br.localId || '').replace(/^0+(?=\d)/, ''),
+          s: sd.id,
+          r: (fi && fi.rarity) || '',
+          g: (fi && fi.image) || br.image || '',
+          v: xMasque(fi && fi.rarity),
+          d: (fi && fi.category === 'Pokemon') ? 1 : 0
+        };
+        if(!xCards[sd.id]) xCards[sd.id] = [];
+        xCards[sd.id].push(carte);
+        cdbById[carte.i] = carte;
+        if(setCards[sd.id]) setCards[sd.id].push(carte);
+        ajouts++;
+      }
+    }
+    if(ajouts){ xSave(); xIndex(); }
+    localStorage.setItem(LS + 'xcAt', String(now()));
+  }catch(e){
+    if(manuel) toast('Vérification impossible');
+    majEnCours = false;
+    return;
+  }
+  majEnCours = false;
+  if(ajouts) toast(ajouts + ' nouvelle' + (ajouts > 1 ? 's' : '') + ' carte' + (ajouts > 1 ? 's' : '') + ' ajoutée' + (ajouts > 1 ? 's' : ''));
+  else if(manuel) toast('Aucune nouvelle carte');
+  if(inconnues.length) toast('Nouvelle extension à intégrer : ' + inconnues.slice(0, 2).join(', '));
+  if(ajouts && tab === 'stock') render();
+}
+
 function namesLoad(){
   if(nameIdx) return Promise.resolve(nameIdx);
   if(nameP) return nameP;
-  nameP = jget('./pks_names.json').then(function(j){ nameIdx = j; return j; })
+  nameP = jget('./pks_names.json').then(function(j){ nameIdx = j; xIndex(); return j; })
     .catch(function(e){ nameP = null; toast('Index de recherche indisponible'); throw e; });
   return nameP;
 }
