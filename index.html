@@ -732,7 +732,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.00';
+var APP_VERSION = '4.01';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -3018,16 +3018,28 @@ function stkRebuild(){
 }
 
 function stkApplyStates(){
-  /* etats : la couche la plus recemment ecrite gagne, la notre en dernier */
   var best = null;
   for(var i=0;i<stkLayers.length;i++){
     var L = stkLayers[i];
     if(!best || (L.stamp || 0) > (best.stamp || 0)) best = L;
   }
-  stkOv = (best && best.ov) ? JSON.parse(JSON.stringify(best.ov)) : {};
+  /* variantes : fusion carte par carte, de la couche la plus ancienne a la
+     plus recente, notre contribution placee selon sa propre date. Retenir
+     seulement le fichier le plus recent effacait les reglages faits sur un
+     autre appareil des que celui-ci ecrivait ensuite. La valeur 0 est un
+     retour aux variantes d'origine : elle doit voyager, sinon la fusion
+     ressusciterait le reglage supprime. */
+  var couches = stkLayers.slice();
+  couches.push({ stamp: myStamp, ov: myOv });
+  couches.sort(function(a, b){ return (a.stamp || 0) - (b.stamp || 0); });
+  stkOv = {};
+  for(var ci=0;ci<couches.length;ci++){
+    var ov = couches[ci].ov;
+    if(!ov) continue;
+    for(var k in ov){ if(ov[k]) stkOv[k] = ov[k]; else delete stkOv[k]; }
+  }
   stkDone = (best && best.done) ? JSON.parse(JSON.stringify(best.done)) : {};
   if(myStamp >= ((best && best.stamp) || 0)){
-    for(var a in myOv) stkOv[a] = myOv[a];
     for(var b in myDone){ if(myDone[b]) stkDone[b] = 1; else delete stkDone[b]; }
   }
   for(var dk in doneDirty){ if(doneDirty[dk]) stkDone[dk] = 1; else delete stkDone[dk]; }
@@ -3343,7 +3355,10 @@ function stkSetOv(id, mask){
      changement disparaitre au premier rechargement, puisque myOv - la seule
      copie vraiment sauvegardee - ne le voyait jamais passer. */
   if(mask) stkOv[id] = mask; else delete stkOv[id];
-  if(mask) myOv[id] = mask; else delete myOv[id];
+  /* 0 et non une suppression : c'est ce qui signale aux autres appareils
+     le retour aux variantes d'origine */
+  myOv[id] = mask || 0;
+  myStamp = now();
   /* stkSave() ne se declenche que s'il y a un mouvement en attente : un
      changement de variantes seul n'en cree aucun, d'ou ce repere factice,
      sur le meme principe que le marquage "jamais fait" (data-nvd/nvu). */
