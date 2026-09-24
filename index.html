@@ -732,7 +732,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '3.99';
+var APP_VERSION = '4.00';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -4634,9 +4634,8 @@ async function pickRender(q){
   if(pickLot !== l) return;
 
   var nb = lotCardCount(l), s = nb > 1 ? 's' : '';
-  var h = '<div class="shT">Cartes du lot</div>' +
-          '<div class="shS">' + esc(lotTitle(l)) + ' — ' + nb + ' carte' + s + ' rattachée' + s + '</div>' +
-          '<div class="fld"><input class="inp" id="f_pick" placeholder="Chercher un autre Pokémon…" value="' + esc(q || '') + '"' + noAuto() + '></div>';
+  var sous = esc(lotTitle(l)) + ' — ' + nb + ' carte' + s + ' rattachée' + s;
+  var h = '';
 
   if(fam && fam.length > 1){
     h += '<div class="famB"><button class="famC' + (pickFam ? '' : ' on') + '" data-pkf="">Toute la famille</button>';
@@ -4658,11 +4657,20 @@ async function pickRender(q){
   h += '<div class="shF"><button class="bP" id="k_pk">Terminé</button></div>';
   if(mine.length) h += '<button class="dgr" id="k_pkr">Tout remettre en stock</button>';
 
-  openSheetKeep(h);
-
+  /* Le champ de recherche n'est construit qu'une fois : le reconstruire a
+     chaque frappe le detruisait, il perdait le focus et le clavier se
+     fermait. Seuls le sous-titre et les resultats sont rafraichis. */
   var inp = $('f_pick');
-  if(inp){
-    inp.oninput = function(){ clearTimeout(inp._t); inp._t = setTimeout(function(){ pickRender(inp.value); }, 260); };
+  if(inp && $('pk_res')){
+    $('pk_sub').innerHTML = sous;
+    $('pk_res').innerHTML = h;
+  } else {
+    openSheetKeep('<div class="shT">Cartes du lot</div>' +
+      '<div class="shS" id="pk_sub">' + sous + '</div>' +
+      '<div class="fld"><input class="inp" id="f_pick" placeholder="Chercher un autre Pokémon…" value="' + esc(q || '') + '"' + noAuto() + '></div>' +
+      '<div id="pk_res">' + h + '</div>');
+    inp = $('f_pick');
+    if(inp) inp.oninput = function(){ clearTimeout(inp._t); inp._t = setTimeout(function(){ pickRender(inp.value); }, 260); };
   }
   $('k_pk').onclick = function(){ commit(pickLot); pickLot = null; closeSheet(); };
   if($('k_pkr')) $('k_pkr').onclick = function(){
