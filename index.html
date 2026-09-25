@@ -732,7 +732,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.08';
+var APP_VERSION = '4.10';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -3007,7 +3007,18 @@ async function sheetDiag(){
     }
     enCache = String(n);
   }catch(e){}
+  /* codes candidats de l'encyclopedie officielle : ceux qui repondent
+     pourront etre utilises pour les blocs correspondants */
+  var CAND = ['ME01','MEG','SWSH01','SWSH1','SSH','SM01','SM1','SUM','XY01','XY1','BW01','SV11','ZSV10'];
+  var trouves = [];
+  if($('diagTx')) $('diagTx').innerHTML = esc(lignes.join('\n')).replace(/\n/g,'<br>') + '<br><br>recherche de codes…';
+  for(var q=0;q<CAND.length;q++){
+    var rc = await diagUn('https://assets.pokemon.com/assets/cms2-fr-fr/img/cards/web/' +
+                          CAND[q] + '/' + CAND[q] + '_FR_1.png', 4000);
+    if(rc.etat === 'ok') trouves.push(CAND[q]);
+  }
   lignes.push('');
+  lignes.push('codes pokemon.fr valides : ' + (trouves.join(', ') || 'aucun'));
   lignes.push('images en mémoire sur cet appareil : ' + enCache);
   lignes.push('version ' + APP_VERSION);
   if($('diagTx')) $('diagTx').innerHTML = esc(lignes.join('\n')).replace(/\n/g,'<br>');
@@ -3078,10 +3089,15 @@ function pkmImg(c){
 var NO_PTCG = { mep:1 };
 function cardSrcs(c, big){
   var l = [];
+  /* Vignettes : TCGdex, seule source d'apercus legers en francais (245x342).
+     Fiche detaillee : pokemon.fr d'abord, scans officiels francais pleine
+     definition, mesures a 805 ms contre 2710 ms pour TCGdex. Son image
+     unique conviendrait mal aux vignettes, bien trop lourde a l'unite. */
+  var pk = pkmImg(c);
+  if(big && pk) l.push(pk);
   if(c.g) l.push(c.g + (big ? '/high.webp' : '/low.webp'));
   if(c.g && big) l.push(c.g + '/low.webp');
-  var pk = pkmImg(c);
-  if(pk) l.push(pk);
+  if(!big && pk) l.push(pk);
   /* c.p : reference d'image Scrydex fournie par pokemontcg.io, pour les
      extensions dont les identifiants different des notres. L'adresse
      images.pokemontcg.io reconstruite renverrait alors un dos de carte. */
