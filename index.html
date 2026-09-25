@@ -732,7 +732,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.02';
+var APP_VERSION = '4.03';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2331,7 +2331,7 @@ function sheetAcc(){
     '<div class="accSec">Stock</div>' +
     '<button class="accBtn" id="a_stk">Vérifier le stock<span>' + stkTotalEx() + ' exemplaires</span></button>' +
     '<button class="accBtn" id="a_holo">Désélectionner Normal sur les holos<span>nettoyage en un clic</span></button>' +
-    '<button class="accBtn" id="a_maj">Vérifier les nouvelles cartes<span>interroge TCGdex et complète les extensions</span></button>' +
+    '<button class="accBtn" id="a_newc">Vérifier les nouvelles cartes<span>interroge TCGdex et complète les extensions</span></button>' +
 
     '<div class="accSec">Synchronisation</div>' +
     '<button class="accBtn" id="a_ref">Rafraîchir maintenant<span>' + lots.length + ' lots</span></button>' +
@@ -2371,7 +2371,7 @@ function sheetAcc(){
   $('a_maj').onclick = hardReload;
   $('a_stk').onclick = sheetStkDiag;
   $('a_holo').onclick = function(){ closeSheet(); stkAutoHideNormal(); };
-  $('a_maj').onclick = function(){ closeSheet(); majCartes(true); };
+  $('a_newc').onclick = function(){ closeSheet(); majCartes(true); };
 
   $('a_ref').onclick = function(){ closeSheet(); sync(true); toast('Synchronisation…'); };
   $('a_js').onclick = exportJson;
