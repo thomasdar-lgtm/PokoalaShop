@@ -732,7 +732,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.06';
+var APP_VERSION = '4.08';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2332,6 +2332,7 @@ function sheetAcc(){
     '<button class="accBtn" id="a_stk">Vérifier le stock<span>' + stkTotalEx() + ' exemplaires</span></button>' +
     '<button class="accBtn" id="a_holo">Désélectionner Normal sur les holos<span>nettoyage en un clic</span></button>' +
     '<button class="accBtn" id="a_newc">Vérifier les nouvelles cartes<span>interroge TCGdex et complète les extensions</span></button>' +
+    '<button class="accBtn" id="a_diag">Diagnostic des images<span>mesure le temps de réponse de chaque source</span></button>' +
 
     '<div class="accSec">Synchronisation</div>' +
     '<button class="accBtn" id="a_ref">Rafraîchir maintenant<span>' + lots.length + ' lots</span></button>' +
@@ -2372,6 +2373,7 @@ function sheetAcc(){
   $('a_stk').onclick = sheetStkDiag;
   $('a_holo').onclick = function(){ closeSheet(); stkAutoHideNormal(); };
   $('a_newc').onclick = function(){ closeSheet(); majCartes(true); };
+  $('a_diag').onclick = function(){ closeSheet(); setTimeout(sheetDiag, 260); };
 
   $('a_ref').onclick = function(){ closeSheet(); sync(true); toast('Synchronisation…'); };
   $('a_js').onclick = exportJson;
@@ -2952,6 +2954,65 @@ async function majCartes(manuel){
   else if(manuel) toast('Aucune nouvelle carte');
   if(inconnues.length) toast('Nouvelle extension à intégrer : ' + inconnues.slice(0, 2).join(', '));
   if(ajouts && tab === 'stock') render();
+}
+
+/* Diagnostic des images : mesure le temps de reponse de chaque hebergeur
+   depuis l'appareil. Aucun de ces sites n'etant joignable depuis
+   l'environnement de developpement, c'est le seul moyen de savoir lequel
+   ralentit l'affichage. */
+var DIAG = [
+  ['TCGdex aperçu',  'https://assets.tcgdex.net/fr/sv/sv01/001/low.webp'],
+  ['TCGdex détail',  'https://assets.tcgdex.net/fr/sv/sv01/001/high.webp'],
+  ['TCGdex 30 ans',  'https://assets.tcgdex.net/fr/me/30th/001/low.webp'],
+  ['pokemon.fr',     'https://assets.pokemon.com/assets/cms2-fr-fr/img/cards/web/SV01/SV01_FR_1.png'],
+  ['Scrydex',        'https://images.scrydex.com/pokemon/me55-1/small'],
+  ['pokemontcg.io',  'https://images.pokemontcg.io/sv1/1.png'],
+  ['symbole',        'https://images.scrydex.com/pokemon/sv1-symbol/symbol']
+];
+function diagUn(url, ms){
+  return new Promise(function(res){
+    var t0 = Date.now(), fini = false, im = new Image();
+    var fin = function(etat){
+      if(fini) return; fini = true;
+      res({ etat: etat, ms: Date.now() - t0 });
+    };
+    im.onload  = function(){ fin('ok'); };
+    im.onerror = function(){ fin('échec'); };
+    setTimeout(function(){ fin('délai dépassé'); }, ms);
+    im.src = url + (url.indexOf('?') < 0 ? '?' : '&') + 'd=' + Date.now();
+  });
+}
+async function sheetDiag(){
+  var h = '<div class="shT">Diagnostic des images</div>' +
+          '<div class="shS">Mesure en cours, environ 15 secondes…</div>' +
+          '<div class="fld"><div class="tagBox" id="diagTx" style="margin:0;max-height:none">…</div></div>' +
+          '<div class="shF"><button class="bP" id="k_dg">Fermer</button></div>';
+  openSheet(h);
+  $('k_dg').onclick = closeSheet;
+  var lignes = [], lent = 0;
+  for(var i=0;i<DIAG.length;i++){
+    var r = await diagUn(DIAG[i][1], 8000);
+    if(r.etat === 'ok' && r.ms > 1500) lent++;
+    lignes.push(DIAG[i][0] + ' : ' + r.etat + ' en ' + r.ms + ' ms');
+    if($('diagTx')) $('diagTx').innerHTML = esc(lignes.join('\n')).replace(/\n/g,'<br>');
+  }
+  /* nombre d'images deja conservees sur l'appareil */
+  var enCache = '?';
+  try{
+    var noms = await caches.keys(), n = 0;
+    for(var k=0;k<noms.length;k++){
+      if(noms[k].indexOf('img') < 0 && noms[k].indexOf('sym') < 0) continue;
+      var c = await caches.open(noms[k]);
+      n += (await c.keys()).length;
+    }
+    enCache = String(n);
+  }catch(e){}
+  lignes.push('');
+  lignes.push('images en mémoire sur cet appareil : ' + enCache);
+  lignes.push('version ' + APP_VERSION);
+  if($('diagTx')) $('diagTx').innerHTML = esc(lignes.join('\n')).replace(/\n/g,'<br>');
+  var s = $('sheet') ? $('sheet').querySelector('.shS') : null;
+  if(s) s.textContent = lent ? (lent + ' source(s) lente(s) détectée(s)') : 'Mesure terminée';
 }
 
 function namesLoad(){
