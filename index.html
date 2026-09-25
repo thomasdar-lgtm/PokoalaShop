@@ -732,7 +732,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.03';
+var APP_VERSION = '4.05';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2691,7 +2691,7 @@ var MV_PREFIX  = 'pkstkmv_';      /* journal a part : il grossit sans fin, le st
 var MV_LEGACY  = 'pkstkmv.json';
 var MV_CAP   = 4000;             /* mouvements conserves */
 var CARDS_VER = '14';   /* fichiers cards/ et pks_names.json */
-var SETS_VER  = '16';
+var SETS_VER  = '17';
 var FAM_VER   = '5';   /* pks_familles.json */   /* pks_sets.json seul, pour ne pas invalider les cartes deja en cache */
 /* Quatre variantes possibles. Le cosmos ne s'active que depuis la fiche :
    aucune source ne le recense, il releve donc toujours d'une saisie manuelle. */
@@ -2874,6 +2874,21 @@ function xMasque(rarete){
      en holo, les autres versions restant activables depuis la fiche */
   return RAR_CLASSIQUE[rarete || ''] ? 3 : 4;
 }
+/* TCGdex numerote ses cartes avec des zeros de tete (001) et prefixe ses
+   extensions autrement que nous (me05 pour notre me5). La comparaison se
+   fait donc sur le NUMERO seul, et l'identifiant d'une carte ajoutee suit
+   la convention deja utilisee par son extension chez nous. */
+function xNum(v){ return String(v == null ? '' : v).replace(/^0+(?=.)/, ''); }
+function xIdCarte(sid, arr, localId){
+  var zeros = 0;
+  for(var i=0;i<arr.length;i++){
+    var suf = String(arr[i].i || '').slice(sid.length + 1);
+    if(/^0\d/.test(suf)){ zeros = suf.length; break; }
+  }
+  var n = xNum(localId);
+  if(zeros && /^\d+$/.test(n)) while(n.length < zeros) n = '0' + n;
+  return sid + '-' + n;
+}
 async function majCartes(manuel){
   if(majEnCours) return;
   majEnCours = true;
@@ -2882,43 +2897,51 @@ async function majCartes(manuel){
   try{
     if(!cdb) await cdbLoad();
     var dist = await fetch(TCGDEX + '/sets').then(function(r){ return r.json(); });
-    var locaux = {};
-    for(var i=0;i<cdb.sets.length;i++) locaux[cdb.sets[i].id] = cdb.sets[i];
+    /* index par identifiant TCGdex : le champ t quand il differe du notre */
+    var parT = {}, skip = {};
+    for(var i=0;i<cdb.sets.length;i++){
+      var sl = cdb.sets[i];
+      parT[sl.t || sl.id] = sl;
+    }
+    var sk = cdb.skip || [];
+    for(var z=0;z<sk.length;z++) skip[sk[z]] = 1;
+
     for(var d=0;d<dist.length;d++){
-      var sd = dist[d], sl = locaux[sd.id];
+      var sd = dist[d];
+      if(skip[sd.id]) continue;              /* extension volontairement ignoree */
+      var st = parT[sd.id];
       var total = (sd.cardCount && (sd.cardCount.total || sd.cardCount.official)) || 0;
-      if(!sl){ if(total) inconnues.push(sd.name || sd.id); continue; }
-      var connues = (sl.n || 0) + ((xCards[sd.id] || []).length);
+      if(!st){ if(total) inconnues.push(sd.name || sd.id); continue; }
+      var connues = (st.n || 0) + ((xCards[st.id] || []).length);
       if(total <= connues) continue;
       var det = await fetch(TCGDEX + '/sets/' + sd.id).then(function(r){ return r.json(); });
       var liste = det.cards || [];
-      var arr = await setLoad(sd.id).catch(function(){ return []; });
+      var arr = await setLoad(st.id).catch(function(){ return []; });
       var vus = {};
-      for(var v=0;v<arr.length;v++) vus[arr[v].i] = 1;
+      for(var v=0;v<arr.length;v++) vus[xNum(arr[v].u)] = 1;
       for(var c=0;c<liste.length;c++){
         var br = liste[c];
-        if(vus[br.id]) continue;
+        if(vus[xNum(br.localId)]) continue;
         var fi = await fetch(TCGDEX + '/cards/' + br.id).then(function(r){ return r.json(); }).catch(function(){ return null; });
         var carte = {
-          i: br.id,
+          i: xIdCarte(st.id, arr, br.localId),
           n: (fi && fi.name) || br.name || br.localId,
           e: (fi && fi.name) || br.name || '',
-          u: String(br.localId || '').replace(/^0+(?=\d)/, ''),
-          s: sd.id,
+          u: xNum(br.localId),
+          s: st.id,
           r: (fi && fi.rarity) || '',
           g: (fi && fi.image) || br.image || '',
           v: xMasque(fi && fi.rarity),
           d: (fi && fi.category === 'Pokemon') ? 1 : 0
         };
-        if(!xCards[sd.id]) xCards[sd.id] = [];
-        xCards[sd.id].push(carte);
+        if(!xCards[st.id]) xCards[st.id] = [];
+        xCards[st.id].push(carte);
         cdbById[carte.i] = carte;
-        if(setCards[sd.id]) setCards[sd.id].push(carte);
+        if(setCards[st.id]) setCards[st.id].push(carte);
         ajouts++;
       }
     }
     if(ajouts){ xSave(); xIndex(); }
-    localStorage.setItem(LS + 'xcAt', String(now()));
   }catch(e){
     if(manuel) toast('Vérification impossible');
     majEnCours = false;
