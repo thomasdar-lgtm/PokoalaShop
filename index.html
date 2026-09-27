@@ -307,6 +307,10 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 .stkBar{display:flex;align-items:center;gap:10px;margin:-5px -16px 11px;padding:13px 16px 8px;position:sticky;top:calc(var(--hdrH,54px) - 1px);z-index:50;background:var(--bg);box-shadow:0 -3px 0 0 var(--bg)}
 .stkBar::after{content:'';position:absolute;left:16px;right:16px;bottom:0;height:1px;background:var(--bd);opacity:.55}
 .stkBack{background:var(--surf);border:1px solid var(--bd);color:var(--tx);border-radius:11px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;padding:0}
+.boxB{background:var(--surf);border:1px solid var(--bd);color:var(--tx3);border-radius:11px;min-width:42px;height:42px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;flex:none;padding:0 7px}
+.boxB svg{width:15px;height:15px;display:block}
+.boxB b{font-size:12px;font-weight:900;line-height:1}
+.boxB.on{color:var(--blu);border-color:var(--blu)}
 .stkBack svg{width:22px;height:22px;display:block}
 .stkBack:active{background:#0c1428}
 .stkTit{font-weight:800;font-size:17px;line-height:1.25;flex:1;min-width:0}
@@ -367,7 +371,9 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 .stkRow .rt{flex:1;min-width:0}
 .stkRow .rt b{display:block;font-size:13px;font-weight:700}
 .stkRow .rt small{color:var(--tx3);font-size:11px;font-weight:600}
-.stkRow .rq{font-size:15px;font-weight:900;color:var(--blu);flex:none}
+.stkRow .rq{font-size:15px;font-weight:900;color:var(--blu);flex:none;display:flex;flex-direction:column;align-items:center;line-height:1.1;min-width:26px}
+.rq small{font-size:8px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.3px}
+.rq.vide{min-width:0}
 .stkRow{align-items:flex-start}
 .stkRow .rt{display:flex;flex-direction:column;gap:5px}
 .stkRow .rvs{display:flex;gap:5px;margin-top:1px}
@@ -732,7 +738,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.10';
+var APP_VERSION = '4.13';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2709,13 +2715,16 @@ var ET_LBL = { nm:'NM', jo:'Joué', ab:'Abîmé' };
 var cdb = null, cdbById = {};
 var stock = {}, stkOv = {}, stkMoves = [];
 var stkLayers = [];                 /* couches des autres appareils */
-var myDelta = {}, myOv = {}, myDone = {}, myStamp = 0;   /* notre contribution */
+var myDelta = {}, myOv = {}, myDone = {}, myBox = {}, myStamp = 0;   /* notre contribution */
 var mvNew = [], mvCount = 0, mvFileId = null, mvLoaded = false, mvTimer = null, mvSaving = false;
 var stkFileId = null, stkPending = [];
 var stkTimer = null, stkSaving = false, stkLoaded = false;
 var stkSet = null, stkLp = null, stkLpFired = false;
 var stkArr = [], stkQry = '', stkJournal = false, stkInv = false, stkNever = false;
 var stkDone = {}, doneDirty = {}, stkNet = false;
+/* numero de boite par extension : une extension tient dans une seule boite,
+   et ses sous-extensions y sont rangees avec elle */
+var stkBox = {};
 var invDir = parseInt(localStorage.getItem(LS + 'invdir') || '-1', 10);   /* -1 decroissant, 1 croissant */
 var nvTri  = localStorage.getItem(LS + 'nvtri') || 'az';                 /* az | qty */
 /* nombre de colonnes de la grille, memorise separement pour ecran etroit et large */
@@ -3214,13 +3223,19 @@ function stkApplyStates(){
      retour aux variantes d'origine : elle doit voyager, sinon la fusion
      ressusciterait le reglage supprime. */
   var couches = stkLayers.slice();
-  couches.push({ stamp: myStamp, ov: myOv });
+  couches.push({ stamp: myStamp, ov: myOv, box: myBox });
   couches.sort(function(a, b){ return (a.stamp || 0) - (b.stamp || 0); });
   stkOv = {};
   for(var ci=0;ci<couches.length;ci++){
     var ov = couches[ci].ov;
     if(!ov) continue;
     for(var k in ov){ if(ov[k]) stkOv[k] = ov[k]; else delete stkOv[k]; }
+  }
+  stkBox = {};
+  for(var bi=0;bi<couches.length;bi++){
+    var bx = couches[bi].box;
+    if(!bx) continue;
+    for(var bk in bx){ if(bx[bk]) stkBox[bk] = bx[bk]; else delete stkBox[bk]; }
   }
   stkDone = (best && best.done) ? JSON.parse(JSON.stringify(best.done)) : {};
   if(myStamp >= ((best && best.stamp) || 0)){
@@ -3232,7 +3247,7 @@ function stkApplyStates(){
 function stkSaveCache(){
   try{
     localStorage.setItem(LS + 'stkc', JSON.stringify({
-      mine: STK_MINE, layers: stkLayers, delta: myDelta, ov: myOv, done: myDone, stamp: myStamp,
+      mine: STK_MINE, layers: stkLayers, delta: myDelta, ov: myOv, done: myDone, box: myBox, stamp: myStamp,
       mvCount: mvCount, id: stkFileId
     }));
   }catch(e){ /* quota plein : on s'en passe */ }
@@ -3245,6 +3260,7 @@ function stkLoadCache(){
     stkLayers = c.layers || [];
     myDelta = c.delta || {};
     myOv = c.ov || {};
+    myBox = c.box || {};
     myDone = c.done || {};
     myStamp = c.stamp || 0;
     mvCount = c.mvCount || 0;
@@ -3314,6 +3330,7 @@ async function stkFetch(){
       if(!stkPending.length){
         myDelta = data.delta || {};
         myOv = data.ov || {};
+        myBox = data.box || {};
         myDone = data.done || {};
         myStamp = data.stamp || 0;
       }
@@ -3429,7 +3446,7 @@ function stkTouchSets(){
 function stkBody(){
   return JSON.stringify({
     v: APP_VERSION, dev: DEV, at: now(), stamp: myStamp,
-    delta: myDelta, ov: myOv, done: myDone
+    delta: myDelta, ov: myOv, done: myDone, box: myBox
   });
 }
 
@@ -3532,6 +3549,54 @@ async function mvSave(){
 }
 function mvQueue(){ clearTimeout(mvTimer); mvTimer = setTimeout(mvSave, 20000); }
 
+
+/* Boite d'une extension : les sous-extensions suivent leur parent, puisque
+   physiquement rangees avec lui. */
+function boxOf(sid){
+  var v = stkBox[rootSet(sid)];
+  return v ? String(v) : '';
+}
+function setBox(sid, n){
+  var r = rootSet(sid), v = parseInt(n, 10);
+  if(!(v > 0)) v = 0;
+  if(v) stkBox[r] = v; else delete stkBox[r];
+  myBox[r] = v;            /* 0 signale aux autres appareils un retrait */
+  myStamp = now();
+  stkPending.push({ t: now(), c: r, v:'-', e:'-', d:0, w: who || '', s:'boite' });
+  stkQueue(); stkSaveCache();
+}
+
+function sheetBox(sid){
+  var s = setInfo(sid), r = rootSet(sid), cur = boxOf(sid);
+  var subs = subsOf(r), avec = subs.length;
+  openSheet(
+    '<div class="shT">Boîte de rangement</div>' +
+    '<div class="shS">' + esc(s ? s.name : sid) + '</div>' +
+    '<div class="fld"><label class="lbl">Numéro de boîte</label>' +
+    '<input class="inp" id="f_box" type="number" inputmode="numeric" min="1" step="1" ' +
+    'value="' + esc(cur) + '" placeholder="ex. 3"' + noAuto() + '></div>' +
+    (avec ? '<div class="fld"><div class="tagBox" style="margin:0">Les ' + avec +
+            ' sous-extension' + (avec > 1 ? 's' : '') + ' rangée' + (avec > 1 ? 's' : '') +
+            ' avec celle-ci suivront le même numéro.</div></div>' : '') +
+    '<div class="shF"><button class="bS" id="x_bx">Annuler</button>' +
+    '<button class="bP" id="k_bx">Enregistrer</button></div>' +
+    (cur ? '<button class="dgr" id="d_bx">Retirer le numéro</button>' : '')
+  );
+  var inp = $('f_box');
+  if(inp) setTimeout(function(){ inp.focus(); inp.select(); }, 120);
+  $('x_bx').onclick = closeSheet;
+  $('k_bx').onclick = function(){
+    setBox(sid, inp ? inp.value : '');
+    closeSheet();
+    var b = boxOf(sid);
+    toast(b ? ('Rangée en boîte ' + b) : 'Numéro retiré');
+    if(tab === 'stock') render();
+  };
+  if($('d_bx')) $('d_bx').onclick = function(){
+    setBox(sid, 0); closeSheet(); toast('Numéro retiré');
+    if(tab === 'stock') render();
+  };
+}
 
 function stkSetOv(id, mask){
   /* stkOv n'est qu'une vue reconstruite a chaque stkApplyStates() (lecture
@@ -3833,10 +3898,15 @@ async function stkRenderGrid(){
   var s = setInfo(stkSet), sid = stkSet;
   var ico = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>';
   function head(sub){
+    var bx = boxOf(sid);
     return '<div class="stkBar"><button class="stkBack" data-stkback="1" aria-label="Retour">' + ico + '</button>' +
            '<div class="stkTit"><span class="th">' + (s ? symHtml(s) : '') + esc(s ? s.name : sid) +
            codeHtml(s) + '</span>' +
-           '<small id="stkSub">' + sub + '</small></div></div>';
+           '<small id="stkSub">' + sub + '</small></div>' +
+           '<button class="boxB' + (bx ? ' on' : '') + '" data-stkbox="' + esc(sid) + '" aria-label="Boîte de rangement">' +
+           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
+           '<path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7"/><path d="M2 7h20v4H2z"/><path d="M10 14h4"/></svg>' +
+           '<b>' + (bx ? esc(bx) : '—') + '</b></button></div>';
   }
   var parts = [sid].concat(subsOf(sid));
   var todo = parts.filter(function(x){ return !setCards[x]; });
@@ -3935,28 +4005,76 @@ function stkGridFill(){
   g.innerHTML = h + '</div>';
 }
 
+/* Analyse d'une recherche du Stock : « ronflex 109 », « ronf 109 »,
+   « ronflex crz » ou « ronf crz ». Un mot reconnu comme code d'extension en
+   est un ; sinon un mot numerique (ou du type tg12, gg05, h1) est un numero
+   de carte ; le reste forme le nom, meme partiel. */
+function stkCodes(){
+  var r = {};
+  if(!cdb) return r;
+  for(var i=0;i<cdb.sets.length;i++){
+    var c = norm(cdb.sets[i].code || '');
+    if(c) (r[c] = r[c] || []).push(cdb.sets[i].id);
+  }
+  return r;
+}
+function stkNum(v){ return norm(String(v == null ? '' : v)).replace(/^0+(?=.)/, ''); }
+function stkParse(q){
+  var mots = String(q || '').trim().split(/\s+/);
+  var codes = stkCodes(), nom = [], num = '', code = '', sids = null;
+  for(var m=0;m<mots.length;m++){
+    var w = norm(mots[m]);
+    if(!w) continue;
+    /* au moins trois lettres : « ex », « gx » ou « sv » sont des suffixes de
+       cartes bien plus souvent que des abreviations d'extension */
+    if(!code && w.length >= 3 && codes[w]){ code = w; sids = codes[w]; continue; }
+    if(!num && (/^\d+[a-z]?$/.test(w) || /^(tg|gg|sv|sh|h|xy)\d+$/.test(w))){ num = stkNum(w); continue; }
+    nom.push(w);
+  }
+  /* un code seul reste un nom : « mew » cherche le Pokemon, pas l'extension 151 */
+  if(!nom.length && code){ nom.push(code); code = ''; sids = null; }
+  return { nom: nom.join(''), num: num, code: code, sids: sids };
+}
+
 async function stkRenderSearch(q){
-  var n = norm(q);
-  if(n.length < 2){ stkView('<div class="ph">Tape au moins deux lettres.</div>'); return; }
+  if(!cdb){ try{ await cdbLoad(); }catch(e){} }
+  var P = stkParse(q), n = P.nom;
+  if(n.length < 2){
+    stkView('<div class="ph">Tape au moins deux lettres du nom' +
+            ((P.num || P.code) ? ', par exemple « ronflex ' + esc(P.num || P.code) + ' »' : '') + '.</div>');
+    return;
+  }
   if(!nameIdx){
     stkView('<div class="ph">Chargement de l\'index…</div>');
     try{ await namesLoad(); }catch(e){ stkView(empty(EMPTY_CMD, 'Recherche indisponible.')); return; }
-    if(norm(query()) !== n || tab !== 'stock') return;
+    if(stkParse(query()).nom !== n || tab !== 'stock') return;
   }
   /* Une carte peut correspondre a plusieurs entrees de l'index — son nom
      francais et son nom anglais, par exemple « Arcanin » et « Arcanine ».
      Sans dedoublonnage elle apparaitrait autant de fois. */
   var vusId = {}, ids = [];
+  var filtreSid = null;
+  if(P.sids){ filtreSid = {}; for(var fs=0;fs<P.sids.length;fs++) filtreSid[P.sids[fs]] = 1; }
+  /* un numero ou une extension se lisent directement dans l'identifiant de la
+     carte : on ecarte avant de telecharger quoi que ce soit */
+  var garde = function(id){
+    var d = id.lastIndexOf('-');
+    if(d < 0) return !P.num && !filtreSid;
+    if(P.num && stkNum(id.slice(d + 1)) !== P.num) return false;
+    if(filtreSid && !filtreSid[id.slice(0, d)]) return false;
+    return true;
+  };
+  var large = (P.num || filtreSid) ? 4000 : 900;
   for(var nm in nameIdx){
     if(nm.indexOf(n) < 0) continue;
     var lst = nameIdx[nm];
     for(var li=0;li<lst.length;li++){
-      if(vusId[lst[li]]) continue;
+      if(vusId[lst[li]] || !garde(lst[li])) continue;
       vusId[lst[li]] = 1; ids.push(lst[li]);
     }
-    if(ids.length > 900) break;
+    if(ids.length > large) break;
   }
-  if(!ids.length){ stkView(noHit(EMPTY_CMD, 'ce Pokémon')); return; }
+  if(!ids.length){ stkView(noHit(EMPTY_CMD, P.num || P.code ? 'cette carte' : 'ce Pokémon')); return; }
 
   /* ne charger que les extensions reellement concernees */
   var need = {}, sids = [];
@@ -3968,7 +4086,7 @@ async function stkRenderSearch(q){
   if(missing.length){
     stkView('<div class="ph">Recherche dans ' + sids.length + ' extensions…</div>');
     try{ await Promise.all(missing.map(setLoad)); }catch(e){}
-    if(norm(query()) !== n || tab !== 'stock') return;
+    if(stkParse(query()).nom !== n || tab !== 'stock') return;
   }
 
   var cards = [], vusC = {};
@@ -3990,15 +4108,21 @@ async function stkRenderSearch(q){
   var tot = 0;
   for(var t=0;t<withQ.length;t++) tot += stkCardQ(withQ[t].i);
 
-  var h;
+  var h = '';
+  if(P.num || P.code){
+    var si0 = P.code && P.sids ? setInfo(P.sids[0]) : null;
+    h += '<div class="stkWarn">Recherche : ' + esc(P.nom) +
+         (P.num ? ' · n° ' + esc(P.num) : '') +
+         (P.code ? ' · ' + esc(si0 ? si0.name : P.code.toUpperCase()) : '') + '</div>';
+  }
   if(withQ.length){
-    h = '<div class="stkTot">' +
+    h += '<div class="stkTot">' +
         '<div><span>Trouvées</span><b>' + show.length + '</b></div>' +
         '<div><span>J\'en ai</span><b>' + withQ.length + '</b></div>' +
         '<div><span>Exempl.</span><b>' + tot + '</b></div>' +
         '<div><span>Extensions</span><b>' + Object.keys(grp).length + '</b></div></div>';
   } else {
-    h = '<div class="stkTot">' +
+    h += '<div class="stkTot">' +
         '<div><span>Cartes trouvées</span><b>' + show.length + '</b></div>' +
         '<div><span>Extensions</span><b>' + Object.keys(grp).length + '</b></div></div>';
     h += '<div class="stkWarn">Aucun exemplaire en stock pour ce nom.</div>';
@@ -4038,7 +4162,11 @@ async function stkRenderSearch(q){
            cardImg(c2, '') +
            '<div class="rt"><b>' + esc(c2.n) + '</b><small>N° ' + esc(c2.u) + (det.length ? ' · ' + esc(det.join(' · ')) : '') + '</small>' +
            '<div class="rvs">' + stkChips(c2) + '</div></div>' +
-           '<div class="rq">' + stkCardQ(c2.i) + '</div></div>';
+           /* a la place de la quantite totale, deja lisible par variante
+              ci-dessus : la boite ou trouver physiquement la carte */
+           '<div class="rq' + (boxOf(c2.s) && stkCardQ(c2.i) > 0 ? '' : ' vide') + '">' +
+           (boxOf(c2.s) && stkCardQ(c2.i) > 0 ? '<small>boîte</small>' + esc(boxOf(c2.s)) : '') +
+           '</div></div>';
     }
   }
   }
@@ -4436,6 +4564,10 @@ function stkBind(){
     if((t = e.target.closest('[data-stkback]'))){
       if(history.state && history.state.d === 3){ history.back(); }
       else { stkSet = null; window.scrollTo(0,0); render(); }
+      return;
+    }
+    if((t = e.target.closest('[data-stkbox]'))){
+      sheetBox(t.getAttribute('data-stkbox'));
       return;
     }
     if((t = e.target.closest('[data-stkset]'))){
