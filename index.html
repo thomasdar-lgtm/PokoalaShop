@@ -738,7 +738,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.14';
+var APP_VERSION = '4.15';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -3001,7 +3001,9 @@ var DIAG = [
   ['pokemon.fr',     'https://assets.pokemon.com/assets/cms2-fr-fr/img/cards/web/SV01/SV01_FR_1.png'],
   ['Scrydex',        'https://images.scrydex.com/pokemon/me55-1/small'],
   ['pokemontcg.io',  'https://images.pokemontcg.io/sv1/1.png'],
-  ['symbole',        'https://images.scrydex.com/pokemon/sv1-symbol/symbol']
+  ['symbole',        'https://images.scrydex.com/pokemon/sv1-symbol/symbol'],
+  ['symbole 30 ans TCGdex', 'https://assets.tcgdex.net/univ/me/30th/symbol.webp'],
+  ['symbole 30 ans Scrydex', 'https://images.scrydex.com/pokemon/me55-symbol/symbol']
 ];
 function diagUn(url, ms){
   return new Promise(function(res){
@@ -3085,7 +3087,16 @@ function symHtml(st, cls){
   var l = st.syms || [];
   if(!l.length) return '<span class="sfb ' + (cls||'') + '">' + esc((st.code || '?').slice(0,3)) + '</span>';
   return '<img class="ssym ' + (cls||'') + '" loading="lazy" src="' + esc(l[0]) + '" alt="" ' +
-         'data-sy="' + esc(JSON.stringify(l)) + '" data-syi="0" data-code="' + esc(st.code || '') + '" onerror="symNext(this)">';
+         'data-sy="' + esc(JSON.stringify(l)) + '" data-syi="0" data-code="' + esc(st.code || '') +
+         '" onerror="symNext(this)" onload="symOk(this)">';
+}
+/* Une source peut repondre une image valide mais vide, ou un pixel de
+   remplacement : le navigateur ne declenche alors aucune erreur, la source
+   suivante n'est jamais essayee et l'emplacement reste blanc, sans meme le
+   code de l'extension. On verifie donc ce qui a ete reellement recu. */
+function symOk(img){
+  if(img.naturalWidth >= 8 && img.naturalHeight >= 8) return;
+  symNext(img);
 }
 function symNext(img){
   var l; try{ l = JSON.parse(img.getAttribute('data-sy')); }catch(e){ l = []; }
