@@ -743,7 +743,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.16';
+var APP_VERSION = '4.17';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -1789,9 +1789,7 @@ function openSheet(html){
 }
 function closeSheet(){
   var was = sheetOpen;
-  var o = $('ovl');
-  o.classList.remove('on'); sheetOpen = false;
-  o.style.height = o.style.top = o.style.bottom = '';
+  $('ovl').classList.remove('on'); sheetOpen = false;
   /* on ne depile qu'une entree : si plusieurs ont ete empilees par erreur,
      le garde-fou du gestionnaire de retour empeche de sortir de la vue.
      suppressPop evite que ce depilement programmatique ne retombe dans le
@@ -2647,29 +2645,6 @@ $('fab').onclick = function(){ if(tab === 'afaire') sheetQuick(); else sheetNew(
 $('btnAcc').onclick = sheetAcc;
 $('btnSignin').onclick = signIn;
 $('ovl').onclick = function(e){ if(e.target === $('ovl')) closeSheet(); };
-
-/* Clavier du telephone : il recouvre le bas de l'ecran sans que la fenetre
-   change de taille, et masque les boutons des panneaux. visualViewport donne
-   la hauteur reellement visible ; le panneau s'y ajuste. */
-(function(){
-  var vv = window.visualViewport;
-  if(!vv) return;
-  function maj(){
-    var o = $('ovl');
-    if(!o) return;
-    if(!o.classList.contains('on')){ o.style.height = o.style.top = o.style.bottom = ''; return; }
-    var cache = window.innerHeight - vv.height;
-    if(cache > 90){                       /* un clavier, pas une barre d'adresse */
-      o.style.top = Math.round(vv.offsetTop) + 'px';
-      o.style.bottom = 'auto';
-      o.style.height = Math.round(vv.height) + 'px';
-    } else {
-      o.style.height = o.style.top = o.style.bottom = '';
-    }
-  }
-  vv.addEventListener('resize', maj);
-  vv.addEventListener('scroll', maj);
-})();
 $('lbX').onclick = closeLightbox;
 /* ne fermer qu'en touchant le fond : un appui sur l'image sert au zoom */
 $('lb').onclick = function(e){ if(e.target === $('lb')) closeLightbox(); };
