@@ -87,6 +87,11 @@ main{padding:4px 16px 20px}
 .bakRow .n{font-size:11.5px;color:var(--tx2);font-weight:500}
 .sBtn .ar{font-size:9px;opacity:.85;line-height:1}
 .secH{font-size:10.5px;font-weight:800;color:var(--tx3);letter-spacing:.9px;text-transform:uppercase;margin:16px 0 9px;display:flex;align-items:center;gap:7px}
+.corbR{display:flex;align-items:center;gap:10px;margin:0 18px 7px;background:var(--surf2);border-radius:var(--r2);padding:10px 12px}
+.corbR .ct{flex:1;min-width:0}
+.corbR .ct b{display:block;font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.corbR .ct small{display:block;font-size:11px;color:var(--tx3);margin-top:2px}
+.corbR .aBtn{flex:none;padding:8px 12px;font-size:12px}
 .secH:first-child{margin-top:4px}
 .secH span{background:var(--surf2);color:var(--tx2);border-radius:9px;padding:1px 6px;font-size:9.5px;letter-spacing:0}
 
@@ -738,7 +743,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.15';
+var APP_VERSION = '4.16';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -754,6 +759,7 @@ var ST = { afaire:'À préparer', pret:'Préparé', vitrine:'En vitrine', vendu:
 
 var lots = [];
 var tab = 'vitrine';
+var lotsDel = [];          /* lots supprimes, recuperables depuis la vitrine */
 var sortKey = 'date', sortDir = -1;
 var groupBy = 'poke';
 try{ var _g = localStorage.getItem(LS + 'group'); if(_g === 'ach' || _g === 'poke') groupBy = _g; }catch(e){}
@@ -875,12 +881,12 @@ function idbPut(k, v){
 /* ═══ CACHE LOCAL ═══ */
 function cacheKey(){ return LS + 'cache_' + (who || 'x'); }
 function saveCache(){
-  try{ localStorage.setItem(cacheKey(), JSON.stringify({ at: Date.now(), lots: lots })); }catch(e){}
+  try{ localStorage.setItem(cacheKey(), JSON.stringify({ at: Date.now(), lots: lots, del: lotsDel })); }catch(e){}
 }
 function loadCache(){
   try{
     var c = JSON.parse(localStorage.getItem(cacheKey()) || 'null');
-    if(c && c.lots && c.lots.length){ lots = c.lots; return true; }
+    if(c && c.lots && c.lots.length){ lots = c.lots; lotsDel = c.del || []; return true; }
   }catch(e){}
   return false;
 }
@@ -1111,10 +1117,16 @@ async function sync(full){
         }
       }
     }
-    var out = [];
-    for(var k in map){ if(!map[k].deleted) out.push(map[k]); }
-    out.sort(function(a,b){ return String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')); });
-    lots = out;
+    var out = [], sup = [];
+    for(var k in map){
+      /* un lot supprime n'est pas efface : il garde toutes ses donnees et
+         reste recuperable depuis la corbeille de la vitrine */
+      if(map[k].deleted){ if(map[k].st) sup.push(map[k]); }
+      else out.push(map[k]);
+    }
+    var parDate = function(a,b){ return String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')); };
+    out.sort(parDate); sup.sort(parDate);
+    lots = out; lotsDel = sup;
     offline = false;
     saveCache();
     setSync('');
@@ -1494,7 +1506,51 @@ function renderVitrine(){
     $('view').innerHTML = head + noHit(EMPTY_VITRINE, 'la vitrine');
     return;
   }
-  $('view').innerHTML = head + '<div class="secH">En vitrine <span>' + v.length + '</span></div>' + sortLots(v).map(card).join('');
+  $('view').innerHTML = head + '<div class="secH">En vitrine <span>' + v.length + '</span></div>' +
+    sortLots(v).map(card).join('') + corbBtn();
+}
+/* acces a la corbeille, uniquement quand elle contient quelque chose */
+function sheetCorb(){
+  if(!lotsDel.length){ toast('Aucun lot supprimé'); return; }
+  var h2 = '<div class="shT">Lots supprimés</div>' +
+           '<div class="shS">' + lotsDel.length + ' lot' + (lotsDel.length > 1 ? 's' : '') +
+           ' récupérable' + (lotsDel.length > 1 ? 's' : '') + '</div>';
+  for(var i=0;i<lotsDel.length && i<120;i++){
+    var l = lotsDel[i], nbk = lotCardCount(l);
+    var det = [];
+    if(l.st) det.push(ST[l.st] || l.st);
+    if(nbk) det.push(nbk + ' carte' + (nbk > 1 ? 's' : ''));
+    if(l.updatedAt) det.push('supprimé le ' + dt(l.updatedAt));
+    h2 += '<div class="corbR">' +
+          '<div class="ct"><b>' + esc(lotTitle(l)) + '</b><small>' + esc(det.join(' · ')) + '</small></div>' +
+          '<button class="aBtn p" data-corbr="' + esc(l.id) + '">Récupérer</button></div>';
+  }
+  if(lotsDel.length > 120) h2 += '<div class="pkE">Seuls les 120 plus récents sont affichés.</div>';
+  h2 += '<div class="shF"><button class="bP" id="k_cb">Fermer</button></div>';
+  openSheet(h2);
+  $('k_cb').onclick = closeSheet;
+}
+/* Recuperation : le lot retrouve son statut d'avant la suppression. Ses
+   cartes avaient ete recreditees au stock et son lien vide (lotRestore),
+   il revient donc sans cartes, sans risque de double comptage. Un lot
+   vendu supprime avait garde les siennes : elles reviennent avec lui. */
+function corbRestore(id){
+  var l = null, i = -1;
+  for(var j=0;j<lotsDel.length;j++) if(lotsDel[j].id === id){ l = lotsDel[j]; i = j; break; }
+  if(!l) return;
+  lotsDel.splice(i, 1);
+  delete l.deleted;
+  commit(l);
+  closeSheet();
+  toast(lotTitle(l) + ' récupéré');
+}
+
+function corbBtn(){
+  if(!lotsDel.length) return '';
+  return '<div class="stkJB" data-corb="1" style="margin-top:14px">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>' +
+    'Lots supprimés<span class="jc">' + lotsDel.length + '</span></div>';
 }
 
 function renderAfaire(){
@@ -2534,6 +2590,9 @@ document.addEventListener('click', function(e){
     render();
     return;
   }
+  if(e.target.closest('[data-corb]')){ sheetCorb(); return; }
+  var tc = e.target.closest('[data-corbr]');
+  if(tc){ corbRestore(tc.getAttribute('data-corbr')); return; }
   var t = e.target.closest('[data-open],[data-mv],[data-list],[data-sell],[data-again],[data-pk]');
   if(!t) return;
   var v;
