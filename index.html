@@ -747,7 +747,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.20';
+var APP_VERSION = '4.21';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -4310,7 +4310,14 @@ async function stkRenderSearch(q){
 /* Ecran des stickers : les familles possedees, et une recherche pour en
    ajouter une parmi les 366 existantes. */
 var stickQry = '', stkStick = false;
-function stkRenderStick(){
+async function stkRenderStick(){
+  /* les familles ne sont chargees que par le selecteur de cartes : sans elles
+     la recherche ne peut rien trouver, il faut donc les demander ici aussi */
+  if(!familles){
+    stkView('<div class="ph">Chargement des familles…</div>');
+    try{ await famLoad(); }catch(e){}
+    if(!stkStick || tab !== 'stock') return;
+  }
   var ico = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>';
   var tot = stickTotal(), nb = 0;
   for(var z in stickers) nb++;
