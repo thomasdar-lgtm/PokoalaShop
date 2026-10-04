@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#00071a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -207,7 +207,7 @@ main{padding:4px 16px 20px}
    panneau ne se propage pas a la page une fois arrive en butee */
 html:has(.ovl.on),html:has(.cfm.on),html:has(#lb.on){overflow:hidden}
 .ovl,.cfm,#lb,.sheet{overscroll-behavior:contain}
-.sheet{background:var(--surf);border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:93vh;overflow-y:auto;padding-bottom:calc(26px + env(safe-area-inset-bottom));animation:up .22s ease}
+.sheet{background:var(--surf);border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:93vh;max-height:93dvh;overflow-y:auto;padding-bottom:calc(26px + env(safe-area-inset-bottom));animation:up .22s ease}
 @keyframes up{from{transform:translateY(30px);opacity:.4}to{transform:none;opacity:1}}
 .grab{width:36px;height:4px;background:var(--surf3);border-radius:3px;margin:11px auto 4px}
 .shT{font-size:16px;font-weight:800;padding:6px 18px 4px}
@@ -295,7 +295,7 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
   .cIn{min-height:82px}
 
   .ovl{align-items:center;padding:26px}
-  .sheet{border-radius:18px;max-width:560px;max-height:86vh;padding-bottom:26px;animation:pop .2s ease}
+  .sheet{border-radius:18px;max-width:560px;max-height:86vh;max-height:86dvh;padding-bottom:26px;animation:pop .2s ease}
   .grab{display:none}
   .shT{padding-top:18px}
   .phZ{height:150px}
@@ -748,7 +748,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.27';
+var APP_VERSION = '4.28';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
