@@ -87,10 +87,15 @@ main{padding:4px 16px 20px}
 .bakRow .n{font-size:11.5px;color:var(--tx2);font-weight:500}
 .sBtn .ar{font-size:9px;opacity:.85;line-height:1}
 .secH{font-size:10.5px;font-weight:800;color:var(--tx3);letter-spacing:.9px;text-transform:uppercase;margin:16px 0 9px;display:flex;align-items:center;gap:7px}
-.stickR{cursor:pointer}
-.stickR .rt b{font-size:14px}
-.stickR.has .rq{color:var(--blu)}
-.stickR .rq{color:var(--tx3)}
+.stkSG{display:grid;grid-template-columns:1fr;gap:7px}
+.stkS{display:flex;align-items:center;gap:7px;background:var(--surf);border:1px solid var(--bd);border-radius:11px;padding:9px 11px}
+.stkS .stkN{flex:1;min-width:0;text-align:left}
+.stkS .stkN b{display:block;font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stkS .stkN small{display:block;color:var(--tx3);font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stkS .sq{min-width:24px;text-align:center;font-size:15px;font-weight:900;color:var(--tx3);line-height:30px}
+.stkS.has{border-color:var(--blu)}
+.stkS.has .sq{color:var(--blu)}
+.stkS .pkB:disabled{opacity:.35}
 .corbR{display:flex;align-items:center;gap:10px;margin:0 18px 7px;background:var(--surf2);border-radius:var(--r2);padding:10px 12px}
 .corbR .ct{flex:1;min-width:0}
 .corbR .ct b{display:block;font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -534,6 +539,7 @@ color:var(--tx);font-size:14px;font-weight:800;cursor:pointer;flex:none;line-hei
 
 @media (min-width:760px){
   .stkBar{margin:-7px -22px 11px;padding:15px 22px 8px}
+  .stkSG{grid-template-columns:1fr 1fr;gap:8px}
   .stkBar::after{left:22px;right:22px}
 }
 
@@ -747,7 +753,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.21';
+var APP_VERSION = '4.22';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -4339,7 +4345,7 @@ async function stkRenderStick(){
     }
     trouve.sort(function(a,b2){ return a.localeCompare(b2); });
     h2 += '<div class="pkH">Résultats</div>';
-    h2 += trouve.length ? trouve.map(stickRow).join('')
+    h2 += trouve.length ? '<div class="stkSG">' + trouve.map(stickRow).join('') + '</div>'
                         : '<div class="pkE">Aucune famille pour cette recherche.</div>';
   } else if(stickQry){
     h2 += '<div class="pkE">Tape au moins deux lettres.</div>';
@@ -4354,7 +4360,7 @@ async function stkRenderStick(){
   }
   mine.sort(function(a,b3){ return a.localeCompare(b3); });
   h2 += '<div class="pkH">Mes stickers' + (nb ? ' (' + nb + ')' : '') + '</div>';
-  h2 += mine.length ? mine.map(stickRow).join('')
+  h2 += mine.length ? '<div class="stkSG">' + mine.map(stickRow).join('') + '</div>'
                     : '<div class="pkE">Aucun sticker pour l\'instant. Cherche un Pokémon ci-dessus pour en ajouter.</div>';
   stkView(h2);
   var inp = $('f_stk');
@@ -4370,9 +4376,13 @@ function stickRow(base){
   var q = stickQ(base), f = familles && familles[norm(base)];
   var membres = (f && f.m) ? f.m.filter(function(x){ return norm(x) !== norm(base); }) : [];
   var sub = membres.length ? membres.join(', ') : 'famille seule';
-  return '<div class="stkRow stickR' + (q ? ' has' : '') + '" data-stkfam="' + esc(base) + '">' +
-         '<div class="rt"><b>' + esc(base) + '</b><small>' + esc(sub) + '</small></div>' +
-         '<div class="rq">' + (q ? q : '—') + '</div></div>';
+  /* boutons plutot qu'appui court et long : une seule quantite par famille,
+     aucune variante a distinguer, le geste doit rester simple */
+  return '<div class="stkS' + (q ? ' has' : '') + '">' +
+         '<div class="stkN"><b>' + esc(base) + '</b><small>' + esc(sub) + '</small></div>' +
+         '<button class="pkB" data-stkm="' + esc(base) + '"' + (q ? '' : ' disabled') + '>−</button>' +
+         '<span class="sq">' + q + '</span>' +
+         '<button class="pkB" data-stkp="' + esc(base) + '">+</button></div>';
 }
 
 async function stkRenderInv(){
@@ -4880,10 +4890,11 @@ function stkBind(){
     if((t = e.target.closest('[data-stksb]'))){
       stkStick = false; window.scrollTo(0,0); render(); return;
     }
-    if((t = e.target.closest('[data-stkfam]'))){
-      if(stkLpFired){ stkLpFired = false; return; }   /* l'appui long a deja retire */
-      stickAdd(t.getAttribute('data-stkfam'), 1);
-      stkRenderStick(); return;
+    if((t = e.target.closest('[data-stkp]'))){
+      stickAdd(t.getAttribute('data-stkp'), 1); stkRenderStick(); return;
+    }
+    if((t = e.target.closest('[data-stkm]'))){
+      stickAdd(t.getAttribute('data-stkm'), -1); stkRenderStick(); return;
     }
     if((t = e.target.closest('.stkRow[data-stkid]'))){ sheetStkCard(t.getAttribute('data-stkid')); return; }
     /* uniquement depuis l'image : un appui sur le nom ou dans un interstice
@@ -4897,19 +4908,6 @@ function stkBind(){
   /* appui long sur un compteur = -1 */
   vw.addEventListener('touchstart', function(e){
     if(tab !== 'stock') return;
-    var tf = e.target.closest('[data-stkfam]');
-    if(tf){
-      stkLpFired = false;
-      clearTimeout(stkLp);
-      stkLp = setTimeout(function(){
-        stkLpFired = true;
-        if(stickAdd(tf.getAttribute('data-stkfam'), -1)){
-          if(navigator.vibrate) navigator.vibrate(18);
-          stkRenderStick();
-        }
-      }, 420);
-      return;
-    }
     var t = e.target.closest('[data-stkv]');
     if(!t) return;
     stkLpFired = false;
