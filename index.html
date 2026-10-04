@@ -674,6 +674,16 @@ pointer-events:none;opacity:.9}
 border-color:rgba(56,139,253,.45)}
 .aBtn.vnt svg{width:14px;height:14px;flex:none}
 
+/* numero de boite sur la liste des extensions, et filtre par boite */
+.setBx{display:inline-flex;align-items:center;gap:4px;color:var(--tx2);flex:none;margin-right:4px}
+.setBx svg{width:15px;height:15px;display:block}
+.setBx b{font-size:12.5px;font-weight:900;line-height:1}
+.setBx:empty{display:none}
+.bxF{display:flex;gap:6px;overflow-x:auto;margin:0 0 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.bxF::-webkit-scrollbar{display:none}
+.bxF .famC{flex:none;min-width:38px;text-align:center}
+.bxT{font-size:12px;font-weight:700;color:var(--tx2);margin:-3px 0 10px}
+
 /* selecteur de cartes et fenetre stickers : hauteur fixe, pour que la
    fenetre ne change pas de taille selon le nombre de resultats */
 .sheet.shFix{height:93vh;height:93dvh}
@@ -761,7 +771,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.31';
+var APP_VERSION = '4.32';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2658,7 +2668,7 @@ for(var n=0;n<navs.length;n++){
     for(var i=0;i<navs.length;i++) navs[i].classList.remove('on');
     this.classList.add('on');
     tab = cible;
-    if(tab !== 'stock'){ stkJournal = false; stkInv = false; stkNever = false; stkStick = false; }
+    if(tab !== 'stock'){ stkJournal = false; stkInv = false; stkNever = false; stkStick = false; stkBoxF = null; }
     if(tab !== 'stock' && stkSet){ stkSet = null; stkQry = ''; if(history.state && history.state.d === 3) history.back(); }
     $('fab').classList.toggle('hide', tab !== 'vitrine' && tab !== 'afaire');
     $('q').value = '';
@@ -3585,6 +3595,7 @@ function stkTouchSets(){
     if(nb.textContent !== tx){ nb.textContent = tx; nb.className = 'blocN' + (vb ? '' : ' z'); }
   }
   nvCountFill();
+  stkBoxUI();
 }
 
 function stkBody(){
@@ -4009,6 +4020,7 @@ function stkRenderSets(){
        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
        '<path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>' +
        'Mouvements de stock<span class="jc">' + (mvLoaded ? stkMoves.length : mvCount) + '</span></div>';
+  h += '<div class="bxF hide" id="bxF"></div><div class="bxT hide" id="bxT"></div>';
   /* reporter le stock des sous-extensions sur leur parent */
   for(var sk in per){
     var rt = rootSet(sk);
@@ -4038,12 +4050,79 @@ function stkRenderSets(){
     }
     h += '<div class="stkSet" data-stkset="' + esc(st.id) + '">' + symHtml(st) +
          '<div class="sinfo"><b>' + esc(st.name) + '</b>' + codeHtml(st) + '</div>' +
+         '<span class="setBx" data-v=""></span>' +
          '<span class="sc' + (n ? '' : ' z') + '">' + (n ? n : '—') + '</span></div>';
   }
   stkView(h + '</div>');
   stkSetsEl = $('view').firstChild;
   stkSetsCdb = cdb;
   nvCountFill();
+  stkBoxUI();
+}
+
+/* Numero de boite sur la liste des extensions, et filtre par boite.
+   Le filtre n'est pas memorise : il repart sur « Toutes » en quittant
+   l'onglet Stock. Recalcule a chaque rafraichissement de la liste, un
+   numero change sur l'autre appareil arrive donc tout seul. */
+var stkBoxF = null;
+var BOX_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
+              '<path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7"/><path d="M2 7h20v4H2z"/><path d="M10 14h4"/></svg>';
+function stkBoxUI(){
+  var wrap = document.querySelector('#view .stkSets');
+  var bar = $('bxF'), info = $('bxT');
+  if(!wrap || !bar || !info) return;
+  var lignes = wrap.querySelectorAll('.stkSet[data-stkset]'), used = {};
+  for(var i=0;i<lignes.length;i++){
+    var bx = boxOf(lignes[i].getAttribute('data-stkset'));
+    var pb = lignes[i].querySelector('.setBx');
+    if(pb && pb.getAttribute('data-v') !== bx){
+      pb.innerHTML = bx ? BOX_SVG + '<b>' + esc(bx) + '</b>' : '';
+      pb.setAttribute('data-v', bx);
+    }
+    if(bx) used[bx] = 1;
+  }
+  var nums = Object.keys(used).sort(function(a, b){ return a - b; });
+  if(stkBoxF && stkBoxF !== 'none' && !used[stkBoxF]) stkBoxF = null;
+  if(!nums.length){
+    stkBoxF = null;
+    bar.innerHTML = ''; bar.classList.add('hide');
+  } else {
+    var hb = '<button class="famC' + (stkBoxF ? '' : ' on') + '" data-bxf="all">Toutes</button>';
+    for(var n=0;n<nums.length;n++)
+      hb += '<button class="famC' + (stkBoxF === nums[n] ? ' on' : '') + '" data-bxf="' + esc(nums[n]) + '">' + esc(nums[n]) + '</button>';
+    hb += '<button class="famC' + (stkBoxF === 'none' ? ' on' : '') + '" data-bxf="none">Sans boîte</button>';
+    if(bar.innerHTML !== hb) bar.innerHTML = hb;
+    bar.classList.remove('hide');
+  }
+  /* quantites par extension racine */
+  var per = {};
+  for(var k in stock){
+    if(!stock[k]) continue;
+    var p = k.split('|')[0], d = p.lastIndexOf('-');
+    var sid = rootSet(d > 0 ? p.slice(0, d) : p);
+    per[sid] = (per[sid] || 0) + stock[k];
+  }
+  var nc = 0, ne = 0;
+  for(var j=0;j<lignes.length;j++){
+    var id = lignes[j].getAttribute('data-stkset'), b2 = boxOf(id);
+    var voir = !stkBoxF || (stkBoxF === 'none' ? !b2 : b2 === stkBoxF);
+    lignes[j].classList.toggle('hide', !voir);
+    if(voir && stkBoxF){ ne++; nc += per[id] || 0; }
+  }
+  /* un titre de serie n'apparait que s'il lui reste une extension visible */
+  var kids = wrap.children, tete = null, vis = false;
+  for(var z=0;z<=kids.length;z++){
+    var el = kids[z];
+    if(!el || el.classList.contains('stkSerie')){
+      if(tete) tete.classList.toggle('hide', !vis);
+      tete = el || null; vis = false;
+    } else if(!el.classList.contains('hide')) vis = true;
+  }
+  if(stkBoxF){
+    info.textContent = (stkBoxF === 'none' ? 'Sans boîte' : 'Boîte ' + stkBoxF) + ' : ' +
+      nc + ' carte' + (nc > 1 ? 's' : '') + ' · ' + ne + ' extension' + (ne > 1 ? 's' : '');
+    info.classList.remove('hide');
+  } else info.classList.add('hide');
 }
 var stkSetsEl = null, stkSetsCdb = null;
 
@@ -4854,6 +4933,11 @@ function stkBind(){
     if((t = e.target.closest('[data-stkbox]'))){
       sheetBox(t.getAttribute('data-stkbox'));
       return;
+    }
+    if((t = e.target.closest('[data-bxf]'))){
+      var vf = t.getAttribute('data-bxf');
+      stkBoxF = (vf === 'all') ? null : vf;
+      stkBoxUI(); return;
     }
     if((t = e.target.closest('[data-stkset]'))){
       stkSet = t.getAttribute('data-stkset');
