@@ -748,7 +748,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.26';
+var APP_VERSION = '4.27';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -1601,6 +1601,9 @@ function card(l){
   var nbc = lotCardCount(l);
   acts.push('<button class="aBtn" data-pk="' + l.id + '">Cartes' +
             (nbc ? '<span class="lotCB">' + nbc + '</span>' : '') + '</button>');
+  var nst = lotStickCount(l);
+  acts.push('<button class="aBtn" data-lst="' + l.id + '">Stickers' +
+            (nst ? '<span class="lotCB">' + nst + '</span>' : '') + '</button>');
   acts.push('<button class="aBtn" data-open="' + l.id + '" aria-label="Modifier"><span style="width:13px;height:13px;display:inline-block;vertical-align:-2px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/> <path d="m15 5 4 4"/></svg></span></button>');
 
   var sub = [];
@@ -2608,7 +2611,7 @@ document.addEventListener('click', function(e){
   if(e.target.closest('[data-corb]')){ sheetCorb(); return; }
   var tc = e.target.closest('[data-corbr]');
   if(tc){ corbRestore(tc.getAttribute('data-corbr')); return; }
-  var t = e.target.closest('[data-open],[data-mv],[data-list],[data-sell],[data-again],[data-pk]');
+  var t = e.target.closest('[data-open],[data-mv],[data-list],[data-sell],[data-again],[data-pk],[data-lst]');
   if(!t) return;
   var v;
   if((v = t.getAttribute('data-open'))){ sheetEdit(v); return; }
@@ -2616,6 +2619,7 @@ document.addEventListener('click', function(e){
   if((v = t.getAttribute('data-sell'))){ sheetSell(v); return; }
   if((v = t.getAttribute('data-again'))){ sheetAgain(v); return; }
   if((v = t.getAttribute('data-pk'))){ sheetPick(v); return; }
+  if((v = t.getAttribute('data-lst'))){ sheetStick(v); return; }
   if((v = t.getAttribute('data-mv'))){
     var p = v.split('|'), l = lots.filter(function(x){ return x.id === p[0]; })[0];
     if(!l) return;
@@ -5277,20 +5281,8 @@ async function pickRender(q){
     h += '</div>';
   }
 
-  /* Stickers : la famille du Pokemon du lot, ou celle du mot cherche.
-     Proposes au-dessus des cartes, c'est le geste qui vient en premier. */
-  var fs = stickFam(pickFam || base);
-  if(fs){
-    var dansLot = lotSticks(l)[norm(fs)] || 0, dispo = stickQ(fs);
-    if(dansLot || dispo){
-      h += '<div class="pkH">Stickers ' + esc(fs) + '</div>' +
-           '<div class="stkS' + (dansLot ? ' has' : '') + '" style="margin:0 18px 9px">' +
-           '<div class="stkN"><b>' + dansLot + ' dans ce lot</b><small>' + dispo + ' en stock</small></div>' +
-           '<button class="pkB" data-pks="' + esc(fs) + '|-1"' + (dansLot ? '' : ' disabled') + '>−</button>' +
-           '<span class="sq">' + dansLot + '</span>' +
-           '<button class="pkB" data-pks="' + esc(fs) + '|1"' + (dispo ? '' : ' disabled') + '>+</button></div>';
-    }
-  }
+  /* Les stickers ont leur propre fenetre (sheetStick), ouverte par le bouton
+     Termine ou par le bouton Stickers de la vignette. */
 
   /* Recherche tapee : ses resultats passent avant les cartes du lot, sinon
      ils tombent sous la liste du lot, hors de l'ecran. */
@@ -5325,15 +5317,25 @@ async function pickRender(q){
     inp = $('f_pick');
     if(inp) inp.oninput = function(){ clearTimeout(inp._t); inp._t = setTimeout(function(){ pickRender(inp.value); }, 260); };
   }
-  $('k_pk').onclick = function(){ commit(pickLot); pickLot = null; closeSheet(); };
+  /* Termine enchaine sur la fenetre des stickers du meme lot */
+  $('k_pk').onclick = function(){
+    var idk = pickLot.id;
+    commit(pickLot); pickLot = null; closeSheet();
+    setTimeout(function(){ sheetStick(idk); }, 280);
+  };
   if($('k_pkr')) $('k_pkr').onclick = function(){
     var ll = pickLot;
-    var ns2 = lotStickCount(ll);
+    /* cartes seulement : les stickers se gerent dans leur propre fenetre */
     confirmBox('Tout remettre en stock ?',
-      lotCardCount(ll) + ' carte(s)' + (ns2 ? ' et ' + ns2 + ' sticker(s)' : '') +
-      ' seront recréditées dans ton stock et détachées de ce lot.',
+      lotCardCount(ll) + ' carte(s) seront recréditées dans ton stock et détachées de ce lot.',
       'Remettre', function(){
-        var n2 = lotRestore(ll);
+        var mk = lotCards(ll), n2 = 0;
+        for(var kk in mk){
+          var pk2 = kk.split('|');
+          stkAdd(pk2[0], pk2[1], pk2[2], mk[kk], 'retour');
+          n2 += mk[kk];
+        }
+        ll.cards = {};
         commit(ll);
         toast(n2 + ' carte(s) remise(s) en stock');
         pickRender($('f_pick') ? $('f_pick').value : '');
@@ -5386,13 +5388,6 @@ document.addEventListener('click', function(e){
     pickRender($('f_pick') ? $('f_pick').value : '');
     return;
   }
-  var ts = e.target.closest('[data-pks]');
-  if(ts && pickLot){
-    var ps = ts.getAttribute('data-pks').split('|');
-    if(!lotStickSet(pickLot, ps[0], parseInt(ps[1], 10)) && ps[1] === '1') toast('Plus de sticker en stock');
-    pickRender($('f_pick') ? $('f_pick').value : '');
-    return;
-  }
   var t = e.target.closest('[data-pick]');
   if(!t || !pickLot) return;
   var raw = t.getAttribute('data-pick').split('|');
@@ -5413,6 +5408,111 @@ var _closeSheetPick = closeSheet;
 closeSheet = function(){
   if(pickLot){ commit(pickLot); pickLot = null; }
   _closeSheetPick();
+};
+
+/* ═══ STICKERS D'UN LOT ═══
+   Fenetre a part, sur le modele du selecteur de cartes. N'importe quelle
+   famille peut etre ajoutee, sans lien avec les cartes du lot : lots
+   libres ou personnalises. Champ vide : la famille du Pokemon du lot.
+   Champ rempli : les familles correspondantes ayant du stock. */
+var stpLot = null;
+async function sheetStick(id){
+  var l = lots.filter(function(x){ return x.id === id; })[0];
+  if(!l) return;
+  stpLot = l;
+  openSheet('<div class="shT">Stickers du lot</div><div class="ph">Chargement…</div>');
+  if(!familles){ try{ await famLoad(); }catch(e){} }
+  if(!stkLoaded){ try{ await stkLoad(); }catch(e){} }
+  if(stpLot !== l) return;
+  stpRender('');
+}
+function stpRow(base){
+  var k = norm(base), q = lotSticks(stpLot)[k] || 0, dispo = stickQ(base);
+  var f = familles && familles[k];
+  var membres = (f && f.m) ? f.m.filter(function(x){ return norm(x) !== k; }) : [];
+  return '<div class="stkS' + (q ? ' has' : '') + '">' +
+         '<div class="stkN"><b>' + esc(base) + '</b><small>' +
+         esc((membres.length ? membres.join(', ') + ' · ' : '') + 'stock : ' + dispo) + '</small></div>' +
+         '<button class="pkB" data-stp="' + esc(base) + '|-1"' + (q ? '' : ' disabled') + '>−</button>' +
+         '<span class="sq">' + q + '</span>' +
+         '<button class="pkB" data-stp="' + esc(base) + '|1"' + (dispo ? '' : ' disabled') + '>+</button></div>';
+}
+function stpRender(q){
+  var l = stpLot;
+  if(!l) return;
+  var m = lotSticks(l), mine = [], dans = {};
+  for(var k in m){
+    if(!m[k]) continue;
+    var f = familles && familles[k];
+    mine.push(f && f.b ? f.b : k);
+    dans[k] = 1;
+  }
+  mine.sort(function(a, b){ return a.localeCompare(b, 'fr'); });
+
+  var tape = !!(q && q.trim()), n = norm(q || ''), res = [];
+  if(tape){
+    if(n.length >= 2 && familles){
+      var vus = {};
+      for(var key in familles){
+        if(key.indexOf(n) < 0) continue;
+        var bs = familles[key].b, nb = norm(bs || '');
+        if(!bs || vus[nb] || dans[nb]) continue;
+        vus[nb] = 1;
+        if(stickQ(bs) > 0) res.push(bs);
+      }
+      res.sort(function(a, b){ return a.localeCompare(b, 'fr'); });
+    }
+  } else {
+    var fb = stickFam(l.poke);
+    if(fb && !dans[norm(fb)]) res.push(fb);
+  }
+
+  var hLot = mine.length ? '<div class="pkH">Dans ce lot</div><div class="stkSG">' + mine.map(stpRow).join('') + '</div>' : '';
+  var hRes = '';
+  if(tape){
+    if(n.length < 2) hRes = '<div class="pkE">Tape au moins deux lettres du nom.</div>';
+    else hRes = '<div class="pkH">Résultats en stock</div>' +
+                (res.length ? '<div class="stkSG">' + res.map(stpRow).join('') + '</div>'
+                            : '<div class="pkE">Aucun sticker en stock pour cette recherche.</div>');
+  } else if(res.length){
+    hRes = '<div class="pkH">Famille du lot</div><div class="stkSG">' + res.map(stpRow).join('') + '</div>';
+  } else if(!mine.length){
+    hRes = '<div class="pkE">Tape le nom d\'un Pokémon pour trouver un sticker.</div>';
+  }
+  /* resultats d'une recherche en premier, comme dans le selecteur de cartes */
+  var h = tape ? (hRes + hLot) : (hLot + hRes);
+
+  var ns = lotStickCount(l);
+  var sous = esc(lotTitle(l)) + ' — ' + ns + ' sticker' + (ns > 1 ? 's' : '');
+
+  /* champ construit une seule fois : il garde le focus et le clavier */
+  if($('f_stp') && $('stp_res')){
+    $('stp_sub').innerHTML = sous;
+    $('stp_res').innerHTML = h;
+    return;
+  }
+  openSheetKeep('<div class="shT">Stickers du lot</div>' +
+    '<div class="shS" id="stp_sub">' + sous + '</div>' +
+    '<div class="fld"><input class="inp" id="f_stp" placeholder="Chercher un autre Pokémon…" value="' + esc(q || '') + '"' + noAuto() + '></div>' +
+    '<div class="fld" id="stp_res">' + h + '</div>' +
+    '<div class="shF"><button class="bP" id="k_stp">Terminé</button></div>');
+  var inp = $('f_stp');
+  if(inp) inp.oninput = function(){ clearTimeout(inp._t); inp._t = setTimeout(function(){ stpRender(inp.value); }, 260); };
+  $('k_stp').onclick = function(){ closeSheet(); };
+}
+document.addEventListener('click', function(e){
+  var t = e.target.closest('[data-stp]');
+  if(!t || !stpLot) return;
+  var p = t.getAttribute('data-stp').split('|'), d = parseInt(p[1], 10);
+  /* enregistrer tout de suite : le stock de stickers est deja decompte */
+  if(lotStickSet(stpLot, p[0], d)) commit(stpLot);
+  else toast(d > 0 ? 'Plus de sticker en stock' : 'Rien à retirer');
+  stpRender($('f_stp') ? $('f_stp').value : '');
+});
+var _closeSheetStp = closeSheet;
+closeSheet = function(){
+  if(stpLot){ commit(stpLot); stpLot = null; }
+  _closeSheetStp();
 };
 
 /* ═══ ZOOM DE LA VISIONNEUSE ═══
