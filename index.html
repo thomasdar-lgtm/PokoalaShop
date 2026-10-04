@@ -753,7 +753,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.22';
+var APP_VERSION = '4.23';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -3431,8 +3431,12 @@ async function stkFetch(){
       }
       continue;
     }
+    /* recopier TOUS les champs synchronises : en oublier un revient a ignorer
+       en silence ce que l'autre appareil a saisi */
     couches.push({ dev: data.dev || f.name, delta: data.delta || {},
-                   ov: data.ov || {}, done: data.done || {}, stamp: data.stamp || 0 });
+                   ov: data.ov || {}, done: data.done || {},
+                   box: data.box || {}, stick: data.stick || {},
+                   stamp: data.stamp || 0 });
   }
 
   /* ne prendre l'identifiant que s'il correspond bien a NOTRE fichier :
@@ -3472,13 +3476,17 @@ async function stkSync(force){
   try{
     var avant = {};
     for(var k in stock) avant[k] = stock[k];
+    var avStick = JSON.stringify(stickers);
     await stkFetch();
     /* ne rafraichir que les cartes reellement modifiees */
     var touchees = {};
     for(var k2 in stock) if(avant[k2] !== stock[k2]) touchees[k2.split('|')[0]] = 1;
     for(var k3 in avant) if(!(k3 in stock)) touchees[k3.split('|')[0]] = 1;
     var ids = Object.keys(touchees);
-    if(ids.length) stkTouchUI(ids);
+    /* un changement de stickers ne touche aucune carte : sans ce test, l'ecran
+       des stickers ne serait jamais redessine apres une saisie de l'autre
+       appareil */
+    if(ids.length || avStick !== JSON.stringify(stickers)) stkTouchUI(ids);
   }catch(e){}
   stkSyncing = false;
 }
@@ -3486,6 +3494,10 @@ async function stkSync(force){
    rechargerait images et symboles, ce qui provoque un scintillement. */
 function stkTouchUI(ids){
   if(tab !== 'stock') return;
+  /* l'ecran des stickers n'affiche aucune carte : il se redessine des que le
+     total a change, sans quoi une saisie de l'autre appareil resterait
+     invisible tant qu'on ne quitte pas l'ecran */
+  if(stkStick){ stkRenderStick(); return; }
   if(stkSet || stkInv){
     for(var i=0;i<ids.length;i++) stkRefresh(ids[i]);
     return;
