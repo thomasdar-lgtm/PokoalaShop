@@ -673,6 +673,11 @@ pointer-events:none;opacity:.9}
 .aBtn.vnt{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:var(--blu);
 border-color:rgba(56,139,253,.45)}
 .aBtn.vnt svg{width:14px;height:14px;flex:none}
+
+/* selecteur de cartes et fenetre stickers : hauteur fixe, pour que la
+   fenetre ne change pas de taille selon le nombre de resultats */
+.sheet.shFix{height:93vh;height:93dvh}
+@media (min-width:760px){ .sheet.shFix{height:86vh;height:86dvh} }
 </style>
 <script>
 /* execute avant tout rendu : si un jeton valide ou une identite est
@@ -748,7 +753,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.28';
+var APP_VERSION = '4.29';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2665,7 +2670,20 @@ $('selGo').onclick = sheetMultiSell;
 $('fab').onclick = function(){ if(tab === 'afaire') sheetQuick(); else sheetNew('vitrine'); };
 $('btnAcc').onclick = sheetAcc;
 $('btnSignin').onclick = signIn;
-$('ovl').onclick = function(e){ if(e.target === $('ovl')) closeSheet(); };
+/* Appui hors du cadre alors qu'un champ du panneau a le focus (clavier
+   ouvert) : on ferme seulement le clavier. Le focus quitte le champ avant
+   l'evenement click, d'ou la memorisation au pointerdown. */
+var ovlKb = false;
+$('ovl').addEventListener('pointerdown', function(e){
+  var a = document.activeElement;
+  ovlKb = e.target === $('ovl') && !!a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA') &&
+          a.type !== 'file' && $('sheet').contains(a);
+});
+$('ovl').onclick = function(e){
+  if(e.target !== $('ovl')) return;
+  if(ovlKb){ ovlKb = false; var a = document.activeElement; if(a && a.blur) a.blur(); return; }
+  closeSheet();
+};
 $('lbX').onclick = closeLightbox;
 /* ne fermer qu'en touchant le fond : un appui sur l'image sert au zoom */
 $('lb').onclick = function(e){ if(e.target === $('lb')) closeLightbox(); };
@@ -2692,7 +2710,7 @@ window.addEventListener('popstate', function(){
   if(tab === 'stock' && stkSet){ stkSet = null; stkQry = ''; window.scrollTo(0,0); render(); return; }
 });
 var _open = openSheet;
-openSheet = function(h){ _open(h); history.pushState({ d:1 }, ''); };
+openSheet = function(h){ $('sheet').classList.remove('shFix'); _open(h); history.pushState({ d:1 }, ''); };
 
 document.addEventListener('visibilitychange', function(){
   if(document.hidden || sheetOpen || !booted) return;
@@ -5207,6 +5225,7 @@ async function sheetPick(id){
   if(!l) return;
   pickLot = l;
   openSheet('<div class="shT">Cartes du lot</div><div class="ph">Chargement…</div>');
+  $('sheet').classList.add('shFix');
   if(!cdb){ try{ await cdbLoad(); }catch(e){} }
   if(!stkLoaded) await stkLoad();
   if(!nameIdx){ try{ await namesLoad(); }catch(e){} }
@@ -5421,6 +5440,7 @@ async function sheetStick(id){
   if(!l) return;
   stpLot = l;
   openSheet('<div class="shT">Stickers du lot</div><div class="ph">Chargement…</div>');
+  $('sheet').classList.add('shFix');
   if(!familles){ try{ await famLoad(); }catch(e){} }
   if(!stkLoaded){ try{ await stkLoad(); }catch(e){} }
   if(stpLot !== l) return;
@@ -5512,6 +5532,7 @@ document.addEventListener('click', function(e){
 var _closeSheetStp = closeSheet;
 closeSheet = function(){
   if(stpLot){ commit(stpLot); stpLot = null; }
+  $('sheet').classList.remove('shFix');
   _closeSheetStp();
 };
 
