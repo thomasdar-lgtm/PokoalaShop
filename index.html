@@ -678,6 +678,14 @@ border-color:rgba(56,139,253,.45)}
    fenetre ne change pas de taille selon le nombre de resultats */
 .sheet.shFix{height:93vh;height:93dvh}
 @media (min-width:760px){ .sheet.shFix{height:86vh;height:86dvh} }
+/* Mobile : panneau accroche en haut a distance fixe, sur toute la hauteur
+   disponible. A l'ouverture du clavier seul son bas se raccourcit : le haut
+   et le champ en cours de saisie ne sautent plus (ecart de 26 a 56 px
+   mesure quand il etait accroche en bas). */
+@media (max-width:759px){
+  .ovl{align-items:stretch;padding-top:calc(29px + env(safe-area-inset-top))}
+  .sheet,.sheet.shFix{height:auto;max-height:none}
+}
 </style>
 <script>
 /* execute avant tout rendu : si un jeton valide ou une identite est
@@ -753,7 +761,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.29';
+var APP_VERSION = '4.30';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
