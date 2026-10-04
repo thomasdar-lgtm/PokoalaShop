@@ -87,6 +87,10 @@ main{padding:4px 16px 20px}
 .bakRow .n{font-size:11.5px;color:var(--tx2);font-weight:500}
 .sBtn .ar{font-size:9px;opacity:.85;line-height:1}
 .secH{font-size:10.5px;font-weight:800;color:var(--tx3);letter-spacing:.9px;text-transform:uppercase;margin:16px 0 9px;display:flex;align-items:center;gap:7px}
+.stickR{cursor:pointer}
+.stickR .rt b{font-size:14px}
+.stickR.has .rq{color:var(--blu)}
+.stickR .rq{color:var(--tx3)}
 .corbR{display:flex;align-items:center;gap:10px;margin:0 18px 7px;background:var(--surf2);border-radius:var(--r2);padding:10px 12px}
 .corbR .ct{flex:1;min-width:0}
 .corbR .ct b{display:block;font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -743,7 +747,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.19';
+var APP_VERSION = '4.20';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2617,14 +2621,14 @@ for(var n=0;n<navs.length;n++){
     var cible = this.getAttribute('data-t');
     /* retoucher l'onglet deja actif ramene a son accueil */
     if(cible === tab){
-      if(tab === 'stock'){ stkSet = null; stkQry = ''; stkJournal = false; stkInv = false; stkNever = false; }
+      if(tab === 'stock'){ stkSet = null; stkQry = ''; stkJournal = false; stkInv = false; stkNever = false; stkStick = false; }
       if(selMode) exitSel();
       if(history.state && history.state.d === 3) history.back();
     }
     for(var i=0;i<navs.length;i++) navs[i].classList.remove('on');
     this.classList.add('on');
     tab = cible;
-    if(tab !== 'stock'){ stkJournal = false; stkInv = false; stkNever = false; }
+    if(tab !== 'stock'){ stkJournal = false; stkInv = false; stkNever = false; stkStick = false; }
     if(tab !== 'stock' && stkSet){ stkSet = null; stkQry = ''; if(history.state && history.state.d === 3) history.back(); }
     $('fab').classList.toggle('hide', tab !== 'vitrine' && tab !== 'afaire');
     $('q').value = '';
@@ -2664,6 +2668,7 @@ window.addEventListener('popstate', function(){
   /* une entree de panneau restee en trop ne doit jamais faire quitter la vue */
   if(history.state && history.state.d === 1 && tab === 'stock' &&
      (stkSet || stkJournal || stkInv || stkNever)) return;
+  if(tab === 'stock' && stkStick){ stkStick = false; window.scrollTo(0,0); render(); return; }
   if(tab === 'stock' && stkNever){ stkNever = false; window.scrollTo(0,0); render(); return; }
   if(tab === 'stock' && stkInv){ stkInv = false; window.scrollTo(0,0); render(); return; }
   if(tab === 'stock' && stkJournal){ stkJournal = false; window.scrollTo(0,0); render(); return; }
@@ -2774,7 +2779,7 @@ var ET_LBL = { nm:'NM', jo:'Joué', ab:'Abîmé' };
 var cdb = null, cdbById = {};
 var stock = {}, stkOv = {}, stkMoves = [];
 var stkLayers = [];                 /* couches des autres appareils */
-var myDelta = {}, myOv = {}, myDone = {}, myBox = {}, myStamp = 0;   /* notre contribution */
+var myDelta = {}, myOv = {}, myDone = {}, myBox = {}, myStick = {}, myStamp = 0;   /* notre contribution */
 var mvNew = [], mvCount = 0, mvFileId = null, mvLoaded = false, mvTimer = null, mvSaving = false;
 var stkFileId = null, stkPending = [];
 var stkTimer = null, stkSaving = false, stkLoaded = false;
@@ -2784,6 +2789,11 @@ var stkDone = {}, doneDirty = {}, stkNet = false;
 /* numero de boite par extension : une extension tient dans une seule boite,
    et ses sous-extensions y sont rangees avec elle */
 var stkBox = {};
+/* Stock de stickers : un compteur par famille d'evolution, sous le nom du
+   Pokemon de base. Meme principe que le stock de cartes : chaque appareil
+   n'ecrit que la somme de ses propres gestes, et le total est leur somme,
+   ce qui rend tout ecrasement impossible. */
+var stickers = {};
 var invDir = parseInt(localStorage.getItem(LS + 'invdir') || '-1', 10);   /* -1 decroissant, 1 croissant */
 var nvTri  = localStorage.getItem(LS + 'nvtri') || 'az';                 /* az | qty */
 /* nombre de colonnes de la grille, memorise separement pour ecran etroit et large */
@@ -3278,6 +3288,13 @@ function stkRebuild(){
   }
   for(var k2 in myDelta) stock[k2] = (stock[k2] || 0) + myDelta[k2];
   for(var k3 in stock) if(stock[k3] <= 0) delete stock[k3];
+  stickers = {};
+  for(var s=0;s<stkLayers.length;s++){
+    var ds = stkLayers[s].stick || {};
+    for(var a in ds) stickers[a] = (stickers[a] || 0) + ds[a];
+  }
+  for(var b in myStick) stickers[b] = (stickers[b] || 0) + myStick[b];
+  for(var c in stickers) if(stickers[c] <= 0) delete stickers[c];
 }
 
 function stkApplyStates(){
@@ -3317,7 +3334,7 @@ function stkApplyStates(){
 function stkSaveCache(){
   try{
     localStorage.setItem(LS + 'stkc', JSON.stringify({
-      mine: STK_MINE, layers: stkLayers, delta: myDelta, ov: myOv, done: myDone, box: myBox, stamp: myStamp,
+      mine: STK_MINE, layers: stkLayers, delta: myDelta, ov: myOv, done: myDone, box: myBox, stick: myStick, stamp: myStamp,
       mvCount: mvCount, id: stkFileId
     }));
   }catch(e){ /* quota plein : on s'en passe */ }
@@ -3329,6 +3346,7 @@ function stkLoadCache(){
     if(c.id && c.mine === STK_MINE) stkFileId = c.id;   /* jamais un identifiant herite */
     stkLayers = c.layers || [];
     myDelta = c.delta || {};
+    myStick = c.stick || {};
     myOv = c.ov || {};
     myBox = c.box || {};
     myDone = c.done || {};
@@ -3399,6 +3417,7 @@ async function stkFetch(){
       /* notre propre fichier : il fait foi sauf si des gestes sont en attente */
       if(!stkPending.length){
         myDelta = data.delta || {};
+        myStick = data.stick || {};
         myOv = data.ov || {};
         myBox = data.box || {};
         myDone = data.done || {};
@@ -3516,7 +3535,7 @@ function stkTouchSets(){
 function stkBody(){
   return JSON.stringify({
     v: APP_VERSION, dev: DEV, at: now(), stamp: myStamp,
-    delta: myDelta, ov: myOv, done: myDone, box: myBox
+    delta: myDelta, ov: myOv, done: myDone, box: myBox, stick: myStick
   });
 }
 
@@ -3674,6 +3693,36 @@ function sheetBox(sid){
     if(tab === 'stock') render();
   };
 }
+
+/* Famille d'un Pokemon, sous son nom de base : c'est la cle du stock de
+   stickers. « Arbok » comme « Abo » renvoient « Abo ». */
+function stickFam(nom){
+  var k = norm(nom || '');
+  if(!k || !familles) return null;
+  var f = familles[k];
+  return f ? (f.b || nom) : null;
+}
+function stickQ(base){ return stickers[norm(base || '')] || 0; }
+function stickAdd(base, d, src){
+  var k = norm(base || '');
+  if(!k) return false;
+  var cur = stickers[k] || 0, nv = Math.max(0, cur + d);
+  if(nv === cur) return false;
+  var vrai = nv - cur;
+  stickers[k] = nv;
+  if(!nv) delete stickers[k];
+  myStick[k] = (myStick[k] || 0) + vrai;
+  if(!myStick[k]) delete myStick[k];
+  /* le journal des mouvements accueille aussi les stickers : v='stk' les
+     distingue des cartes a la lecture */
+  var mv = { t: now(), c: base, v: 'stk', e: '-', d: vrai, w: who || '', s: src || 'stickers' };
+  stkPending.push(mv);
+  mvNew.push(mv); mvCount++;
+  if(mvLoaded) stkMoves.push(mv);
+  stkQueue(); mvQueue(); stkSaveCache();
+  return true;
+}
+function stickTotal(){ var t = 0; for(var k in stickers) t += stickers[k]; return t; }
 
 function stkSetOv(id, mask){
   /* stkOv n'est qu'une vue reconstruite a chaque stkApplyStates() (lecture
@@ -3836,6 +3885,7 @@ async function renderStock(){
   }
   if(!stkLoaded) await stkLoad();
   else stkSync();                      /* relire en arriere-plan a chaque entree */
+  if(stkStick) return stkRenderStick();
   if(stkNever) return stkRenderNever();
   if(stkInv) return stkRenderInv();
   if(stkJournal) return stkRenderJournal();
@@ -3859,6 +3909,10 @@ function stkRenderSets(){
     stkTouchSets();
     var jc = stkSetsEl.querySelector('.stkJB .jc');
     if(jc) jc.textContent = mvLoaded ? stkMoves.length : mvCount;
+    /* la liste reutilisee garde ses anciens totaux : celui des stickers se
+       rafraichit ici, comme les compteurs d'extensions au-dessus */
+    var sb = stkSetsEl.querySelector('[data-stkst] b');
+    if(sb) sb.textContent = stickTotal();
     return;
   }
   var tot = 0, uniq = 0;
@@ -3873,7 +3927,9 @@ function stkRenderSets(){
           '<div class="cell" data-stkinv="1"><span class="go">›</span>' +
           '<span>Exemplaires</span><b>' + tot + '</b></div>' +
           '<div class="cell" data-stknv="1"><span class="go">›</span>' +
-          '<span>Jamais fait</span><b id="nvCount">—</b></div></div>';
+          '<span>Jamais fait</span><b id="nvCount">—</b></div>' +
+          '<div class="cell" data-stkst="1"><span class="go">›</span>' +
+          '<span>Stickers</span><b>' + stickTotal() + '</b></div></div>';
   h += '<div class="stkJB" data-stkj="1">' +
        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
        '<path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>' +
@@ -4251,6 +4307,67 @@ async function stkRenderSearch(q){
 }
 
 /* ---- inventaire complet : toutes les cartes possedees ---- */
+/* Ecran des stickers : les familles possedees, et une recherche pour en
+   ajouter une parmi les 366 existantes. */
+var stickQry = '', stkStick = false;
+function stkRenderStick(){
+  var ico = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>';
+  var tot = stickTotal(), nb = 0;
+  for(var z in stickers) nb++;
+  var sub = nb ? (nb + ' famille' + (nb > 1 ? 's' : '') + ' · ' + tot + ' sticker' + (tot > 1 ? 's' : '')) : 'aucun sticker';
+  var h2 = '<div class="stkBar"><button class="stkBack" data-stksb="1" aria-label="Retour">' + ico + '</button>' +
+           '<div class="stkTit">Stickers<small>' + sub + '</small></div></div>' +
+           '<div class="fld" style="margin:0 0 11px"><input class="inp" id="f_stk" placeholder="Chercher un Pokémon à ajouter…" ' +
+           'value="' + esc(stickQry) + '"' + noAuto() + '></div>';
+
+  /* resultats de recherche : les familles correspondantes, possedees ou non */
+  var q = norm(stickQry), vus = {}, trouve = [];
+  if(q.length >= 2 && familles){
+    for(var k in familles){
+      if(k.indexOf(q) < 0) continue;
+      var b = familles[k].b;
+      if(!b || vus[norm(b)]) continue;
+      vus[norm(b)] = 1; trouve.push(b);
+      if(trouve.length > 40) break;
+    }
+    trouve.sort(function(a,b2){ return a.localeCompare(b2); });
+    h2 += '<div class="pkH">Résultats</div>';
+    h2 += trouve.length ? trouve.map(stickRow).join('')
+                        : '<div class="pkE">Aucune famille pour cette recherche.</div>';
+  } else if(stickQry){
+    h2 += '<div class="pkE">Tape au moins deux lettres.</div>';
+  }
+
+  /* les familles possedees */
+  var mine = [];
+  for(var m in stickers){
+    if(!stickers[m]) continue;
+    var f = familles && familles[m];
+    mine.push(f && f.b ? f.b : m);
+  }
+  mine.sort(function(a,b3){ return a.localeCompare(b3); });
+  h2 += '<div class="pkH">Mes stickers' + (nb ? ' (' + nb + ')' : '') + '</div>';
+  h2 += mine.length ? mine.map(stickRow).join('')
+                    : '<div class="pkE">Aucun sticker pour l\'instant. Cherche un Pokémon ci-dessus pour en ajouter.</div>';
+  stkView(h2);
+  var inp = $('f_stk');
+  if(inp){
+    inp.oninput = function(){
+      clearTimeout(inp._t);
+      inp._t = setTimeout(function(){ stickQry = inp.value; stkRenderStick(); }, 260);
+    };
+    if(stickQry){ inp.focus(); var v = inp.value; inp.value = ''; inp.value = v; }
+  }
+}
+function stickRow(base){
+  var q = stickQ(base), f = familles && familles[norm(base)];
+  var membres = (f && f.m) ? f.m.filter(function(x){ return norm(x) !== norm(base); }) : [];
+  var sub = membres.length ? membres.join(', ') : 'famille seule';
+  return '<div class="stkRow stickR' + (q ? ' has' : '') + '" data-stkfam="' + esc(base) + '">' +
+         '<div class="rt"><b>' + esc(base) + '</b><small>' + esc(sub) + '</small></div>' +
+         '<div class="rq">' + (q ? q : '—') + '</div></div>';
+}
+
 async function stkRenderInv(){
   var ico = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>';
   function head(sub){
@@ -4509,7 +4626,7 @@ async function stkRenderNever(){
 }
 
 /* ---- journal des mouvements ---- */
-var SRC_LBL = { saisie:'Saisie', lot:'Mis en lot', retour:'Retour de lot', variante:'Variante' };
+var SRC_LBL = { saisie:'Saisie', lot:'Mis en lot', retour:'Retour de lot', variante:'Variante', stickers:'Sticker' };
 
 async function stkRenderJournal(){
   var ico = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>';
@@ -4541,7 +4658,9 @@ async function stkRenderJournal(){
     '<button class="' + (mvFilt === 'all' ? 'on' : '') + '" data-mvf="all">Tout (' + stkMoves.length + ')</button>' +
     '</div></div>';
 
-  var keys = list.map(function(m){ return m.c; });
+  /* un mouvement de sticker porte un nom de famille, pas un identifiant de
+     carte : inutile d'aller chercher une extension qui n'existe pas */
+  var keys = list.filter(function(m){ return m.v !== 'stk'; }).map(function(m){ return m.c; });
   stkView(head('chargement…') + bar);
   await ensureCards(keys);
   if(!stkJournal || tab !== 'stock') return;
@@ -4556,14 +4675,14 @@ async function stkRenderJournal(){
   }
 
   for(var i=0;i<list.length;i++){
-    var m = list[i], c = cdbById[m.c];
+    var m = list[i], stk = (m.v === 'stk'), c = stk ? null : cdbById[m.c];
     var d = new Date(m.t), j = dt(m.t);
     if(j !== jour){ jour = j; h += '<div class="stkJD">' + esc(j) + '</div>'; }
 
     var vs = c ? stkVars(c) : [];
     var det = [];
     if(vs.length > 1 && VAR_FULL[m.v]) det.push(VAR_FULL[m.v]);
-    if(m.e && m.e !== 'nm') det.push(ET_LBL[m.e] || m.e);
+    if(!stk && m.e && m.e !== 'nm') det.push(ET_LBL[m.e] || m.e);
     var si = c ? setInfo(rootSet(c.s)) : null;
     if(si) det.push(si.name);
     if(m.s && SRC_LBL[m.s]) det.push(SRC_LBL[m.s]);
@@ -4747,6 +4866,18 @@ function stkBind(){
       if(stkAdd(p[0], p[1], 'nm', 1)) majCompteur(t, p[0], p[1]);
       return;
     }
+    if((t = e.target.closest('[data-stkst]'))){
+      stkStick = true; stkInv = false; stkNever = false; stkJournal = false;
+      stickQry = ''; window.scrollTo(0,0); render(); return;
+    }
+    if((t = e.target.closest('[data-stksb]'))){
+      stkStick = false; window.scrollTo(0,0); render(); return;
+    }
+    if((t = e.target.closest('[data-stkfam]'))){
+      if(stkLpFired){ stkLpFired = false; return; }   /* l'appui long a deja retire */
+      stickAdd(t.getAttribute('data-stkfam'), 1);
+      stkRenderStick(); return;
+    }
     if((t = e.target.closest('.stkRow[data-stkid]'))){ sheetStkCard(t.getAttribute('data-stkid')); return; }
     /* uniquement depuis l'image : un appui sur le nom ou dans un interstice
        ne doit pas ouvrir la fiche par surprise pendant la saisie */
@@ -4759,6 +4890,19 @@ function stkBind(){
   /* appui long sur un compteur = -1 */
   vw.addEventListener('touchstart', function(e){
     if(tab !== 'stock') return;
+    var tf = e.target.closest('[data-stkfam]');
+    if(tf){
+      stkLpFired = false;
+      clearTimeout(stkLp);
+      stkLp = setTimeout(function(){
+        stkLpFired = true;
+        if(stickAdd(tf.getAttribute('data-stkfam'), -1)){
+          if(navigator.vibrate) navigator.vibrate(18);
+          stkRenderStick();
+        }
+      }, 420);
+      return;
+    }
     var t = e.target.closest('[data-stkv]');
     if(!t) return;
     stkLpFired = false;
