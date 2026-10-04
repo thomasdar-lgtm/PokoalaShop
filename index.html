@@ -673,11 +673,6 @@ pointer-events:none;opacity:.9}
 .aBtn.vnt{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:var(--blu);
 border-color:rgba(56,139,253,.45)}
 .aBtn.vnt svg{width:14px;height:14px;flex:none}
-
-/* raccourci vers l'annonce sur la vignette */
-.aBtn.vint{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:var(--blu);
-border-color:rgba(56,139,253,.45)}
-.aBtn.vint svg{width:14px;height:14px;flex:none}
 </style>
 <script>
 /* execute avant tout rendu : si un jeton valide ou une identite est
@@ -753,7 +748,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.24';
+var APP_VERSION = '4.26';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -1604,9 +1599,6 @@ function card(l){
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' +
     '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>Vinted</a>');
   var nbc = lotCardCount(l);
-  if(l.url) acts.push('<a class="aBtn vint" href="' + esc(l.url) + '" target="_blank" rel="noopener" aria-label="Ouvrir l\'annonce">' +
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' +
-    '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>Vinted</a>');
   acts.push('<button class="aBtn" data-pk="' + l.id + '">Cartes' +
             (nbc ? '<span class="lotCB">' + nbc + '</span>' : '') + '</button>');
   acts.push('<button class="aBtn" data-open="' + l.id + '" aria-label="Modifier"><span style="width:13px;height:13px;display:inline-block;vertical-align:-2px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/> <path d="m15 5 4 4"/></svg></span></button>');
@@ -5228,10 +5220,26 @@ async function pickRender(q){
   /* Par defaut on propose toute la famille du Pokemon du lot ; les pastilles
      permettent de se restreindre a un membre, et le champ de recherche sert
      a chercher autre chose. */
-  var base = (q && q.trim()) ? q : (l.poke || '');
-  var fam = familleDe(base);
+  /* Champ vide : la famille du Pokemon du lot, avec ses pastilles.
+     Champ rempli : meme analyse que la recherche du Stock (stkParse) —
+     « ronflex » ne donne que Ronflex, « ronflex 109 » ce numero,
+     « ronflex crz » cette extension. Plus de pastilles dans ce cas. */
+  var tape = !!(q && q.trim());
+  var P = tape ? stkParse(q) : null;
+  var base = tape ? P.nom : (l.poke || '');
+  var fam = tape ? null : familleDe(base);
   if(pickFam && (!fam || fam.indexOf(pickFam) < 0)) pickFam = null;
   var cibles = pickFam ? [pickFam] : (fam || [base]);
+  var filtreSid = null;
+  if(P && P.sids){ filtreSid = {}; for(var fs0=0;fs0<P.sids.length;fs0++) filtreSid[P.sids[fs0]] = 1; }
+  function pickGarde(id){
+    if(!P || (!P.num && !filtreSid)) return true;
+    var d = id.lastIndexOf('-');
+    if(d < 0) return false;
+    if(P.num && stkNum(id.slice(d + 1)) !== P.num) return false;
+    if(filtreSid && !filtreSid[id.slice(0, d)]) return false;
+    return true;
+  }
 
   var avail = [];
   if(nameIdx){
@@ -5242,7 +5250,7 @@ async function pickRender(q){
       for(var nm in nameIdx){
         if(nm.indexOf(n) < 0) continue;
         var a = nameIdx[nm];
-        for(var i=0;i<a.length;i++) ids[a[i]] = 1;
+        for(var i=0;i<a.length;i++) if(pickGarde(a[i])) ids[a[i]] = 1;
       }
     }
     for(var k in stock){
@@ -5284,15 +5292,20 @@ async function pickRender(q){
     }
   }
 
-  if(mine.length) h += '<div class="pkH">Dans ce lot</div>' + pickRows(mine, inLot);
-
+  /* Recherche tapee : ses resultats passent avant les cartes du lot, sinon
+     ils tombent sous la liste du lot, hors de l'ecran. */
+  var hLot = mine.length ? '<div class="pkH">Dans ce lot</div>' + pickRows(mine, inLot) : '';
+  var hRes = '';
   if(cibles.length && norm(cibles[0]).length >= 2){
-    h += '<div class="pkH">Disponible en stock</div>';
-    h += avail.length ? pickRows(avail, inLot)
-                      : '<div class="pkE">Aucun exemplaire en stock pour cette recherche.</div>';
+    hRes = '<div class="pkH">' + (tape ? 'Résultats en stock' : 'Disponible en stock') + '</div>' +
+           (avail.length ? pickRows(avail, inLot)
+                         : '<div class="pkE">Aucun exemplaire en stock pour cette recherche.</div>');
+  } else if(tape){
+    hRes = '<div class="pkE">Tape au moins deux lettres du nom, par exemple « salamèche 8 ».</div>';
   } else if(!mine.length){
-    h += '<div class="pkE">Tape au moins deux lettres pour chercher dans ton stock.</div>';
+    hRes = '<div class="pkE">Tape au moins deux lettres pour chercher dans ton stock.</div>';
   }
+  h += tape ? (hRes + hLot) : (hLot + hRes);
 
   h += '<div class="shF"><button class="bP" id="k_pk">Terminé</button></div>';
   if(mine.length) h += '<button class="dgr" id="k_pkr">Tout remettre en stock</button>';
