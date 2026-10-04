@@ -761,7 +761,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.30';
+var APP_VERSION = '4.31';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -1446,7 +1446,7 @@ function render(){
   $('s4').textContent = eur0(rev);
   setBadge('nb2', afaire);
   $('stats').classList.toggle('hide', tab !== 'vitrine' && tab !== 'histo');
-  $('srch').classList.toggle('hide', tab === 'stock' && (!!stkSet || stkJournal || stkInv || stkNever));
+  $('srch').classList.toggle('hide', tab === 'stock' && (!!stkSet || stkJournal || stkInv || stkNever || stkStick));
   $('qClr').classList.toggle('hide', !query());
 
   if(selMode) updateSelBar();
@@ -4420,7 +4420,9 @@ async function stkRenderStick(){
     h2 += '<div class="pkE">Tape au moins deux lettres.</div>';
   }
 
-  /* les familles possedees */
+  /* les familles possedees : masquees pendant une recherche, dont les
+     resultats incluent deja celles qu'on possede (sinon doublons) */
+  if(q.length < 2){
   var mine = [];
   for(var m in stickers){
     if(!stickers[m]) continue;
@@ -4431,6 +4433,7 @@ async function stkRenderStick(){
   h2 += '<div class="pkH">Mes stickers' + (nb ? ' (' + nb + ')' : '') + '</div>';
   h2 += mine.length ? '<div class="stkSG">' + mine.map(stickRow).join('') + '</div>'
                     : '<div class="pkE">Aucun sticker pour l\'instant. Cherche un Pokémon ci-dessus pour en ajouter.</div>';
+  }
   stkView(h2);
   var inp = $('f_stk');
   if(inp){
