@@ -771,7 +771,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.35';
+var APP_VERSION = '4.36';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -4496,10 +4496,11 @@ async function stkRenderStick(){
   var tot = stickTotal(), nb = 0;
   for(var z in stickers) nb++;
   var sub = nb ? (nb + ' famille' + (nb > 1 ? 's' : '') + ' · ' + tot + ' sticker' + (tot > 1 ? 's' : '')) : 'aucun sticker';
-  var h2 = '<div class="stkBar"><button class="stkBack" data-stksb="1" aria-label="Retour">' + ico + '</button>' +
-           '<div class="stkTit">Stickers<small>' + sub + '</small></div></div>' +
+  var tete = '<div class="stkBar"><button class="stkBack" data-stksb="1" aria-label="Retour">' + ico + '</button>' +
+           '<div class="stkTit">Stickers<small id="stk_sub">' + sub + '</small></div></div>' +
            '<div class="fld" style="margin:0 0 11px"><input class="inp" id="f_stk" placeholder="Chercher un Pokémon à ajouter…" ' +
            'value="' + esc(stickQry) + '"' + noAuto() + '></div>';
+  var h2 = '';
 
   /* resultats de recherche : les familles correspondantes, possedees ou non */
   var q = norm(stickQry), vus = {}, trouve = [];
@@ -4533,7 +4534,15 @@ async function stkRenderStick(){
   h2 += mine.length ? '<div class="stkSG">' + mine.map(stickRow).join('') + '</div>'
                     : '<div class="pkE">Aucun sticker pour l\'instant. Cherche un Pokémon ci-dessus pour en ajouter.</div>';
   }
-  stkView(h2);
+  /* Le champ n'est construit qu'une fois : le reconstruire pendant la
+     frappe cassait le mot en cours du clavier Android (lettres perdues ou
+     doublees). Seuls le sous-titre et les resultats sont rafraichis. */
+  if($('f_stk') && $('stk_res')){
+    $('stk_sub').textContent = sub;
+    $('stk_res').innerHTML = h2;
+    return;
+  }
+  stkView(tete + '<div id="stk_res">' + h2 + '</div>');
   var inp = $('f_stk');
   if(inp){
     inp.oninput = function(){
