@@ -771,7 +771,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.36';
+var APP_VERSION = '4.37';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2559,9 +2559,17 @@ document.addEventListener('touchstart', function(e){
   lpX = t.clientX; lpY = t.clientY; lpFired = false;
   clearTimeout(lpTimer);
   lpTimer = setTimeout(function(){
-    lpFired = true; lpTimer = null;
+    lpTimer = null;
     if(navigator.vibrate) navigator.vibrate(18);
-    enterSel(lpId);
+    var idLp = lpId;
+    /* enterSel redessine les vignettes sous le doigt : le bouton touche est
+       retire de la page, et la fin du toucher ne remonte alors jamais jusqu'ici.
+       L'appui long est donc clos tout de suite ; sinon le prochain appui,
+       quel qu'il soit (un lot, « Marquer vendus »...), etait annule. */
+    lpId = null; lpFired = false;
+    suppressClick = true;
+    setTimeout(function(){ suppressClick = false; }, 400);
+    enterSel(idLp);
   }, 420);
 }, { passive:false });
 
