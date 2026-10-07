@@ -771,7 +771,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.32';
+var APP_VERSION = '4.35';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2817,7 +2817,7 @@ var MV_LEGACY  = 'pkstkmv.json';
 var MV_CAP   = 4000;             /* mouvements conserves */
 var CARDS_VER = '15';   /* fichiers cards/ et pks_names.json */
 var SETS_VER  = '18';
-var FAM_VER   = '7';   /* pks_familles.json */   /* pks_sets.json seul, pour ne pas invalider les cartes deja en cache */
+var FAM_VER   = '9';   /* pks_familles.json */   /* pks_sets.json seul, pour ne pas invalider les cartes deja en cache */
 /* Quatre variantes possibles. Le cosmos ne s'active que depuis la fiche :
    aucune source ne le recense, il releve donc toujours d'une saisie manuelle. */
 var VAR_LBL  = { n:'Norm', r:'Rev', h:'Holo', c:'Cosmos', p:'Pokéball', m:'Masterball' };
@@ -3763,10 +3763,30 @@ function sheetBox(sid){
 /* Famille d'un Pokemon, sous son nom de base : c'est la cle du stock de
    stickers. « Arbok » comme « Abo » renvoient « Abo ». */
 function stickFam(nom){
-  var k = norm(nom || '');
+  var g = stickGroup(norm(nom || ''));
+  return g ? g.b : null;
+}
+/* Regroupement des stickers. Par defaut c'est la famille d'evolution, mais
+   deux exceptions propres aux stickers (le selecteur de cartes, lui, garde
+   les familles telles quelles) :
+   - Evoli : chaque membre a ses propres stickers (Aquali seul, Pyroli seul...)
+   - Nidoran : male et femelle et leurs evolutions forment un seul groupe.
+     norm('Nidoran♀') = norm('Nidoran♂') = 'nidoran' : c'est deja la cle de
+     stock des deux, rien a migrer. */
+var STICK_SEPARE = { evoli: 1 };
+var STICK_FUSION = { nidoran: { b: 'Nidoran', m: ['Nidoran♀', 'Nidorina', 'Nidoqueen', 'Nidoran♂', 'Nidorino', 'Nidoking'] } };
+function stickGroup(k){
   if(!k || !familles) return null;
   var f = familles[k];
-  return f ? (f.b || nom) : null;
+  if(!f) return null;
+  var kb = norm(f.b || '');
+  if(STICK_FUSION[kb]) return STICK_FUSION[kb];
+  if(STICK_SEPARE[kb]){
+    var m = f.m || [];
+    for(var i=0;i<m.length;i++) if(norm(m[i]) === k) return { b: m[i], m: [m[i]] };
+    return { b: f.b, m: [f.b] };
+  }
+  return { b: f.b, m: f.m || [f.b] };
 }
 function stickQ(base){ return stickers[norm(base || '')] || 0; }
 function stickAdd(base, d, src){
@@ -4486,7 +4506,7 @@ async function stkRenderStick(){
   if(q.length >= 2 && familles){
     for(var k in familles){
       if(k.indexOf(q) < 0) continue;
-      var b = familles[k].b;
+      var gr = stickGroup(k), b = gr && gr.b;
       if(!b || vus[norm(b)]) continue;
       vus[norm(b)] = 1; trouve.push(b);
       if(trouve.length > 40) break;
@@ -4505,8 +4525,8 @@ async function stkRenderStick(){
   var mine = [];
   for(var m in stickers){
     if(!stickers[m]) continue;
-    var f = familles && familles[m];
-    mine.push(f && f.b ? f.b : m);
+    var gm = stickGroup(m);
+    mine.push(gm ? gm.b : m);
   }
   mine.sort(function(a,b3){ return a.localeCompare(b3); });
   h2 += '<div class="pkH">Mes stickers' + (nb ? ' (' + nb + ')' : '') + '</div>';
@@ -4524,8 +4544,8 @@ async function stkRenderStick(){
   }
 }
 function stickRow(base){
-  var q = stickQ(base), f = familles && familles[norm(base)];
-  var membres = (f && f.m) ? f.m.filter(function(x){ return norm(x) !== norm(base); }) : [];
+  var q = stickQ(base), f = stickGroup(norm(base));
+  var membres = (f && f.m) ? f.m.filter(function(x){ return x !== base && norm(x) !== norm(base); }) : [];
   var sub = membres.length ? membres.join(', ') : 'famille seule';
   /* boutons plutot qu'appui court et long : une seule quantite par famille,
      aucune variante a distinguer, le geste doit rester simple */
@@ -5229,8 +5249,8 @@ function lotCardCount(l){
 function lotStickTxt(l){
   var m = lotSticks(l), out = [];
   for(var k in m){
-    var f = familles && familles[k];
-    out.push((f && f.b ? f.b : k) + (m[k] > 1 ? ' ×' + m[k] : ''));
+    var f = stickGroup(k);
+    out.push((f ? f.b : k) + (m[k] > 1 ? ' ×' + m[k] : ''));
   }
   return out.join(', ');
 }
@@ -5543,8 +5563,8 @@ async function sheetStick(id){
 }
 function stpRow(base){
   var k = norm(base), q = lotSticks(stpLot)[k] || 0, dispo = stickQ(base);
-  var f = familles && familles[k];
-  var membres = (f && f.m) ? f.m.filter(function(x){ return norm(x) !== k; }) : [];
+  var f = stickGroup(k);
+  var membres = (f && f.m) ? f.m.filter(function(x){ return x !== base && norm(x) !== k; }) : [];
   return '<div class="stkS' + (q ? ' has' : '') + '">' +
          '<div class="stkN"><b>' + esc(base) + '</b><small>' +
          esc((membres.length ? membres.join(', ') + ' · ' : '') + 'stock : ' + dispo) + '</small></div>' +
@@ -5558,8 +5578,8 @@ function stpRender(q){
   var m = lotSticks(l), mine = [], dans = {};
   for(var k in m){
     if(!m[k]) continue;
-    var f = familles && familles[k];
-    mine.push(f && f.b ? f.b : k);
+    var f = stickGroup(k);
+    mine.push(f ? f.b : k);
     dans[k] = 1;
   }
   mine.sort(function(a, b){ return a.localeCompare(b, 'fr'); });
@@ -5570,7 +5590,7 @@ function stpRender(q){
       var vus = {};
       for(var key in familles){
         if(key.indexOf(n) < 0) continue;
-        var bs = familles[key].b, nb = norm(bs || '');
+        var gs = stickGroup(key), bs = gs && gs.b, nb = norm(bs || '');
         if(!bs || vus[nb] || dans[nb]) continue;
         vus[nb] = 1;
         if(stickQ(bs) > 0) res.push(bs);
