@@ -771,7 +771,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.37';
+var APP_VERSION = '4.38';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2825,7 +2825,7 @@ var MV_LEGACY  = 'pkstkmv.json';
 var MV_CAP   = 4000;             /* mouvements conserves */
 var CARDS_VER = '15';   /* fichiers cards/ et pks_names.json */
 var SETS_VER  = '18';
-var FAM_VER   = '9';   /* pks_familles.json */   /* pks_sets.json seul, pour ne pas invalider les cartes deja en cache */
+var FAM_VER   = '10';   /* pks_familles.json */   /* pks_sets.json seul, pour ne pas invalider les cartes deja en cache */
 /* Quatre variantes possibles. Le cosmos ne s'active que depuis la fiche :
    aucune source ne le recense, il releve donc toujours d'une saisie manuelle. */
 var VAR_LBL  = { n:'Norm', r:'Rev', h:'Holo', c:'Cosmos', p:'Pokéball', m:'Masterball' };
@@ -3790,8 +3790,10 @@ function stickGroup(k){
   var kb = norm(f.b || '');
   if(STICK_FUSION[kb]) return STICK_FUSION[kb];
   if(STICK_SEPARE[kb]){
-    var m = f.m || [];
-    for(var i=0;i<m.length;i++) if(norm(m[i]) === k) return { b: m[i], m: [m[i]] };
+    /* une carte a variante (« Lt. Surge's Jolteon ») porte en 'e' le nom de
+       son espece : c'est elle qui donne le sticker (Voltali) */
+    var m = f.m || [], ke = f.e ? norm(f.e) : k;
+    for(var i=0;i<m.length;i++) if(norm(m[i]) === ke) return { b: m[i], m: [m[i]] };
     return { b: f.b, m: [f.b] };
   }
   return { b: f.b, m: f.m || [f.b] };
