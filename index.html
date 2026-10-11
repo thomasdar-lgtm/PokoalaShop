@@ -783,7 +783,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.42';
+var APP_VERSION = '4.43';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -1070,6 +1070,9 @@ async function boot(){
 
   var hadCache = loadCache();
   if(hadCache){ setSync('busy'); render(); }
+  /* familles chargees des le depart : le regroupement des stickers en depend,
+     y compris le total affiche dans la liste du Stock */
+  famLoad();
 
   if(!tokenValid()){
     if(!hadCache) setSync('busy');
@@ -2868,7 +2871,7 @@ var MV_LEGACY  = 'pkstkmv.json';
 var MV_CAP   = 4000;             /* mouvements conserves */
 var CARDS_VER = '15';   /* fichiers cards/ et pks_names.json */
 var SETS_VER  = '18';
-var FAM_VER   = '10';   /* pks_familles.json */   /* pks_sets.json seul, pour ne pas invalider les cartes deja en cache */
+var FAM_VER   = '11';   /* pks_familles.json */   /* pks_sets.json seul, pour ne pas invalider les cartes deja en cache */
 /* Quatre variantes possibles. Le cosmos ne s'active que depuis la fiche :
    aucune source ne le recense, il releve donc toujours d'une saisie manuelle. */
 var VAR_LBL  = { n:'Norm', r:'Rev', h:'Holo', c:'Cosmos', p:'Pokéball', m:'Masterball' };
@@ -3392,12 +3395,17 @@ function stkRebuild(){
   }
   for(var k2 in myDelta) stock[k2] = (stock[k2] || 0) + myDelta[k2];
   for(var k3 in stock) if(stock[k3] <= 0) delete stock[k3];
+  /* Stickers : chaque cle est rangee sous son groupe ACTUEL (stickCanon).
+     Les fichiers de chaque appareil ne sont jamais reecrits : une cle
+     ancienne (« latias » avant le regroupement Latios / Latias) s'ajoute
+     simplement au groupe. Rien a migrer, rien ne peut etre compte deux fois,
+     et un appareil pas encore a jour reste compatible. */
   stickers = {};
   for(var s=0;s<stkLayers.length;s++){
     var ds = stkLayers[s].stick || {};
-    for(var a in ds) stickers[a] = (stickers[a] || 0) + ds[a];
+    for(var a in ds){ var ca = stickCanon(a); stickers[ca] = (stickers[ca] || 0) + ds[a]; }
   }
-  for(var b in myStick) stickers[b] = (stickers[b] || 0) + myStick[b];
+  for(var b in myStick){ var cb = stickCanon(b); stickers[cb] = (stickers[cb] || 0) + myStick[b]; }
   for(var c in stickers) if(stickers[c] <= 0) delete stickers[c];
 }
 
@@ -3841,9 +3849,16 @@ function stickGroup(k){
   }
   return { b: f.b, m: f.m || [f.b] };
 }
-function stickQ(base){ return stickers[norm(base || '')] || 0; }
+/* cle de stock d'un sticker : celle du groupe actuel. Sans les familles
+   (pas encore chargees), la cle est gardee telle quelle. */
+function stickCanon(k){
+  if(!k || !familles) return k;
+  var g = stickGroup(k);
+  return g ? norm(g.b) : k;
+}
+function stickQ(base){ return stickers[stickCanon(norm(base || ''))] || 0; }
 function stickAdd(base, d, src){
-  var k = norm(base || '');
+  var k = stickCanon(norm(base || ''));
   if(!k) return false;
   var cur = stickers[k] || 0, nv = Math.max(0, cur + d);
   if(nv === cur) return false;
@@ -3864,9 +3879,10 @@ function stickAdd(base, d, src){
 /* Rattacher un sticker a un lot : il quitte le stock, exactement comme une
    carte. Le detacher le recredite. */
 function lotStickSet(l, base, d){
-  var k = norm(base || '');
+  var k = stickCanon(norm(base || ''));
   if(!l || !k) return false;
   if(!l.sticks) l.sticks = {};
+  lotSticks(l);
   var cur = l.sticks[k] || 0;
   if(d > 0){
     if(stickQ(base) < d) return false;        /* pas assez en stock */
@@ -5417,7 +5433,19 @@ function lotRestore(l){
   l.sticks = {};
   return n;
 }
-function lotSticks(l){ return (l && l.sticks) || {}; }
+function lotSticks(l){
+  var s = (l && l.sticks) || {};
+  if(!familles || !l || !l.sticks) return s;
+  /* meme regroupement que le stock : la quantite totale du lot ne change pas */
+  var change = false, out = {};
+  for(var k in s){
+    var c = stickCanon(k);
+    if(c !== k) change = true;
+    out[c] = (out[c] || 0) + s[k];
+  }
+  if(change) l.sticks = out;
+  return l.sticks;
+}
 function lotStickCount(l){
   var m = lotSticks(l), t = 0;
   for(var k in m) t += m[k];
@@ -5431,7 +5459,15 @@ var familles = null, famP = null, pickFam = null;
 function famLoad(){
   if(familles) return Promise.resolve(familles);
   if(famP) return famP;
-  famP = jgetv('./pks_familles.json', FAM_VER).then(function(j){ familles = j; return j; })
+  famP = jgetv('./pks_familles.json', FAM_VER).then(function(j){
+      familles = j;
+      try{
+        stkRebuild();
+        var sb = document.querySelector('[data-stkst] b');
+        if(sb) sb.textContent = stickTotal();
+      }catch(e){}
+      return j;
+    })
     .catch(function(e){ famP = null; familles = {}; return {}; });
   return famP;
 }
