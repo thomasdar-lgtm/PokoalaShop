@@ -348,8 +348,10 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 .stkSrch{position:relative;margin:0 0 10px}
 .stkSrch input{width:100%;background:var(--surf);border:1px solid var(--bd);border-radius:11px;padding:10px 34px 10px 13px;color:var(--tx);font-size:14px;outline:none}
 .stkSrch input::-webkit-search-cancel-button,.stkSrch input::-webkit-search-decoration{-webkit-appearance:none;appearance:none;display:none}
-.letS{flex:none;background:transparent;color:var(--tx3);border:1px solid var(--bd);border-radius:9px;font:inherit;font-size:12px;font-weight:700;padding:5px 6px;max-width:64px}
-.letS option{background:var(--surf);color:var(--tx)}
+.letB{position:relative;flex:none;width:42px;height:42px;border-radius:11px;background:var(--surf);border:1px solid var(--bd);
+color:var(--tx2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;cursor:pointer;overflow:hidden}
+.letB.on{color:var(--blu);border-color:var(--blu);font-size:16px}
+.letS{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px}
 .fldX{position:relative}
 .fldX .inp{padding-right:40px}
 .fldX .fx{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--surf2);border:0;color:var(--tx2);width:22px;height:22px;border-radius:50%;font-size:13px;cursor:pointer;padding:0}
@@ -776,7 +778,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.40';
+var APP_VERSION = '4.41';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -4540,10 +4542,13 @@ async function stkRenderStick(){
   var tete = '<div class="stkBar"><button class="stkBack" data-stksb="1" aria-label="Retour">' + ico + '</button>' +
            '<div class="stkTit">Stickers<small id="stk_sub">' + sub + '</small></div>' +
            /* filtre par lettre, discret : sert surtout a controler l'inventaire */
-           '<select class="letS" id="stk_let" aria-label="Filtrer par lettre"><option value="">A–Z</option>' +
+           /* bouton carre identique au bouton retour ; la liste native, invisible,
+              le recouvre et ouvre le selecteur du telephone */
+           '<label class="letB' + (stickLet ? ' on' : '') + '" id="stk_letB"><span id="stk_letT">' + (stickLet || 'A–Z') + '</span>' +
+           '<select class="letS" id="stk_let" aria-label="Filtrer par lettre"><option value="">Toutes</option>' +
            'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(function(c){
              return '<option value="' + c + '"' + (stickLet === c ? ' selected' : '') + '>' + c + '</option>';
-           }).join('') + '</select></div>' +
+           }).join('') + '</select></label></div>' +
            '<div class="fld" style="margin:0 0 11px"><input class="inp" id="f_stk" placeholder="Chercher un Pokémon à ajouter…" ' +
            'value="' + esc(stickQry) + '"' + noAuto() + '></div>';
   var h2 = '';
@@ -4608,7 +4613,12 @@ async function stkRenderStick(){
     };
     champX(inp, function(){ stickQry = ''; stkRenderStick(); });
     var sl = $('stk_let');
-    if(sl) sl.onchange = function(){ stickLet = sl.value; window.scrollTo(0,0); stkRenderStick(); };
+    if(sl) sl.onchange = function(){
+      stickLet = sl.value;
+      $('stk_letT').textContent = stickLet || 'A–Z';
+      $('stk_letB').classList.toggle('on', !!stickLet);
+      window.scrollTo(0,0); stkRenderStick();
+    };
     if(stickQry){ inp.focus(); var v = inp.value; inp.value = ''; inp.value = v; }
   }
 }
