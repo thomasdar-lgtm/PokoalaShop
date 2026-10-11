@@ -348,6 +348,11 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 .stkSrch{position:relative;margin:0 0 10px}
 .stkSrch input{width:100%;background:var(--surf);border:1px solid var(--bd);border-radius:11px;padding:10px 34px 10px 13px;color:var(--tx);font-size:14px;outline:none}
 .stkSrch input::-webkit-search-cancel-button,.stkSrch input::-webkit-search-decoration{-webkit-appearance:none;appearance:none;display:none}
+.letS{flex:none;background:transparent;color:var(--tx3);border:1px solid var(--bd);border-radius:9px;font:inherit;font-size:12px;font-weight:700;padding:5px 6px;max-width:64px}
+.letS option{background:var(--surf);color:var(--tx)}
+.fldX{position:relative}
+.fldX .inp{padding-right:40px}
+.fldX .fx{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--surf2);border:0;color:var(--tx2);width:22px;height:22px;border-radius:50%;font-size:13px;cursor:pointer;padding:0}
 .stkSrch .sx{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--surf2);border:0;color:var(--tx2);width:22px;height:22px;border-radius:50%;font-size:13px;cursor:pointer}
 .stkWrap{display:block}
 .stkFB{display:flex;gap:6px;margin:0 0 11px}
@@ -771,7 +776,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.38';
+var APP_VERSION = '4.40';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2690,7 +2695,33 @@ for(var n=0;n<navs.length;n++){
 }
 
 $('q').oninput = render;
-$('qClr').onclick = function(){ $('q').value = ''; $('q').blur(); render(); };
+$('qClr').onclick = function(){ $('q').value = ''; render(); $('q').focus(); };
+/* Boutons × des recherches : l'appui ne doit pas retirer le focus du champ,
+   sinon Android ferme le clavier. Empecher le mousedown garde le focus. */
+document.addEventListener('mousedown', function(e){
+  if(e.target.closest && e.target.closest('#qClr,#stkqx,.fx')) e.preventDefault();
+}, true);
+/* × dans un champ de recherche de panneau ou d'ecran. vider() relance la
+   recherche avec un champ vide ; le champ garde le focus. */
+function champX(inp, vider){
+  if(!inp || inp._x) return;
+  inp._x = true;
+  inp.parentNode.classList.add('fldX');
+  var b = document.createElement('button');
+  b.type = 'button'; b.className = 'fx'; b.textContent = '×';
+  b.setAttribute('aria-label', 'Effacer');
+  function maj(){ b.classList.toggle('hide', !inp.value); }
+  b.onclick = function(e){
+    e.preventDefault();
+    clearTimeout(inp._t);
+    inp.value = ''; maj();
+    vider();
+    inp.focus();
+  };
+  inp.addEventListener('input', maj);
+  inp.parentNode.appendChild(b);
+  maj();
+}
 $('selCancel').onclick = exitSel;
 $('selGo').onclick = sheetMultiSell;
 $('fab').onclick = function(){ if(tab === 'afaire') sheetQuick(); else sheetNew('vitrine'); };
@@ -4493,7 +4524,7 @@ async function stkRenderSearch(q){
 /* ---- inventaire complet : toutes les cartes possedees ---- */
 /* Ecran des stickers : les familles possedees, et une recherche pour en
    ajouter une parmi les 366 existantes. */
-var stickQry = '', stkStick = false;
+var stickQry = '', stkStick = false, stickLet = '';
 async function stkRenderStick(){
   /* les familles ne sont chargees que par le selecteur de cartes : sans elles
      la recherche ne peut rien trouver, il faut donc les demander ici aussi */
@@ -4507,7 +4538,12 @@ async function stkRenderStick(){
   for(var z in stickers) nb++;
   var sub = nb ? (nb + ' famille' + (nb > 1 ? 's' : '') + ' · ' + tot + ' sticker' + (tot > 1 ? 's' : '')) : 'aucun sticker';
   var tete = '<div class="stkBar"><button class="stkBack" data-stksb="1" aria-label="Retour">' + ico + '</button>' +
-           '<div class="stkTit">Stickers<small id="stk_sub">' + sub + '</small></div></div>' +
+           '<div class="stkTit">Stickers<small id="stk_sub">' + sub + '</small></div>' +
+           /* filtre par lettre, discret : sert surtout a controler l'inventaire */
+           '<select class="letS" id="stk_let" aria-label="Filtrer par lettre"><option value="">A–Z</option>' +
+           'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(function(c){
+             return '<option value="' + c + '"' + (stickLet === c ? ' selected' : '') + '>' + c + '</option>';
+           }).join('') + '</select></div>' +
            '<div class="fld" style="margin:0 0 11px"><input class="inp" id="f_stk" placeholder="Chercher un Pokémon à ajouter…" ' +
            'value="' + esc(stickQry) + '"' + noAuto() + '></div>';
   var h2 = '';
@@ -4540,9 +4576,20 @@ async function stkRenderStick(){
     mine.push(gm ? gm.b : m);
   }
   mine.sort(function(a,b3){ return a.localeCompare(b3); });
+  if(stickLet){
+    /* initiale sans accent : Évoli est rangé a E */
+    var lc = stickLet.toLowerCase(), nl = 0;
+    mine = mine.filter(function(x){ return norm(x).charAt(0) === lc; });
+    for(var il=0;il<mine.length;il++) nl += stickQ(mine[il]);
+    h2 += '<div class="pkH">Lettre ' + stickLet + ' · ' + mine.length + ' famille' + (mine.length > 1 ? 's' : '') +
+          ' · ' + nl + ' sticker' + (nl > 1 ? 's' : '') + '</div>';
+    h2 += mine.length ? '<div class="stkSG">' + mine.map(stickRow).join('') + '</div>'
+                      : '<div class="pkE">Aucun sticker en stock pour la lettre ' + stickLet + '.</div>';
+  } else {
   h2 += '<div class="pkH">Mes stickers' + (nb ? ' (' + nb + ')' : '') + '</div>';
   h2 += mine.length ? '<div class="stkSG">' + mine.map(stickRow).join('') + '</div>'
                     : '<div class="pkE">Aucun sticker pour l\'instant. Cherche un Pokémon ci-dessus pour en ajouter.</div>';
+  }
   }
   /* Le champ n'est construit qu'une fois : le reconstruire pendant la
      frappe cassait le mot en cours du clavier Android (lettres perdues ou
@@ -4559,6 +4606,9 @@ async function stkRenderStick(){
       clearTimeout(inp._t);
       inp._t = setTimeout(function(){ stickQry = inp.value; stkRenderStick(); }, 260);
     };
+    champX(inp, function(){ stickQry = ''; stkRenderStick(); });
+    var sl = $('stk_let');
+    if(sl) sl.onchange = function(){ stickLet = sl.value; window.scrollTo(0,0); stkRenderStick(); };
     if(stickQry){ inp.focus(); var v = inp.value; inp.value = ''; inp.value = v; }
   }
 }
@@ -5080,7 +5130,7 @@ function stkBind(){
     }
     if((t = e.target.closest('[data-stkst]'))){
       stkStick = true; stkInv = false; stkNever = false; stkJournal = false;
-      stickQry = ''; window.scrollTo(0,0); render(); return;
+      stickQry = ''; stickLet = ''; window.scrollTo(0,0); render(); return;
     }
     if((t = e.target.closest('[data-stksb]'))){
       stkStick = false; window.scrollTo(0,0); render(); return;
@@ -5469,6 +5519,7 @@ async function pickRender(q){
       '<div id="pk_res">' + h + '</div>');
     inp = $('f_pick');
     if(inp) inp.oninput = function(){ clearTimeout(inp._t); inp._t = setTimeout(function(){ pickRender(inp.value); }, 260); };
+    champX(inp, function(){ pickRender(''); });
   }
   /* Termine enchaine sur la fenetre des stickers du meme lot */
   $('k_pk').onclick = function(){
@@ -5652,6 +5703,7 @@ function stpRender(q){
     '<div class="shF"><button class="bP" id="k_stp">Terminé</button></div>');
   var inp = $('f_stp');
   if(inp) inp.oninput = function(){ clearTimeout(inp._t); inp._t = setTimeout(function(){ stpRender(inp.value); }, 260); };
+  champX(inp, function(){ stpRender(''); });
   $('k_stp').onclick = function(){ closeSheet(); };
 }
 document.addEventListener('click', function(e){
