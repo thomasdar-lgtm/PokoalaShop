@@ -789,7 +789,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.44';
+var APP_VERSION = '4.45';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -1075,6 +1075,22 @@ async function boot(){
   $('app').classList.remove('hide');
 
   var hadCache = loadCache();
+  /* modifications restees en attente (app fermee avant confirmation) :
+     elles reprennent leur place a l'ecran et seront reecrites */
+  pendLoad();
+  for(var pid in pendLots){
+    var pv = pendLots[pid], at = -1;
+    savedLots[pid] = pv;
+    for(var li=0;li<lots.length;li++) if(lots[li].id === pid){ at = li; break; }
+    if(pv.deleted){
+      if(at >= 0) lots.splice(at, 1);
+      lotsDel = lotsDel.filter(function(x){ return x.id !== pid; });
+      if(pv.st) lotsDel.unshift(pv);
+    }
+    else if(at >= 0){ if(String(pv.updatedAt || '') > String(lots[at].updatedAt || '')) lots[at] = pv; }
+    else lots.unshift(pv);
+    hadCache = true;
+  }
   if(hadCache){ setSync('busy'); render(); }
   /* familles chargees des le depart : le regroupement des stickers en depend,
      y compris le total affiche dans la liste du Stock */
@@ -1124,7 +1140,45 @@ async function boot(){
 /* ═══ DRIVE ═══ */
 function setSync(state){
   var d = $('syncDot'); d.className = 'syncDot' + (state ? ' ' + state : '');
-  $('syncTx').textContent = (state === 'err' ? 'hors ligne · v' : 'v') + APP_VERSION;
+  syncEtat = state || '';
+  var n = pendN();
+  $('syncTx').textContent = (state === 'err' ? 'hors ligne · v' : 'v') + APP_VERSION +
+    (n && state !== 'busy' ? ' · ' + n + ' en attente' : '');
+}
+var syncEtat = '';
+
+/* ═══ MODIFICATIONS EN ATTENTE ═══
+   Toute modification d'un lot est gardee ici, et dans le stockage du
+   telephone, tant qu'une RELECTURE de Drive n'a pas prouve qu'elle y est.
+   Un echec d'ecriture (jeton expire, reseau), une fermeture de l'app ou une
+   ecriture concurrente de l'autre appareil ne peuvent donc plus la perdre :
+   elle est reecrite jusqu'a confirmation. */
+var pendLots = {}, saveRetryT = null;
+function pendKey(){ return LS + 'pend_' + (who || 'x'); }
+function pendLoad(){
+  try{ pendLots = JSON.parse(localStorage.getItem(pendKey()) || '{}') || {}; }catch(e){ pendLots = {}; }
+}
+function pendSave(){
+  try{ localStorage.setItem(pendKey(), JSON.stringify(pendLots)); }catch(e){}
+  setSync(syncEtat);
+}
+function pendN(){ var n = 0; for(var k in pendLots) n++; return n; }
+/* une modification est confirmee des que Drive contient cette version ou
+   une version plus recente (y compris de l'autre appareil) */
+function pendConfirm(remote){
+  var chg = false;
+  for(var i=0;i<remote.length;i++){
+    var r = remote[i], p = r && pendLots[r.id];
+    if(p && String(r.updatedAt || '') >= String(p.updatedAt || '')){ delete pendLots[r.id]; chg = true; }
+  }
+  return chg;
+}
+function retrySave(){
+  clearTimeout(saveRetryT);
+  saveRetryT = setTimeout(function(){
+    if(!pendN() || document.hidden) return;
+    if(tokenValid()) save(); else reauth();
+  }, 20000);
 }
 
 async function listFiles(){
@@ -1150,22 +1204,43 @@ async function sync(full){
   setSync('busy');
   try{
     var files = await listFiles();
-    var map = {};
+    var map = {}, ownVus = {};
     myFileId = null;
     for(var i=0;i<files.length;i++){
       var f = files[i];
       if(f.name === myFile) myFileId = f.id;
       var rr = await api('https://www.googleapis.com/drive/v3/files/' + f.id + '?alt=media');
-      var data = await rr.json().catch(function(){ return {}; });
-      if(data && data.lots) mergeInto(map, data.lots);
+      /* un fichier illisible interrompt la synchro : afficher une liste
+         incomplete ferait croire a des lots disparus */
+      if(!rr.ok) throw new Error('lecture');
+      var data = await rr.json();
+      if(data && data.lots){ mergeInto(map, data.lots); pendConfirm(data.lots); }
       if(f.name === myFile && data){
         var own = data.lots || [];
+        ownVus = {};
         for(var z=0;z<own.length;z++){
+          ownVus[own[z].id] = own[z];
           var cur = savedLots[own[z].id];
           if(!cur || String(own[z].updatedAt||'') > String(cur.updatedAt||'')) savedLots[own[z].id] = own[z];
         }
       }
     }
+    /* convergence : une version connue ici plus recente que celle de notre
+       fichier (ecriture ratee, ou ecrasee par l'autre appareil) repasse en
+       attente : elle sera reecrite et reste affichee d'ici la */
+    for(var sid in savedLots){
+      var dv = ownVus[sid], sv = savedLots[sid];
+      if(dv && String(sv.updatedAt || '') <= String(dv.updatedAt || '')) continue;
+      if(map[sid] && String(map[sid].updatedAt || '') >= String(sv.updatedAt || '')) continue;
+      pendLots[sid] = JSON.parse(JSON.stringify(sv));
+    }
+    /* les modifications pas encore confirmees restent affichees : jamais de
+       retour en arriere a l'ecran */
+    for(var pid in pendLots){
+      var pv = pendLots[pid];
+      if(!map[pid] || String(pv.updatedAt || '') > String(map[pid].updatedAt || '')) map[pid] = pv;
+    }
+    var aEcrire = pendN() > 0;
     var out = [], sup = [];
     for(var k in map){
       /* un lot supprime n'est pas efface : il garde toutes ses donnees et
@@ -1178,7 +1253,9 @@ async function sync(full){
     lots = out; lotsDel = sup;
     offline = false;
     saveCache();
+    pendSave();
     setSync('');
+    if(aEcrire) save();
     /* Ne pas reconstruire une vue du Stock en cours de consultation : la
        synchronisation ne concerne que les lots, et un rafraichissement
        complet ferait remonter le defilement en haut toutes les 12 secondes,
@@ -1194,22 +1271,34 @@ async function sync(full){
 var savedLots = {};
 async function save(){
   if(saving){ dirty = true; return; }
+  if(!tokenValid()){ retrySave(); reauth(); return; }
   saving = true; setSync('busy');
+  var ok = false;
   try{
+    /* jamais de second fichier : avant d'en creer un, on cherche le notre */
+    if(!myFileId){
+      var fl = await listFiles();
+      for(var fi=0;fi<fl.length;fi++) if(fl[fi].name === myFile){ myFileId = fl[fi].id; break; }
+    }
     /* Relire le distant avant d'ecrire : l'app ecrit le fichier entier depuis
-       sa memoire, et la synchro automatique est suspendue tant qu'un panneau
-       est ouvert. Sans cette fusion, un enregistrement fait apres une longue
-       saisie effacerait les lots crees entre-temps sur l'autre appareil. */
+       sa memoire. Sans cette fusion, un enregistrement effacerait les lots
+       ecrits entre-temps par l'autre appareil. Si la relecture echoue, on
+       n'ecrit PAS : ecrire a l'aveugle pourrait effacer ces lots. */
     if(myFileId){
-      try{
-        var rr0 = await api('https://www.googleapis.com/drive/v3/files/' + myFileId + '?alt=media');
-        var rem0 = await rr0.json();
-        var rl0 = (rem0 && rem0.lots) || [];
-        for(var q0=0;q0<rl0.length;q0++){
-          var cur0 = savedLots[rl0[q0].id];
-          if(!cur0 || String(rl0[q0].updatedAt || '') > String(cur0.updatedAt || '')) savedLots[rl0[q0].id] = rl0[q0];
-        }
-      }catch(e0){ /* distant illisible : on ecrit ce qu'on a */ }
+      var rr0 = await api('https://www.googleapis.com/drive/v3/files/' + myFileId + '?alt=media');
+      if(!rr0.ok) throw new Error('lecture');
+      var rem0 = await rr0.json();
+      var rl0 = (rem0 && rem0.lots) || [];
+      for(var q0=0;q0<rl0.length;q0++){
+        var cur0 = savedLots[rl0[q0].id];
+        if(!cur0 || String(rl0[q0].updatedAt || '') > String(cur0.updatedAt || '')) savedLots[rl0[q0].id] = rl0[q0];
+      }
+      pendConfirm(rl0);
+    }
+    /* les modifications en attente passent toujours dans l'ecriture */
+    for(var pk in pendLots){
+      var cp = savedLots[pk];
+      if(!cp || String(pendLots[pk].updatedAt || '') >= String(cp.updatedAt || '')) savedLots[pk] = pendLots[pk];
     }
     var body = { v: APP_VERSION, updated: now(), lots: [] };
     for(var k in savedLots) body.lots.push(savedLots[k]);
@@ -1221,16 +1310,24 @@ async function save(){
       });
       myFileId = (await m.json()).id;
     }
-    await api('https://www.googleapis.com/upload/drive/v3/files/' + myFileId + '?uploadType=media', {
+    var wr = await api('https://www.googleapis.com/upload/drive/v3/files/' + myFileId + '?uploadType=media', {
       method:'PATCH', headers:{'Content-Type':'application/json'}, body: json
     });
+    if(!wr.ok) throw new Error('ecriture');
+    /* verification : ce qui est confirme sort de l'attente, le reste sera
+       reecrit */
+    var rv = await api('https://www.googleapis.com/drive/v3/files/' + myFileId + '?alt=media');
+    if(rv.ok){ var jv = await rv.json(); pendConfirm((jv && jv.lots) || []); }
+    ok = true;
     setSync('');
     makeBackup(false).catch(function(){});
   }catch(e){
     if(e.message !== 'auth') setSync('err');
   }
   saving = false;
+  pendSave();
   if(dirty){ dirty = false; save(); }
+  else if(pendN()) retrySave();
 }
 
 /* écrit un lot : dans mon fichier + dans la vue locale */
@@ -1238,11 +1335,16 @@ function commit(lot){
   lot.updatedAt = now();
   lot.by = who || 'moi';
   savedLots[lot.id] = lot;
+  pendLots[lot.id] = JSON.parse(JSON.stringify(lot));
+  pendSave();
   var i = -1;
   for(var j=0;j<lots.length;j++){ if(lots[j].id === lot.id){ i = j; break; } }
   if(lot.deleted){ if(i>=0) lots.splice(i,1); }
   else if(i>=0) lots[i] = lot;
   else lots.unshift(lot);
+  /* la corbeille suit tout de suite, sans attendre la synchro */
+  lotsDel = lotsDel.filter(function(x){ return x.id !== lot.id; });
+  if(lot.deleted && lot.st) lotsDel.unshift(lot);
   render();
   saveCache();
   save();
@@ -1413,13 +1515,16 @@ async function restoreBackup(id){
     if(!l || !l.id) continue;
     l.updatedAt = stamp; l.by = who; delete l.deleted;
     savedLots[l.id] = l;
+    pendLots[l.id] = l;
     seen[l.id] = true;
   }
   for(var j=0;j<lots.length;j++){
     if(!seen[lots[j].id]){
       savedLots[lots[j].id] = { id: lots[j].id, deleted: true, updatedAt: stamp, by: who };
+      pendLots[lots[j].id] = savedLots[lots[j].id];
     }
   }
+  pendSave();
   await save();
   await sync(true);
   toast(data.lots.length + ' lots restaurés');
@@ -2799,6 +2904,10 @@ window.addEventListener('online', function(){
   if(!booted) return;
   if(tokenValid()) sync(false); else reauth();
 });
+/* avant que l'app passe en arriere-plan : derniere tentative d'ecriture */
+document.addEventListener('visibilitychange', function(){
+  if(document.hidden && booted && pendN() && tokenValid() && !saving) save();
+});
 
 /* ═══ BOOT ═══ */
 /* Une session connue permet d'afficher l'interface immediatement. Sans ca,
@@ -3453,7 +3562,7 @@ function stkSaveCache(){
   try{
     localStorage.setItem(LS + 'stkc', JSON.stringify({
       mine: STK_MINE, layers: stkLayers, delta: myDelta, ov: myOv, done: myDone, box: myBox, stick: myStick, stamp: myStamp,
-      mvCount: mvCount, id: stkFileId
+      mvCount: mvCount, id: stkFileId, pend: stkPending.length
     }));
   }catch(e){ /* quota plein : on s'en passe */ }
 }
@@ -3470,6 +3579,16 @@ function stkLoadCache(){
     myDone = c.done || {};
     myStamp = c.stamp || 0;
     mvCount = c.mvCount || 0;
+    /* Gestes saisis mais pas encore ecrits sur Drive (app fermee trop tot) :
+       sans ce rappel, la lecture de notre fichier Drive, plus ancien,
+       ecrasait ces gestes au demarrage. Le fichier de cet appareil n'est
+       ecrit que par lui : la version locale est donc toujours la plus
+       recente, et elle est reecrite. */
+    if(c.pend > 0 && !stkPending.length){
+      stkPending.push({ t: now(), c: '-', v: '-', e: '-', d: 0, w: who || '', s: 'reprise' });
+      stkQueue();
+    }
+    mvLocalLoad();
     stkRebuild();
     stkApplyStates();
     return true;
@@ -3749,8 +3868,10 @@ async function mvSave(){
     if(!mvFileId) mvFileId = await driveFindExact(MV_MINE);
     var base = [];
     if(mvFileId){
-      try{ var j = await driveRead(mvFileId); base = (j && j.moves) || []; }
-      catch(e){ base = []; }
+      /* relecture obligatoire : sans elle, l'ecriture remplacerait tout
+         l'historique par les seuls nouveaux mouvements */
+      var j = await driveRead(mvFileId);
+      base = (j && j.moves) || [];
     }
     var vus = {};
     for(var i=0;i<base.length;i++) vus[base[i].t + '|' + base[i].c + '|' + base[i].d] = 1;
@@ -3763,11 +3884,26 @@ async function mvSave(){
     mvFileId = await driveWrite(mvFileId, MV_MINE,
       JSON.stringify({ moves: base, dev: DEV, at: now(), v: APP_VERSION }));
     mvNew = mvNew.slice(envoi.length);
+    mvLocal();
   }catch(e){ /* on retentera : mvNew est conserve */ }
   mvSaving = false;
   if(mvNew.length) mvQueue();
 }
-function mvQueue(){ clearTimeout(mvTimer); mvTimer = setTimeout(mvSave, 20000); }
+function mvQueue(){ mvLocal(); clearTimeout(mvTimer); mvTimer = setTimeout(mvSave, 20000); }
+/* mouvements pas encore ecrits : gardes sur l'appareil jusqu'a l'ecriture */
+function mvLocal(){ try{ localStorage.setItem(LS + 'mvp', JSON.stringify(mvNew)); }catch(e){} }
+function mvLocalLoad(){
+  var sv = [];
+  try{ sv = JSON.parse(localStorage.getItem(LS + 'mvp') || '[]') || []; }catch(e){ sv = []; }
+  if(!sv.length) return;
+  var vus = {};
+  for(var i=0;i<mvNew.length;i++) vus[mvNew[i].t + '|' + mvNew[i].c + '|' + mvNew[i].d] = 1;
+  for(var k=0;k<sv.length;k++){
+    var cle = sv[k].t + '|' + sv[k].c + '|' + sv[k].d;
+    if(!vus[cle]){ mvNew.push(sv[k]); vus[cle] = 1; }
+  }
+  mvQueue();
+}
 
 
 /* Boite d'une extension : les sous-extensions suivent leur parent, puisque
