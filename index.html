@@ -348,6 +348,12 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 .stkSrch{position:relative;margin:0 0 10px}
 .stkSrch input{width:100%;background:var(--surf);border:1px solid var(--bd);border-radius:11px;padding:10px 34px 10px 13px;color:var(--tx);font-size:14px;outline:none}
 .stkSrch input::-webkit-search-cancel-button,.stkSrch input::-webkit-search-decoration{-webkit-appearance:none;appearance:none;display:none}
+.fmbR{display:flex;gap:6px;overflow-x:auto;margin:0 0 11px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.fmbR::-webkit-scrollbar{display:none}
+.fmbR .famC{flex:none;display:inline-flex;align-items:center;gap:6px}
+.fmbR .famC.z{opacity:.5}
+.fmbN{font-size:11px;font-weight:800;color:var(--tx3)}
+.fmbR .famC.on .fmbN{color:var(--blu)}
 .letB{flex:none;width:42px;height:42px;border-radius:11px;background:var(--surf);border:1px solid var(--bd);
 color:var(--tx2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;cursor:pointer;padding:0}
 .letB.on{background:rgba(56,139,253,.16);color:var(--blu);border-color:var(--blu);font-size:16px}
@@ -783,7 +789,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.43';
+var APP_VERSION = '4.44';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -4412,10 +4418,83 @@ function stkParse(q){
   return { nom: nom.join(''), num: num, code: code, sids: sids };
 }
 
+/* ---- membres de la famille dans la recherche du Stock ----
+   Une rangee de pastilles propose les autres membres de la famille du Pokemon
+   cherche. Un appui REMPLACE les resultats par ceux de ce membre ; un second
+   appui sur la meme pastille revient au resultat de base. La saisie n'est
+   jamais modifiee : numero et code d'extension s'appliquent aussi au membre. */
+var stkMemb = null, stkMembQ = null, stkMembBase = null, stkPastGarde = null;
+/* remet a jour le chiffre des pastilles apres un geste sur le stock */
+function stkPastQ(){
+  var r = document.querySelector('#view .fmbR');
+  if(!r || !stkPastGarde || !nameIdx) return;
+  var parId = {};
+  for(var sk in stock){ if(stock[sk] > 0){ var s0 = sk.split('|')[0]; parId[s0] = (parId[s0] || 0) + stock[sk]; } }
+  var bs = r.querySelectorAll('[data-fmb]');
+  for(var i=0;i<bs.length;i++){
+    var q = stkChipQ(bs[i].getAttribute('data-fmb'), stkPastGarde, parId);
+    var nEl = bs[i].querySelector('.fmbN');
+    if(nEl) nEl.textContent = q;
+    bs[i].classList.toggle('z', !q);
+  }
+}
+function stkFamOf(n){
+  if(!familles || !n || n.length < 2) return null;
+  if(familles[n]) return familles[n];
+  /* saisie partielle (« axolo ») : la famille n'est retenue que si elle est unique */
+  var f = null;
+  for(var k in familles){
+    if(k.indexOf(n) !== 0) continue;
+    if(f && f.b !== familles[k].b) return null;
+    f = familles[k];
+  }
+  return f;
+}
+function famPastilles(f){
+  var ms = (f && f.m) || [], ns = ms.map(norm), out = [], vu = {};
+  for(var i=0;i<ms.length;i++){
+    var mn = ns[i];
+    if(!mn || vu[mn]) continue;
+    /* une variante de carte (« Nidoking TURBO ») est deja couverte par le
+       membre qu'elle contient : pas de pastille en double */
+    var variante = false;
+    for(var j=0;j<ns.length;j++) if(ns[j] !== mn && ns[j].length >= 3 && mn.indexOf(ns[j]) >= 0) variante = true;
+    if(variante) continue;
+    vu[mn] = 1;
+    out.push({ lab: ms[i].replace(/[♀♂]/g, ''), n: mn });
+  }
+  return out.length > 1 ? out : null;
+}
+/* exemplaires en stock pour un nom, avec les memes filtres que la recherche */
+function stkChipQ(mn, garde, parId){
+  var vus = {}, t = 0;
+  for(var nm in nameIdx){
+    if(nm.indexOf(mn) < 0) continue;
+    var l = nameIdx[nm];
+    for(var i=0;i<l.length;i++){
+      if(vus[l[i]] || !garde(l[i])) continue;
+      vus[l[i]] = 1; t += parId[l[i]] || 0;
+    }
+  }
+  return t;
+}
+document.addEventListener('click', function(e){
+  var t = e.target.closest && e.target.closest('[data-fmb]');
+  if(!t || tab !== 'stock') return;
+  var v = t.getAttribute('data-fmb');
+  if(stkMemb === v) stkMemb = null;                 /* second appui : retour au resultat de base */
+  else if(!stkMemb && v === stkMembBase) return;    /* c'est deja le resultat affiche */
+  else stkMemb = v;
+  stkMembQ = query();
+  stkRenderSearch(query());
+});
+
 async function stkRenderSearch(q){
   if(!cdb){ try{ await cdbLoad(); }catch(e){} }
-  var P = stkParse(q), n = P.nom;
-  if(n.length < 2){
+  /* une nouvelle saisie efface le choix d'une pastille */
+  if(stkMembQ !== q){ stkMemb = null; stkMembQ = q; }
+  var P = stkParse(q), n = stkMemb || P.nom;
+  if(P.nom.length < 2){
     stkView('<div class="ph">Tape au moins deux lettres du nom' +
             ((P.num || P.code) ? ', par exemple « ronflex ' + esc(P.num || P.code) + ' »' : '') + '.</div>');
     return;
@@ -4423,7 +4502,7 @@ async function stkRenderSearch(q){
   if(!nameIdx){
     stkView('<div class="ph">Chargement de l\'index…</div>');
     try{ await namesLoad(); }catch(e){ stkView(empty(EMPTY_CMD, 'Recherche indisponible.')); return; }
-    if(stkParse(query()).nom !== n || tab !== 'stock') return;
+    if(query() !== q || tab !== 'stock') return;
   }
   /* Une carte peut correspondre a plusieurs entrees de l'index — son nom
      francais et son nom anglais, par exemple « Arcanin » et « Arcanine ».
@@ -4440,6 +4519,28 @@ async function stkRenderSearch(q){
     if(filtreSid && !filtreSid[id.slice(0, d)]) return false;
     return true;
   };
+  var chipsH = '';
+  stkPastGarde = garde;
+  var fm = famPastilles(stkFamOf(P.nom));
+  stkMembBase = null;
+  if(fm){
+    var parId = {};
+    for(var sk in stock){ if(stock[sk] > 0){ var sid0 = sk.split('|')[0]; parId[sid0] = (parId[sid0] || 0) + stock[sk]; } }
+    for(var fb=0;fb<fm.length;fb++) if(fm[fb].n === P.nom) stkMembBase = fm[fb].n;
+    if(!stkMembBase){
+      var deb = fm.filter(function(x){ return x.n.indexOf(P.nom) === 0; });
+      if(deb.length === 1) stkMembBase = deb[0].n;
+    }
+    if(stkMemb && !fm.some(function(x){ return x.n === stkMemb; })){ stkMemb = null; n = P.nom; }
+    chipsH = '<div class="fmbR">';
+    for(var fc=0;fc<fm.length;fc++){
+      var qn = stkChipQ(fm[fc].n, garde, parId);
+      var on = stkMemb ? (fm[fc].n === stkMemb) : (fm[fc].n === stkMembBase);
+      chipsH += '<button class="famC' + (on ? ' on' : '') + (qn ? '' : ' z') + '" data-fmb="' + esc(fm[fc].n) + '">' +
+                esc(fm[fc].lab) + '<span class="fmbN">' + qn + '</span></button>';
+    }
+    chipsH += '</div>';
+  }
   var large = (P.num || filtreSid) ? 4000 : 900;
   for(var nm in nameIdx){
     if(nm.indexOf(n) < 0) continue;
@@ -4450,7 +4551,7 @@ async function stkRenderSearch(q){
     }
     if(ids.length > large) break;
   }
-  if(!ids.length){ stkView(noHit(EMPTY_CMD, P.num || P.code ? 'cette carte' : 'ce Pokémon')); return; }
+  if(!ids.length){ stkView(chipsH + noHit(EMPTY_CMD, P.num || P.code ? 'cette carte' : 'ce Pokémon')); return; }
 
   /* ne charger que les extensions reellement concernees */
   var need = {}, sids = [];
@@ -4462,7 +4563,7 @@ async function stkRenderSearch(q){
   if(missing.length){
     stkView('<div class="ph">Recherche dans ' + sids.length + ' extensions…</div>');
     try{ await Promise.all(missing.map(setLoad)); }catch(e){}
-    if(stkParse(query()).nom !== n || tab !== 'stock') return;
+    if(query() !== q || tab !== 'stock') return;
   }
 
   var cards = [], vusC = {};
@@ -4473,7 +4574,7 @@ async function stkRenderSearch(q){
   var withQ = cards.filter(function(c){ return stkCardQ(c.i) > 0; });
   var LIM = 400, coupe = cards.length > LIM;
   var show = cards.slice(0, LIM);          /* toujours tout, possede ou non */
-  if(!show.length){ stkView(noHit(EMPTY_CMD, 'ce Pokémon')); return; }
+  if(!show.length){ stkView(chipsH + noHit(EMPTY_CMD, 'ce Pokémon')); return; }
 
   var order = [], grp = {};
   for(var m=0;m<cdb.sets.length;m++) if(!cdb.sets[m].parent) order.push(cdb.sets[m].id);
@@ -4484,10 +4585,10 @@ async function stkRenderSearch(q){
   var tot = 0;
   for(var t=0;t<withQ.length;t++) tot += stkCardQ(withQ[t].i);
 
-  var h = '';
+  var h = chipsH;
   if(P.num || P.code){
     var si0 = P.code && P.sids ? setInfo(P.sids[0]) : null;
-    h += '<div class="stkWarn">Recherche : ' + esc(P.nom) +
+    h += '<div class="stkWarn">Recherche : ' + esc(n) +
          (P.num ? ' · n° ' + esc(P.num) : '') +
          (P.code ? ' · ' + esc(si0 ? si0.name : P.code.toUpperCase()) : '') + '</div>';
   }
@@ -5312,6 +5413,7 @@ function majCompteur(el, id, v){
       if(rq) rq.textContent = stkCardQ(id);
     }
     majSousTitre();
+    stkPastQ();
   }catch(e){}
   stkRefresh(id);
 }
