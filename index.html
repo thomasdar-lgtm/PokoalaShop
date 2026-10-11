@@ -87,7 +87,7 @@ main{padding:4px 16px 20px}
 .bakRow .n{font-size:11.5px;color:var(--tx2);font-weight:500}
 .sBtn .ar{font-size:9px;opacity:.85;line-height:1}
 .secH{font-size:10.5px;font-weight:800;color:var(--tx3);letter-spacing:.9px;text-transform:uppercase;margin:16px 0 9px;display:flex;align-items:center;gap:7px}
-.stkSG{display:grid;grid-template-columns:1fr;gap:7px}
+.stkSG{display:grid;grid-template-columns:minmax(0,1fr);gap:7px}
 .stkS{display:flex;align-items:center;gap:7px;background:var(--surf);border:1px solid var(--bd);border-radius:11px;padding:9px 11px}
 .stkS .stkN{flex:1;min-width:0;text-align:left}
 .stkS .stkN b{display:block;font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -348,13 +348,17 @@ nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-w
 .stkSrch{position:relative;margin:0 0 10px}
 .stkSrch input{width:100%;background:var(--surf);border:1px solid var(--bd);border-radius:11px;padding:10px 34px 10px 13px;color:var(--tx);font-size:14px;outline:none}
 .stkSrch input::-webkit-search-cancel-button,.stkSrch input::-webkit-search-decoration{-webkit-appearance:none;appearance:none;display:none}
-.letB{position:relative;flex:none;width:42px;height:42px;border-radius:11px;background:var(--surf);border:1px solid var(--bd);
-color:var(--tx2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;cursor:pointer;overflow:hidden}
-.letB.on{color:var(--blu);border-color:var(--blu);font-size:16px}
-.letS{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px}
-.fldX{position:relative}
-.fldX .inp{padding-right:40px}
-.fldX .fx{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--surf2);border:0;color:var(--tx2);width:22px;height:22px;border-radius:50%;font-size:13px;cursor:pointer;padding:0}
+.letB{flex:none;width:42px;height:42px;border-radius:11px;background:var(--surf);border:1px solid var(--bd);
+color:var(--tx2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;cursor:pointer;padding:0}
+.letB.on{background:rgba(56,139,253,.16);color:var(--blu);border-color:var(--blu);font-size:16px}
+.letP{position:absolute;top:calc(100% - 2px);right:16px;z-index:60;width:244px;background:var(--surf);border:1px solid var(--bd);
+border-radius:13px;padding:9px;box-shadow:0 12px 30px rgba(0,0,0,.45);display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
+.letP .famC{padding:0;height:34px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.letP .famC:disabled{opacity:.3;cursor:default}
+.letP .letT{grid-column:1/-1;height:32px}
+.fxW{position:relative;display:block}
+.fxW .inp{padding-right:40px}
+.fxW .fx{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--surf2);border:0;color:var(--tx2);width:22px;height:22px;border-radius:50%;font-size:13px;cursor:pointer;padding:0}
 .stkSrch .sx{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--surf2);border:0;color:var(--tx2);width:22px;height:22px;border-radius:50%;font-size:13px;cursor:pointer}
 .stkWrap{display:block}
 .stkFB{display:flex;gap:6px;margin:0 0 11px}
@@ -546,7 +550,8 @@ color:var(--tx);font-size:14px;font-weight:800;cursor:pointer;flex:none;line-hei
 
 @media (min-width:760px){
   .stkBar{margin:-7px -22px 11px;padding:15px 22px 8px}
-  .stkSG{grid-template-columns:1fr 1fr;gap:8px}
+  .letP{right:22px}
+  .stkSG{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
   .stkBar::after{left:22px;right:22px}
 }
 
@@ -778,7 +783,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.41';
+var APP_VERSION = '4.42';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2708,7 +2713,12 @@ document.addEventListener('mousedown', function(e){
 function champX(inp, vider){
   if(!inp || inp._x) return;
   inp._x = true;
-  inp.parentNode.classList.add('fldX');
+  /* enveloppe a la taille exacte du champ : le × se place par rapport au
+     champ et non au bloc qui l'entoure (dont les marges varient) */
+  var w = document.createElement('span');
+  w.className = 'fxW';
+  inp.parentNode.insertBefore(w, inp);
+  w.appendChild(inp);
   var b = document.createElement('button');
   b.type = 'button'; b.className = 'fx'; b.textContent = '×';
   b.setAttribute('aria-label', 'Effacer');
@@ -2721,7 +2731,7 @@ function champX(inp, vider){
     inp.focus();
   };
   inp.addEventListener('input', maj);
-  inp.parentNode.appendChild(b);
+  w.appendChild(b);
   maj();
 }
 $('selCancel').onclick = exitSel;
@@ -4527,6 +4537,39 @@ async function stkRenderSearch(q){
 /* Ecran des stickers : les familles possedees, et une recherche pour en
    ajouter une parmi les 366 existantes. */
 var stickQry = '', stkStick = false, stickLet = '';
+/* panneau des lettres : les lettres sans sticker possede sont grisees */
+function letPanel(){
+  var p = $('stk_letP');
+  if(!p) return;
+  if(!p.classList.contains('hide')){ p.classList.add('hide'); return; }
+  var dispo = {};
+  for(var k in stickers){
+    if(!stickers[k]) continue;
+    var g = stickGroup(k);
+    dispo[norm(g ? g.b : k).charAt(0).toUpperCase()] = 1;
+  }
+  var h = '<button class="famC letT' + (stickLet ? '' : ' on') + '" data-let="">Toutes les lettres</button>';
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach(function(c){
+    h += '<button class="famC' + (stickLet === c ? ' on' : '') + '" data-let="' + c + '"' + (dispo[c] ? '' : ' disabled') + '>' + c + '</button>';
+  });
+  p.innerHTML = h;
+  p.classList.remove('hide');
+}
+document.addEventListener('click', function(e){
+  var p = $('stk_letP');
+  if(!p || p.classList.contains('hide')) return;
+  var t = e.target.closest('[data-let]');
+  if(t && p.contains(t)){
+    stickLet = t.getAttribute('data-let');
+    var b = $('stk_letB');
+    b.textContent = stickLet || 'A–Z';
+    b.classList.toggle('on', !!stickLet);
+    p.classList.add('hide');
+    window.scrollTo(0,0); stkRenderStick();
+    return;
+  }
+  if(!p.contains(e.target)) p.classList.add('hide');
+});
 async function stkRenderStick(){
   /* les familles ne sont chargees que par le selecteur de cartes : sans elles
      la recherche ne peut rien trouver, il faut donc les demander ici aussi */
@@ -4544,11 +4587,8 @@ async function stkRenderStick(){
            /* filtre par lettre, discret : sert surtout a controler l'inventaire */
            /* bouton carre identique au bouton retour ; la liste native, invisible,
               le recouvre et ouvre le selecteur du telephone */
-           '<label class="letB' + (stickLet ? ' on' : '') + '" id="stk_letB"><span id="stk_letT">' + (stickLet || 'A–Z') + '</span>' +
-           '<select class="letS" id="stk_let" aria-label="Filtrer par lettre"><option value="">Toutes</option>' +
-           'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(function(c){
-             return '<option value="' + c + '"' + (stickLet === c ? ' selected' : '') + '>' + c + '</option>';
-           }).join('') + '</select></label></div>' +
+           '<button class="letB' + (stickLet ? ' on' : '') + '" id="stk_letB" aria-label="Filtrer par lettre">' + (stickLet || 'A–Z') + '</button>' +
+           '<div class="letP hide" id="stk_letP"></div></div>' +
            '<div class="fld" style="margin:0 0 11px"><input class="inp" id="f_stk" placeholder="Chercher un Pokémon à ajouter…" ' +
            'value="' + esc(stickQry) + '"' + noAuto() + '></div>';
   var h2 = '';
@@ -4612,13 +4652,8 @@ async function stkRenderStick(){
       inp._t = setTimeout(function(){ stickQry = inp.value; stkRenderStick(); }, 260);
     };
     champX(inp, function(){ stickQry = ''; stkRenderStick(); });
-    var sl = $('stk_let');
-    if(sl) sl.onchange = function(){
-      stickLet = sl.value;
-      $('stk_letT').textContent = stickLet || 'A–Z';
-      $('stk_letB').classList.toggle('on', !!stickLet);
-      window.scrollTo(0,0); stkRenderStick();
-    };
+    var lb = $('stk_letB');
+    if(lb) lb.onclick = function(e){ e.stopPropagation(); letPanel(); };
     if(stickQry){ inp.focus(); var v = inp.value; inp.value = ''; inp.value = v; }
   }
 }
