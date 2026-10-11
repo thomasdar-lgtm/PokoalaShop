@@ -789,7 +789,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.45';
+var APP_VERSION = '4.46';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -4601,7 +4601,9 @@ function famPastilles(f){
   }
   return out.length > 1 ? out : null;
 }
-/* exemplaires en stock pour un nom, avec les memes filtres que la recherche */
+/* cartes differentes possedees pour un nom (comme « J'en ai ») : une carte
+   compte une fois, quels que soient ses exemplaires et variantes. Memes
+   filtres que la recherche. */
 function stkChipQ(mn, garde, parId){
   var vus = {}, t = 0;
   for(var nm in nameIdx){
@@ -4609,7 +4611,8 @@ function stkChipQ(mn, garde, parId){
     var l = nameIdx[nm];
     for(var i=0;i<l.length;i++){
       if(vus[l[i]] || !garde(l[i])) continue;
-      vus[l[i]] = 1; t += parId[l[i]] || 0;
+      vus[l[i]] = 1;
+      if(parId[l[i]] > 0) t++;
     }
   }
   return t;
