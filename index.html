@@ -789,7 +789,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.48';
+var APP_VERSION = '4.49';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -3631,6 +3631,8 @@ function setLegacyId(v){
 }
 
 async function stkFetch(){
+  /* saisies faites pendant cette lecture : voir le traitement de notre fichier */
+  var genDepart = stkGen, attenteDepart = stkPending.length;
   /* Toutes les lectures en parallele : enchainees une par une, elles
      cumulaient cinq a six allers-retours vers Drive. */
   var pList = driveList(STK_PREFIX);
@@ -3676,8 +3678,14 @@ async function stkFetch(){
     }
     if(f.name === STK_MINE){
       mienId = f.id;
-      /* notre propre fichier : il fait foi sauf si des gestes sont en attente */
-      if(!stkPending.length){
+      /* Notre propre fichier ne remplace l'etat local que si AUCUNE saisie n'a
+         eu lieu depuis le debut de cette lecture. Sinon ce qui a ete lu est
+         anterieur a la saisie : si l'ecriture de la saisie s'est terminee
+         entre-temps (lecture lente), le remplacer effacait la saisie, puis
+         l'ecriture suivante l'effacait aussi de Drive. */
+      /* et seulement si rien n'attendait d'etre ecrit au depart : une saisie
+         pas encore ecrite ne peut pas figurer dans ce qui a ete lu */
+      if(!attenteDepart && !stkPending.length && stkGen === genDepart){
         myDelta = data.delta || {};
         myStick = data.stick || {};
         myOv = data.ov || {};
@@ -3850,7 +3858,10 @@ async function stkSave(){
   stkSaving = false;
   if(stkPending.length) stkQueue();
 }
-function stkQueue(){ clearTimeout(stkTimer); stkTimer = setTimeout(stkSave, 2500); }
+/* stkGen : compteur de saisies locales. Toute saisie (carte, sticker, boite,
+   variantes, marque) passe par stkQueue. */
+var stkGen = 0;
+function stkQueue(){ stkGen++; clearTimeout(stkTimer); stkTimer = setTimeout(stkSave, 2500); }
 
 function stkAdd(id, v, e, d, src){
   var k = stkKey(id, v, e), cur = stock[k] || 0, nv = Math.max(0, cur + d);
