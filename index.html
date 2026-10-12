@@ -789,7 +789,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.46';
+var APP_VERSION = '4.48';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -1016,6 +1016,11 @@ function api(url, opts){
       try{ localStorage.removeItem(LS + 'tk'); }catch(e){}
       reauth(); throw new Error('auth');
     }
+    /* Drive a repondu : le reseau est la. Sans ce retour a la normale, une
+       seule requete coupee (app passee en arriere-plan) laissait l'app en
+       « hors ligne » tant qu'aucune synchro des lots n'avait reussi, ce qui
+       n'arrive jamais dans l'onglet Stock. */
+    if(offline){ offline = false; if(syncEtat === 'err') setSync(''); }
     return r;
   }, function(err){
     offline = true; setSync('err');
@@ -2542,8 +2547,8 @@ function sheetAcc(){
   var etatLbl = etatOk ? ((me && (me.email || me.name)) || 'Connecté') : 'Non connecté';
   var etatSub = etatOk
     ? ((me && me.name && me.email) ? me.name : 'Sauvegarde active sur Google Drive')
-    : (offline ? 'Hors ligne — les modifications partiront au retour du réseau'
-               : 'Touche « Rafraîchir maintenant » pour rétablir la connexion');
+    : (offline ? 'Réseau indisponible — les modifications partiront au retour du réseau'
+               : 'Connexion Google à renouveler — touche « Rafraîchir maintenant »');
   if(etatOk && !me) fetchMe();
   openSheet(
     '<div class="shT">' + (SOLO ? 'PoKoalaShop' : 'Cet appareil : ' + esc(WHOS[who] || '?')) + '</div>' +
@@ -3002,6 +3007,9 @@ var cdb = null, cdbById = {};
 var stock = {}, stkOv = {}, stkMoves = [];
 var stkLayers = [];                 /* couches des autres appareils */
 var myDelta = {}, myOv = {}, myDone = {}, myBox = {}, myStick = {}, myStamp = 0;   /* notre contribution */
+/* date de CHAQUE reglage (boite, variantes) : la valeur la plus recente gagne
+   cle par cle, quel que soit l'appareil */
+var myBoxT = {}, myOvT = {};
 var mvNew = [], mvCount = 0, mvFileId = null, mvLoaded = false, mvTimer = null, mvSaving = false;
 var stkFileId = null, stkPending = [];
 var stkTimer = null, stkSaving = false, stkLoaded = false;
@@ -3488,16 +3496,21 @@ async function driveRead(id){
   return await r.json();
 }
 async function driveWrite(id, nom, body){
+  /* jamais de second fichier du meme nom : on cherche avant de creer */
+  if(!id) id = await driveFindExact(nom);
   if(!id){
     var fd = new FormData();
     fd.append('metadata', new Blob([JSON.stringify({ name: nom, parents: ['appDataFolder'] })], { type:'application/json' }));
     fd.append('file', new Blob([body], { type:'application/json' }));
     var r = await api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method:'POST', body: fd });
+    if(!r.ok) throw new Error('ecriture');
     return (await r.json()).id;
   }
-  await api('https://www.googleapis.com/upload/drive/v3/files/' + id + '?uploadType=media', {
+  /* une reponse d'erreur de Drive est un echec : les gestes restent en attente */
+  var w = await api('https://www.googleapis.com/upload/drive/v3/files/' + id + '?uploadType=media', {
     method:'PATCH', headers:{ 'Content-Type':'application/json' }, body: body
   });
+  if(!w.ok) throw new Error('ecriture');
   return id;
 }
 
@@ -3536,21 +3549,30 @@ function stkApplyStates(){
      autre appareil des que celui-ci ecrivait ensuite. La valeur 0 est un
      retour aux variantes d'origine : elle doit voyager, sinon la fusion
      ressusciterait le reglage supprime. */
+  /* Fusion CLE PAR CLE : pour chaque boite / chaque carte, la valeur la plus
+     recente gagne. Un reglage date (depuis 4.47) porte sa propre date ; un
+     reglage plus ancien, sans date propre, prend celle de son fichier,
+     prefixee pour rester toujours plus ancien qu'un reglage date (il a
+     forcement ete saisi avant). Les dates sont des textes ISO : elles se
+     comparent comme des textes (l'ancienne soustraction donnait NaN, le tri
+     ne se faisait pas et l'appareil local gagnait toujours). */
   var couches = stkLayers.slice();
-  couches.push({ stamp: myStamp, ov: myOv, box: myBox });
-  couches.sort(function(a, b){ return (a.stamp || 0) - (b.stamp || 0); });
-  stkOv = {};
-  for(var ci=0;ci<couches.length;ci++){
-    var ov = couches[ci].ov;
-    if(!ov) continue;
-    for(var k in ov){ if(ov[k]) stkOv[k] = ov[k]; else delete stkOv[k]; }
+  couches.push({ stamp: myStamp, ov: myOv, box: myBox, ovt: myOvT, boxt: myBoxT, moi: true });
+  function fusion(champ, champT){
+    var val = {}, quand = {}, out = {};
+    for(var ci=0;ci<couches.length;ci++){
+      var c = couches[ci], m = c[champ], mt = c[champT] || {};
+      if(!m) continue;
+      for(var k in m){
+        var t = mt[k] ? String(mt[k]) : '0|' + String(c.stamp || '');
+        if(!(k in quand) || t > quand[k] || (t === quand[k] && c.moi)){ quand[k] = t; val[k] = m[k]; }
+      }
+    }
+    for(var k2 in val) if(val[k2]) out[k2] = val[k2];
+    return out;
   }
-  stkBox = {};
-  for(var bi=0;bi<couches.length;bi++){
-    var bx = couches[bi].box;
-    if(!bx) continue;
-    for(var bk in bx){ if(bx[bk]) stkBox[bk] = bx[bk]; else delete stkBox[bk]; }
-  }
+  stkOv = fusion('ov', 'ovt');
+  stkBox = fusion('box', 'boxt');
   stkDone = (best && best.done) ? JSON.parse(JSON.stringify(best.done)) : {};
   if(myStamp >= ((best && best.stamp) || 0)){
     for(var b in myDone){ if(myDone[b]) stkDone[b] = 1; else delete stkDone[b]; }
@@ -3562,6 +3584,7 @@ function stkSaveCache(){
   try{
     localStorage.setItem(LS + 'stkc', JSON.stringify({
       mine: STK_MINE, layers: stkLayers, delta: myDelta, ov: myOv, done: myDone, box: myBox, stick: myStick, stamp: myStamp,
+      ovt: myOvT, boxt: myBoxT,
       mvCount: mvCount, id: stkFileId, pend: stkPending.length
     }));
   }catch(e){ /* quota plein : on s'en passe */ }
@@ -3576,6 +3599,8 @@ function stkLoadCache(){
     myStick = c.stick || {};
     myOv = c.ov || {};
     myBox = c.box || {};
+    myOvT = c.ovt || {};
+    myBoxT = c.boxt || {};
     myDone = c.done || {};
     myStamp = c.stamp || 0;
     mvCount = c.mvCount || 0;
@@ -3657,6 +3682,8 @@ async function stkFetch(){
         myStick = data.stick || {};
         myOv = data.ov || {};
         myBox = data.box || {};
+        myOvT = data.ovt || {};
+        myBoxT = data.boxt || {};
         myDone = data.done || {};
         myStamp = data.stamp || 0;
       }
@@ -3667,6 +3694,7 @@ async function stkFetch(){
     couches.push({ dev: data.dev || f.name, delta: data.delta || {},
                    ov: data.ov || {}, done: data.done || {},
                    box: data.box || {}, stick: data.stick || {},
+                   ovt: data.ovt || {}, boxt: data.boxt || {},
                    stamp: data.stamp || 0 });
   }
 
@@ -3708,6 +3736,7 @@ async function stkSync(force){
     var avant = {};
     for(var k in stock) avant[k] = stock[k];
     var avStick = JSON.stringify(stickers);
+    var avBox = JSON.stringify(stkBox), avOv = JSON.parse(JSON.stringify(stkOv));
     await stkFetch();
     /* ne rafraichir que les cartes reellement modifiees */
     var touchees = {};
@@ -3717,7 +3746,13 @@ async function stkSync(force){
     /* un changement de stickers ne touche aucune carte : sans ce test, l'ecran
        des stickers ne serait jamais redessine apres une saisie de l'autre
        appareil */
-    if(ids.length || avStick !== JSON.stringify(stickers)) stkTouchUI(ids);
+    /* un reglage de variantes change l'affichage de la carte concernee */
+    for(var ko in stkOv) if(avOv[ko] !== stkOv[ko]) touchees[ko] = 1;
+    for(var ko2 in avOv) if(!(ko2 in stkOv)) touchees[ko2] = 1;
+    ids = Object.keys(touchees);
+    var boxChange = avBox !== JSON.stringify(stkBox);
+    if(boxChange) stkBoxMaj();
+    if(ids.length || boxChange || avStick !== JSON.stringify(stickers)) stkTouchUI(ids);
   }catch(e){}
   stkSyncing = false;
 }
@@ -3737,6 +3772,16 @@ function stkTouchUI(ids){
   stkTouchSets();
 }
 
+/* numero de boite modifie sur l'autre appareil : bouton de l'en-tete d'une
+   extension ouverte (la liste, elle, est mise a jour par stkTouchSets) */
+function stkBoxMaj(){
+  var b = document.querySelector('.boxB[data-stkbox]');
+  if(!b) return;
+  var bx = boxOf(b.getAttribute('data-stkbox'));
+  b.classList.toggle('on', !!bx);
+  var t = b.querySelector('b');
+  if(t) t.textContent = bx ? bx : '—';
+}
 /* liste des extensions : seuls les compteurs changent */
 function stkTouchSets(){
   var per = {}, tot = 0;
@@ -3785,7 +3830,7 @@ function stkTouchSets(){
 function stkBody(){
   return JSON.stringify({
     v: APP_VERSION, dev: DEV, at: now(), stamp: myStamp,
-    delta: myDelta, ov: myOv, done: myDone, box: myBox, stick: myStick
+    delta: myDelta, ov: myOv, done: myDone, box: myBox, stick: myStick, boxt: myBoxT, ovt: myOvT
   });
 }
 
@@ -3917,6 +3962,7 @@ function setBox(sid, n){
   if(!(v > 0)) v = 0;
   if(v) stkBox[r] = v; else delete stkBox[r];
   myBox[r] = v;            /* 0 signale aux autres appareils un retrait */
+  myBoxT[r] = now();
   myStamp = now();
   stkPending.push({ t: now(), c: r, v:'-', e:'-', d:0, w: who || '', s:'boite' });
   stkQueue(); stkSaveCache();
@@ -4050,6 +4096,7 @@ function stkSetOv(id, mask){
   /* 0 et non une suppression : c'est ce qui signale aux autres appareils
      le retour aux variantes d'origine */
   myOv[id] = mask || 0;
+  myOvT[id] = now();
   myStamp = now();
   /* stkSave() ne se declenche que s'il y a un mouvement en attente : un
      changement de variantes seul n'en cree aucun, d'ou ce repere factice,
