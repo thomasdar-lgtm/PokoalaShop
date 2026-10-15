@@ -789,7 +789,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.49';
+var APP_VERSION = '4.50';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -4617,6 +4617,34 @@ function stkParse(q){
    cherche. Un appui REMPLACE les resultats par ceux de ce membre ; un second
    appui sur la meme pastille revient au resultat de base. La saisie n'est
    jamais modifiee : numero et code d'extension s'appliquent aussi au membre. */
+/* Noms de Pokemon contenus dans le nom d'un autre Pokemon (francais et
+   anglais, l'index contient aussi des cartes anglaises) : « melo » est dans
+   « melofee », « mew » dans « mewtwo ». Genere depuis la liste officielle
+   des especes. */
+var ESP_SUP = {"marill":["azumarill"],"woobat":["swoobat"],"porygon":["porygon2","porygonz"],"clic":["cliticlic"],"abra":["crabrawler","kadabra","simiabraz"],"natu":["eternatus"],"rattata":["rattatac"],"rapion":["drapion"],"pohm":["pohmarmotte","pohmotte"],"klang":["klinklang"],"dunsparce":["dudunsparce"],"aron":["darumarond","volcarona"],"lairon":["piclairon"],"aggron":["laggron"],"mantine":["lamantine"],"pidgeot":["pidgeotto"],"pawmo":["pawmot"],"abo":["abomasnow","bacabouh","badabouin","crabominable","mabosstiff","pumpkaboo","raboot","rillaboom","rocabot"],"voltorb":["voltorbe"],"muk":["pyukumuku"],"klink":["klinklang"],"mew":["mewtwo"],"tarinor":["tarinorme"],"smogo":["smogogo"],"draco":["dracolosse","dracovish","dracozolt","minidraco"],"gigalith":["gigalithe"],"wattrel":["kilowattrel"],"coxy":["coxyclaque"],"dofin":["superdofin"],"tadmorv":["grotadmorv"],"golem":["golemastoc","gringolem"],"hypno":["hypnomade"],"machop":["machopeur"],"paras":["parasect"],"arcanin":["arcanine"],"kabuto":["kabutops"],"araqua":["araquanid"],"tic":["articuno","beartic","canarticho","cliticlic","denticrisse","grotichon","meowstic","milotic","ouisticram","palarticho","raticate","shiinotic","togetic"],"melo":["melodelfe","meloetta","melofee","melokrik"]};
+var ESP_LONG = {};
+for(var esk in ESP_SUP) for(var esi=0;esi<ESP_SUP[esk].length;esi++) ESP_LONG[ESP_SUP[esk][esi]] = 1;
+/* La carte (cle de l'index) est-elle bien celle du Pokemon m ? Une occurrence
+   de m qui fait partie d'un nom de Pokemon plus long ne compte pas :
+   « meloetta » n'est pas Melo, « melofeedeerika » est Melofee et pas Melo,
+   mais une carte a plusieurs Pokemon (« togepimelofee... ») compte pour chacun. */
+function nomContient(k, m){
+  var p = k.indexOf(m), sup = ESP_SUP[m];
+  if(p < 0 || !sup) return p >= 0;
+  while(p >= 0){
+    var couvert = false;
+    for(var i=0;i<sup.length && !couvert;i++){
+      var off = sup[i].indexOf(m), q = k.indexOf(sup[i]);
+      while(q >= 0){
+        if(q + off === p){ couvert = true; break; }
+        q = k.indexOf(sup[i], q + 1);
+      }
+    }
+    if(!couvert) return true;
+    p = k.indexOf(m, p + 1);
+  }
+  return false;
+}
 var stkMemb = null, stkMembQ = null, stkMembBase = null, stkPastGarde = null;
 /* remet a jour le chiffre des pastilles apres un geste sur le stock */
 function stkPastQ(){
@@ -4652,7 +4680,8 @@ function famPastilles(f){
     /* une variante de carte (« Nidoking TURBO ») est deja couverte par le
        membre qu'elle contient : pas de pastille en double */
     var variante = false;
-    for(var j=0;j<ns.length;j++) if(ns[j] !== mn && ns[j].length >= 3 && mn.indexOf(ns[j]) >= 0) variante = true;
+    if(!ESP_LONG[mn])
+      for(var j=0;j<ns.length;j++) if(ns[j] !== mn && ns[j].length >= 3 && mn.indexOf(ns[j]) >= 0) variante = true;
     if(variante) continue;
     vu[mn] = 1;
     out.push({ lab: ms[i].replace(/[♀♂]/g, ''), n: mn });
@@ -4665,7 +4694,7 @@ function famPastilles(f){
 function stkChipQ(mn, garde, parId){
   var vus = {}, t = 0;
   for(var nm in nameIdx){
-    if(nm.indexOf(mn) < 0) continue;
+    if(!nomContient(nm, mn)) continue;
     var l = nameIdx[nm];
     for(var i=0;i<l.length;i++){
       if(vus[l[i]] || !garde(l[i])) continue;
@@ -4740,7 +4769,7 @@ async function stkRenderSearch(q){
   }
   var large = (P.num || filtreSid) ? 4000 : 900;
   for(var nm in nameIdx){
-    if(nm.indexOf(n) < 0) continue;
+    if(stkMemb ? !nomContient(nm, n) : nm.indexOf(n) < 0) continue;
     var lst = nameIdx[nm];
     for(var li=0;li<lst.length;li++){
       if(vusId[lst[li]] || !garde(lst[li])) continue;
@@ -5835,7 +5864,7 @@ async function pickRender(q){
       var n = norm(cibles[t]);
       if(n.length < 2) continue;
       for(var nm in nameIdx){
-        if(nm.indexOf(n) < 0) continue;
+        if(tape ? nm.indexOf(n) < 0 : !nomContient(nm, n)) continue;
         var a = nameIdx[nm];
         for(var i=0;i<a.length;i++) if(pickGarde(a[i])) ids[a[i]] = 1;
       }
