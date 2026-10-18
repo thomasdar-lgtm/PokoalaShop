@@ -789,7 +789,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.50';
+var APP_VERSION = '4.51';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -3880,6 +3880,16 @@ function stkAdd(id, v, e, d, src){
 }
 
 /* ---- journal : un fichier par appareil, meme principe ---- */
+/* Ordre chronologique des mouvements. Les dates sont des textes ISO (ou des
+   nombres pour d'anciens mouvements) : une soustraction de textes donne NaN,
+   le tri ne se faisait pas et le journal montrait les plus anciens. */
+function mvMs(m){
+  var t = m && m.t;
+  if(typeof t === 'number') return t;
+  var n = Date.parse(t);
+  return isNaN(n) ? 0 : n;
+}
+function mvOrdre(a, b){ return mvMs(a) - mvMs(b); }
 async function mvLoad(force){
   if(mvLoaded && !force) return stkMoves;
   var tout = [];
@@ -3907,7 +3917,7 @@ async function mvLoad(force){
     var m = mvNew[n], cle = m.t + '|' + m.c + '|' + m.d;
     if(!vus[cle]){ tout.push(m); vus[cle] = 1; }
   }
-  tout.sort(function(a, b){ return a.t - b.t; });
+  tout.sort(mvOrdre);
   stkMoves = tout;
   mvCount = Math.max(mvCount, tout.length);
   mvLoaded = true;
@@ -3935,7 +3945,7 @@ async function mvSave(){
       var cle = envoi[k].t + '|' + envoi[k].c + '|' + envoi[k].d;
       if(!vus[cle]){ base.push(envoi[k]); vus[cle] = 1; }
     }
-    base.sort(function(a, b){ return a.t - b.t; });
+    base.sort(mvOrdre);
     if(base.length > MV_CAP) base = base.slice(-MV_CAP);
     mvFileId = await driveWrite(mvFileId, MV_MINE,
       JSON.stringify({ moves: base, dev: DEV, at: now(), v: APP_VERSION }));
