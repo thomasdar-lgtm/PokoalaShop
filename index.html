@@ -467,7 +467,25 @@ color:var(--tx);font-size:14px;font-weight:800;cursor:pointer;flex:none;line-hei
 .stkMv .mt{flex:1;min-width:0}
 .stkMv .mt b{display:block;font-weight:700}
 .stkMv .mt small{display:block;color:var(--tx3);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.stkMv .mh{color:var(--tx3);font-size:10px;font-weight:700;flex:none}
+.stkMv .mh{color:var(--tx3);font-size:10px;font-weight:700;flex:none;text-align:right;line-height:1.35}
+/* journal : choix de la date */
+.mvBarre{position:relative;margin:0 0 10px}
+.mvDB{width:100%;display:flex;align-items:center;gap:9px;background:var(--surf);border:1px solid var(--bd);border-radius:11px;padding:10px 13px;color:var(--tx2);font-size:13px;font-weight:700;cursor:pointer;text-align:left}
+.mvDB svg{width:17px;height:17px;flex:none;color:var(--tx3)}
+.mvDB span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mvDB span::first-letter{text-transform:uppercase}
+.mvDB.on{color:var(--blu);border-color:var(--blu);background:rgba(56,139,253,.10)}
+.mvDB.on svg{color:var(--blu)}
+.mvDP{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:60;background:var(--surf);border:1px solid var(--bd);border-radius:13px;padding:9px;box-shadow:0 12px 30px rgba(0,0,0,.45)}
+.mvML{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:9px;margin-bottom:9px;border-bottom:1px solid var(--bd)}
+.mvML::-webkit-scrollbar{display:none}
+.mvML .famC{flex:none;text-transform:capitalize}
+.mvJG{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;max-height:240px;overflow-y:auto}
+.mvJG .famC{padding:5px 0;display:flex;flex-direction:column;align-items:center;line-height:1.15}
+.mvJG .famC b{font-size:14px;font-weight:800}
+.mvJG .famC small{font-size:10px;font-weight:700;color:var(--tx3)}
+.mvJG .famC.on small{color:var(--blu)}
+.mvDM{grid-column:1/-1;color:var(--tx3);font-size:12px;font-weight:600;padding:8px 4px;text-align:center}
 
 /* selection de cartes pour un lot */
 .pkH{font-size:11px;font-weight:800;color:var(--tx3);letter-spacing:.5px;text-transform:uppercase;margin:14px 0 7px}
@@ -789,7 +807,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.51';
+var APP_VERSION = '4.52';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2559,6 +2577,11 @@ function sheetAcc(){
     '<a class="accBtn" style="text-decoration:none" href="https://thomasdar-lgtm.github.io/Pokoala/" target="_blank" rel="noopener">Pokoala<span>Application liée</span></a>' +
     '<button class="accBtn" id="a_maj">Recharger l\'app<span>vide le cache et redémarre</span></button>' +
 
+    '<div class="accSec">Cet appareil</div>' +
+    '<div class="fld"><div style="display:flex;gap:9px"><input class="inp" id="f_devnom" style="flex:1;min-width:0" maxlength="20" placeholder="ex. S25, Tablette, Oppo" value="' + esc(devNom()) + '"' + noAuto() + '>' +
+    '<button class="aBtn" id="a_devnom" style="flex:none;padding:0 15px">Enregistrer</button></div>' +
+    '<div class="tagBox" style="margin:7px 0 0">Ce nom s\'affiche dans le journal des mouvements, sur chaque geste fait depuis cet appareil.</div></div>' +
+
     '<div class="accSec">Compte Google</div>' +
     '<div class="fld"><div class="gAcc' + (etatOk ? ' ok' : ' ko') + '">' +
     '<span class="gDot"></span><span class="gTx"><b>' + esc(etatLbl) + '</b>' +
@@ -2605,6 +2628,15 @@ function sheetAcc(){
     };
   }
   $('x7').onclick = closeSheet;
+  $('a_devnom').onclick = function(){
+    var v = $('f_devnom').value.trim().slice(0, 20);
+    if(!v){ toast('Donne un nom à cet appareil'); return; }
+    try{ localStorage.setItem(LS + 'devnom', v); }catch(e){ toast('Nom non enregistré'); return; }
+    /* le nom voyage dans le fichier de stock de l'appareil : les autres le lisent */
+    stkPending.push({ t: now(), c: '-', v: '-', e: '-', d: 0, w: who || '', s: 'nom' });
+    stkQueue(); stkSaveCache();
+    toast('Appareil : ' + v);
+  };
   $('a_maj').onclick = hardReload;
   $('a_stk').onclick = sheetStkDiag;
   $('a_holo').onclick = function(){ closeSheet(); stkAutoHideNormal(); };
@@ -2807,7 +2839,7 @@ for(var n=0;n<navs.length;n++){
     for(var i=0;i<navs.length;i++) navs[i].classList.remove('on');
     this.classList.add('on');
     tab = cible;
-    if(tab !== 'stock'){ stkJournal = false; stkInv = false; stkNever = false; stkStick = false; stkBoxF = null; }
+    if(tab !== 'stock'){ mvJ = null; stkJournal = false; stkInv = false; stkNever = false; stkStick = false; stkBoxF = null; }
     if(tab !== 'stock' && stkSet){ stkSet = null; stkQry = ''; if(history.state && history.state.d === 3) history.back(); }
     $('fab').classList.toggle('hide', tab !== 'vitrine' && tab !== 'afaire');
     $('q').value = '';
@@ -3004,13 +3036,13 @@ var ETS = [['nm','Near Mint'],['jo','Joué'],['ab','Abîmé']];
 var ET_LBL = { nm:'NM', jo:'Joué', ab:'Abîmé' };
 
 var cdb = null, cdbById = {};
-var stock = {}, stkOv = {}, stkMoves = [];
+var stock = {}, stkOv = {};
 var stkLayers = [];                 /* couches des autres appareils */
 var myDelta = {}, myOv = {}, myDone = {}, myBox = {}, myStick = {}, myStamp = 0;   /* notre contribution */
 /* date de CHAQUE reglage (boite, variantes) : la valeur la plus recente gagne
    cle par cle, quel que soit l'appareil */
 var myBoxT = {}, myOvT = {};
-var mvNew = [], mvCount = 0, mvFileId = null, mvLoaded = false, mvTimer = null, mvSaving = false;
+var mvNew = [], mvCount = 0, mvTimer = null, mvSaving = false;
 var stkFileId = null, stkPending = [];
 var stkTimer = null, stkSaving = false, stkLoaded = false;
 var stkSet = null, stkLp = null, stkLpFired = false;
@@ -3703,6 +3735,7 @@ async function stkFetch(){
                    ov: data.ov || {}, done: data.done || {},
                    box: data.box || {}, stick: data.stick || {},
                    ovt: data.ovt || {}, boxt: data.boxt || {},
+                   nom: data.nom || '',
                    stamp: data.stamp || 0 });
   }
 
@@ -3837,7 +3870,7 @@ function stkTouchSets(){
 
 function stkBody(){
   return JSON.stringify({
-    v: APP_VERSION, dev: DEV, at: now(), stamp: myStamp,
+    v: APP_VERSION, dev: DEV, nom: devNom(), at: now(), stamp: myStamp,
     delta: myDelta, ov: myOv, done: myDone, box: myBox, stick: myStick, boxt: myBoxT, ovt: myOvT
   });
 }
@@ -3874,7 +3907,7 @@ function stkAdd(id, v, e, d, src){
   var mv = { t: now(), c: id, v: v, e: e, d: vrai, w: who || '', s: src || 'saisie' };
   stkPending.push(mv);
   mvNew.push(mv); mvCount++;
-  if(mvLoaded) stkMoves.push(mv);
+  mvJVu(mv);
   stkQueue(); mvQueue(); stkSaveCache();
   return true;
 }
@@ -3890,71 +3923,185 @@ function mvMs(m){
   return isNaN(n) ? 0 : n;
 }
 function mvOrdre(a, b){ return mvMs(a) - mvMs(b); }
-async function mvLoad(force){
-  if(mvLoaded && !force) return stkMoves;
-  var tout = [];
-  try{
-    var files = await driveList(MV_PREFIX);
-    for(var i=0;i<files.length;i++){
-      var f = files[i], j = null;
-      try{ j = await driveRead(f.id); }catch(e){ continue; }
-      if(f.name === MV_MINE) mvFileId = f.id;
-      if(j && j.moves) tout = tout.concat(j.moves);
-    }
-    /* ancien fichier unique */
-    try{
-      var oldId = await driveFindExact(MV_LEGACY);
-      if(oldId){
-        var v = await driveRead(oldId);
-        if(v && v.moves) tout = tout.concat(v.moves);
-      }
-    }catch(e){}
-  }catch(e){ toast('Journal : lecture impossible'); }
+/* ═══ JOURNAL PAR MOIS (4.52) ═══
+   Chaque appareil range ses mouvements dans un fichier par mois :
+   pkstkmv_<appareil>_<AAAA-MM>.json. Aucune limite, rien n'est supprime.
+   Les anciens fichiers (pkstkmv_<appareil>.json, plafonne a 4000, et l'ancien
+   fichier commun pkstkmv.json) ne sont JAMAIS modifies ni supprimes : chaque
+   appareil recopie le sien dans les fichiers mensuels, verifie la copie en la
+   relisant, puis depose un marqueur pkstkmv_<appareil>_fait.json. Tant que ce
+   marqueur n'existe pas, l'ancien fichier reste lu. Les doublons sont ecartes
+   a la lecture : un appareil pas encore a jour ne perd rien. */
+var MV_RE_MOIS = /^pkstkmv_([a-z0-9]+)_(\d{4}-\d{2})\.json$/;
+var MV_RE_FAIT = /^pkstkmv_([a-z0-9]+)_fait\.json$/;
+var MV_RE_ANC  = /^pkstkmv_([a-z0-9]+)\.json$/;
+function mvNomMois(dev, mois){ return MV_PREFIX + dev + '_' + mois + '.json'; }
+function mvNomFait(dev){ return MV_PREFIX + dev + '_fait.json'; }
+function mv2(n){ return ('0' + n).slice(-2); }
+/* mois et jour en heure locale : ce sont eux qui s'affichent */
+function mvMois(m){ var d = new Date(mvMs(m)); return d.getFullYear() + '-' + mv2(d.getMonth() + 1); }
+function mvJour(m){ var d = new Date(mvMs(m)); return d.getFullYear() + '-' + mv2(d.getMonth() + 1) + '-' + mv2(d.getDate()); }
+function mvCle(m){ return m.t + '|' + m.c + '|' + m.v + '|' + m.e + '|' + m.d; }
+function devNom(){ try{ return localStorage.getItem(LS + 'devnom') || ''; }catch(e){ return ''; } }
 
-  var vus = {};
-  for(var z=0;z<tout.length;z++) vus[tout[z].t + '|' + tout[z].c + '|' + tout[z].d] = 1;
-  for(var n=0;n<mvNew.length;n++){
-    var m = mvNew[n], cle = m.t + '|' + m.c + '|' + m.d;
-    if(!vus[cle]){ tout.push(m); vus[cle] = 1; }
-  }
-  tout.sort(mvOrdre);
-  stkMoves = tout;
-  mvCount = Math.max(mvCount, tout.length);
-  mvLoaded = true;
-  return stkMoves;
+/* listage strict et complet : une erreur de Drive est une erreur, jamais une
+   liste vide, et toutes les pages sont lues */
+async function driveListQ(q){
+  var out = [], page = null;
+  do{
+    var url = 'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&pageSize=1000' +
+      '&fields=nextPageToken,files(id,name)&q=' + encodeURIComponent(q + ' and trashed=false') +
+      (page ? '&pageToken=' + encodeURIComponent(page) : '');
+    var r = await api(url);
+    if(!r.ok) throw new Error('liste ' + r.status);
+    var j = await r.json();
+    out = out.concat(j.files || []);
+    page = j.nextPageToken || null;
+  }while(page);
+  return out;
 }
 
-/* Ecriture : uniquement notre fichier, en ajoutant nos nouveaux mouvements
-   a ceux qu'il contient deja. */
+/* ajoute des mouvements a un fichier mensuel : relecture obligatoire (jamais
+   d'ecriture a l'aveugle), puis verification par relecture apres ecriture */
+async function mvFusionMois(nom, ajout, dev){
+  var ex = await driveListQ("name = '" + nom + "'");
+  var base = [], id = null, vus = {};
+  for(var i=0;i<ex.length;i++){
+    var j = await driveRead(ex[i].id);           /* echec : on s'arrete, rien n'est ecrit */
+    if(!id) id = ex[i].id;
+    var ms = (j && j.moves) || [];
+    for(var a=0;a<ms.length;a++){ var k = mvCle(ms[a]); if(!vus[k]){ vus[k] = 1; base.push(ms[a]); } }
+  }
+  var neuf = 0;
+  for(var b=0;b<ajout.length;b++){
+    var k2 = mvCle(ajout[b]);
+    if(!vus[k2]){ vus[k2] = 1; base.push(ajout[b]); neuf++; }
+  }
+  if(!neuf && id) return;
+  base.sort(mvOrdre);
+  var corps = { moves: base, dev: dev, at: now(), v: APP_VERSION };
+  if(dev === DEV && devNom()) corps.nom = devNom();
+  id = await driveWrite(id, nom, JSON.stringify(corps));
+  var lu = await driveRead(id), ok = {};
+  var lm = (lu && lu.moves) || [];
+  for(var c=0;c<lm.length;c++) ok[mvCle(lm[c])] = 1;
+  for(var d=0;d<ajout.length;d++) if(!ok[mvCle(ajout[d])]) throw new Error('verification');
+}
+async function mvEcrireParMois(dev, moves){
+  var g = {};
+  for(var i=0;i<moves.length;i++){ var m = mvMois(moves[i]); (g[m] = g[m] || []).push(moves[i]); }
+  var mois = Object.keys(g).sort();
+  for(var k=0;k<mois.length;k++) await mvFusionMois(mvNomMois(dev, mois[k]), g[mois[k]], dev);
+}
+
+/* recopie unique des anciens fichiers ; rejouee tant qu'elle n'a pas abouti */
+function mvMigOk(){ try{ return localStorage.getItem(LS + 'mvmig') === DEV; }catch(e){ return false; } }
+async function mvMigrer(){
+  if(mvMigOk()) return;
+  var fichiers = await driveListQ("name contains '" + MV_PREFIX + "'");
+  var faits = {};
+  for(var i=0;i<fichiers.length;i++){ var f = MV_RE_FAIT.exec(fichiers[i].name); if(f) faits[f[1]] = 1; }
+  if(!faits[DEV]){
+    var miens = fichiers.filter(function(x){ return x.name === MV_MINE; }), mv = [];
+    for(var a=0;a<miens.length;a++){ var j = await driveRead(miens[a].id); mv = mv.concat((j && j.moves) || []); }
+    await mvEcrireParMois(DEV, mv);
+    await driveWrite(null, mvNomFait(DEV), JSON.stringify({ at: now(), n: mv.length, v: APP_VERSION }));
+  }
+  if(!faits.legacy){
+    var vieux = await driveListQ("name = '" + MV_LEGACY + "'"), lv = [];
+    for(var b=0;b<vieux.length;b++){ var jl = await driveRead(vieux[b].id); lv = lv.concat((jl && jl.moves) || []); }
+    await mvEcrireParMois('legacy', lv);
+    await driveWrite(null, mvNomFait('legacy'), JSON.stringify({ at: now(), n: lv.length, v: APP_VERSION }));
+  }
+  try{ localStorage.setItem(LS + 'mvmig', DEV); }catch(e){}
+}
+
+/* Ecriture : uniquement nos fichiers mensuels */
 async function mvSave(){
   if(mvSaving || !mvNew.length) return;
   mvSaving = true;
   var envoi = mvNew.slice();
   try{
-    if(!mvFileId) mvFileId = await driveFindExact(MV_MINE);
-    var base = [];
-    if(mvFileId){
-      /* relecture obligatoire : sans elle, l'ecriture remplacerait tout
-         l'historique par les seuls nouveaux mouvements */
-      var j = await driveRead(mvFileId);
-      base = (j && j.moves) || [];
-    }
-    var vus = {};
-    for(var i=0;i<base.length;i++) vus[base[i].t + '|' + base[i].c + '|' + base[i].d] = 1;
-    for(var k=0;k<envoi.length;k++){
-      var cle = envoi[k].t + '|' + envoi[k].c + '|' + envoi[k].d;
-      if(!vus[cle]){ base.push(envoi[k]); vus[cle] = 1; }
-    }
-    base.sort(mvOrdre);
-    if(base.length > MV_CAP) base = base.slice(-MV_CAP);
-    mvFileId = await driveWrite(mvFileId, MV_MINE,
-      JSON.stringify({ moves: base, dev: DEV, at: now(), v: APP_VERSION }));
+    await mvMigrer();
+    await mvEcrireParMois(DEV, envoi);
     mvNew = mvNew.slice(envoi.length);
     mvLocal();
-  }catch(e){ /* on retentera : mvNew est conserve */ }
+  }catch(e){ /* on retentera : mvNew est conserve sur l'appareil */ }
   mvSaving = false;
   if(mvNew.length) mvQueue();
 }
+
+/* ---- lecture pour la consultation : rien n'est garde hors du journal ---- */
+var mvJ = null;   /* { idx, mois:{M:[...]}, ouvert, jour, q, err } */
+function mvNoms(){
+  /* le fichier de stock porte le nom ACTUEL (reecrit des qu'on renomme) :
+     il passe avant celui, peut-etre ancien, des fichiers du journal */
+  var n = { legacy: 'ancien fichier' };
+  if(mvJ && mvJ.noms) for(var k in mvJ.noms) n[k] = mvJ.noms[k];
+  for(var i=0;i<stkLayers.length;i++) if(stkLayers[i].nom && stkLayers[i].dev) n[stkLayers[i].dev] = stkLayers[i].nom;
+  if(devNom()) n[DEV] = devNom();
+  return n;
+}
+async function mvIndex(){
+  if(mvJ.idx) return mvJ.idx;
+  var fichiers = await driveListQ("name contains '" + MV_PREFIX + "'");
+  var idx = { mois: {}, anc: [] }, faits = {}, anc = [];
+  for(var i=0;i<fichiers.length;i++){
+    var f = fichiers[i], m;
+    if((m = MV_RE_MOIS.exec(f.name))) (idx.mois[m[2]] = idx.mois[m[2]] || []).push({ id: f.id, dev: m[1] });
+    else if((m = MV_RE_FAIT.exec(f.name))) faits[m[1]] = 1;
+    else if((m = MV_RE_ANC.exec(f.name))) anc.push({ id: f.id, dev: m[1] });
+  }
+  if(!faits.legacy){
+    var vx = await driveListQ("name = '" + MV_LEGACY + "'");
+    for(var v=0;v<vx.length;v++) anc.push({ id: vx[v].id, dev: 'legacy' });
+  }
+  /* anciens fichiers pas encore recopies : lus en entier, il faut connaitre
+     leurs mois (cas transitoire, jusqu'a la mise a jour de chaque appareil) */
+  for(var a=0;a<anc.length;a++){
+    if(faits[anc[a].dev]) continue;
+    var j = await driveRead(anc[a].id);
+    var ms = (j && j.moves) || [];
+    idx.anc.push({ dev: anc[a].dev, moves: ms });
+    for(var z=0;z<ms.length;z++){ var mo = mvMois(ms[z]); if(!idx.mois[mo]) idx.mois[mo] = []; }
+  }
+  for(var p=0;p<mvNew.length;p++){ var mn = mvMois(mvNew[p]); if(!idx.mois[mn]) idx.mois[mn] = []; }
+  mvJ.idx = idx;
+  return idx;
+}
+/* mouvements d'un mois, tous appareils, sans doublon, du plus recent au plus ancien */
+async function mvChargerMois(mois){
+  if(mvJ.mois[mois]) return mvJ.mois[mois];
+  var idx = await mvIndex(), src = idx.mois[mois] || [];
+  var lus = await Promise.all(src.map(function(s){
+    return driveRead(s.id).then(function(j){ return { dev: s.dev, j: j }; });
+  }));
+  var out = [], vus = {};
+  mvJ.noms = mvJ.noms || {};
+  function prendre(m, dev){
+    var k = mvCle(m);
+    if(vus[k]) return;
+    vus[k] = 1;
+    var c = {}; for(var x in m) c[x] = m[x];
+    c._dev = dev;
+    out.push(c);
+  }
+  for(var i=0;i<lus.length;i++){
+    var j = lus[i].j || {};
+    if(j.nom) mvJ.noms[lus[i].dev] = j.nom;
+    var ms = j.moves || [];
+    for(var a=0;a<ms.length;a++) prendre(ms[a], lus[i].dev);
+  }
+  for(var b=0;b<idx.anc.length;b++){
+    var am = idx.anc[b].moves;
+    for(var z=0;z<am.length;z++) if(mvMois(am[z]) === mois) prendre(am[z], idx.anc[b].dev);
+  }
+  for(var p=0;p<mvNew.length;p++) if(mvMois(mvNew[p]) === mois) prendre(mvNew[p], DEV);
+  out.sort(function(x, y){ return mvOrdre(y, x); });
+  mvJ.mois[mois] = out;
+  return out;
+}
+
 function mvQueue(){ mvLocal(); clearTimeout(mvTimer); mvTimer = setTimeout(mvSave, 20000); }
 /* mouvements pas encore ecrits : gardes sur l'appareil jusqu'a l'ecriture */
 function mvLocal(){ try{ localStorage.setItem(LS + 'mvp', JSON.stringify(mvNew)); }catch(e){} }
@@ -4081,7 +4228,7 @@ function stickAdd(base, d, src){
   var mv = { t: now(), c: base, v: 'stk', e: '-', d: vrai, w: who || '', s: src || 'stickers' };
   stkPending.push(mv);
   mvNew.push(mv); mvCount++;
-  if(mvLoaded) stkMoves.push(mv);
+  mvJVu(mv);
   stkQueue(); mvQueue(); stkSaveCache();
   return true;
 }
@@ -4274,6 +4421,7 @@ async function renderStock(){
   if(stkNever) return stkRenderNever();
   if(stkInv) return stkRenderInv();
   if(stkJournal) return stkRenderJournal();
+  mvJ = null;   /* journal quitte : rien n'est garde en memoire */
   if(stkSet) return stkRenderGrid();      /* la recherche se fait dans l'extension */
   var q = query();
   if(q) return stkRenderSearch(q);
@@ -4293,7 +4441,6 @@ function stkRenderSets(){
     majHdrH();
     stkTouchSets();
     var jc = stkSetsEl.querySelector('.stkJB .jc');
-    if(jc) jc.textContent = mvLoaded ? stkMoves.length : mvCount;
     /* la liste reutilisee garde ses anciens totaux : celui des stickers se
        rafraichit ici, comme les compteurs d'extensions au-dessus */
     var sb = stkSetsEl.querySelector('[data-stkst] b');
@@ -4318,7 +4465,7 @@ function stkRenderSets(){
   h += '<div class="stkJB" data-stkj="1">' +
        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
        '<path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>' +
-       'Mouvements de stock<span class="jc">' + (mvLoaded ? stkMoves.length : mvCount) + '</span></div>';
+       'Mouvements de stock<span class="jc">›</span></div>';
   h += '<div class="bxF hide" id="bxF"></div><div class="bxT hide" id="bxT"></div>';
   /* reporter le stock des sous-extensions sur leur parent */
   for(var sk in per){
@@ -5283,74 +5430,182 @@ async function stkRenderNever(){
 /* ---- journal des mouvements ---- */
 var SRC_LBL = { saisie:'Saisie', lot:'Mis en lot', retour:'Retour de lot', variante:'Variante', stickers:'Sticker' };
 
+/* un geste fait pendant la consultation apparait aussitot */
+function mvJVu(m){
+  if(!mvJ) return;
+  var arr = mvJ.mois[mvMois(m)];
+  if(!arr) return;
+  var c = {}; for(var x in m) c[x] = m[x];
+  c._dev = DEV;
+  arr.unshift(c);
+}
+var MOIS_FR = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+function moisLbl(mo){ var p = mo.split('-'); return MOIS_FR[parseInt(p[1],10) - 1] + ' ' + p[0]; }
+function jourLbl(j){
+  var p = j.split('-'), d = new Date(+p[0], +p[1] - 1, +p[2]);
+  return d.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+}
+function mvFiltre(list){
+  return (mvFilt === 'lot') ? list.filter(function(m){ return m.s === 'lot' || m.s === 'retour'; }) : list;
+}
+
 async function stkRenderJournal(){
+  if(!mvJ) mvJ = { idx: null, mois: {}, ouvert: null, jour: null, q: '' };
   var ico = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>';
-  function head(sub){
-    return '<div class="stkBar"><button class="stkBack" data-stkjb="1" aria-label="Retour">' + ico + '</button>' +
-           '<div class="stkTit">Mouvements de stock<small>' + sub + '</small></div></div>';
-  }
-  /* toujours relire : le journal doit refleter ce que l'autre appareil a fait */
-  stkView(head('chargement…'));
-  if(mvNew.length){ clearTimeout(mvTimer); await mvSave(); }
-  await mvLoad(true);
-  if(!stkJournal || tab !== 'stock') return;
-  if(!stkMoves.length){
-    stkView(head('aucun mouvement') + '<div class="pkE">Rien n\'a encore été saisi.</div>');
+  var cal = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>';
+  var h = '<div class="stkBar"><button class="stkBack" data-stkjb="1" aria-label="Retour">' + ico + '</button>' +
+          '<div class="stkTit">Mouvements de stock<small id="mv_sub">choisis une date ou cherche une carte</small></div></div>';
+  if(!devNom()) h += '<div class="tagBox" style="margin:0 0 10px;padding:8px 12px">Appareil sans nom · à régler dans le compte, rubrique « Cet appareil ».</div>';
+  h += '<div class="fld" style="padding:0;margin:0 0 10px"><input class="inp" id="mv_q" placeholder="Chercher une carte (toutes dates)…" value="' + esc(mvJ.q) + '"' + noAuto() + '></div>';
+  h += '<div class="mvBarre"><button class="mvDB' + (mvJ.jour ? ' on' : '') + '" id="mv_dB">' + cal +
+       '<span>' + (mvJ.jour ? esc(jourLbl(mvJ.jour)) : 'Choisir une date') + '</span></button>' +
+       '<div class="mvDP hide" id="mv_dP"></div></div>';
+  h += '<div class="stkFB"><div class="sg">' +
+       '<button class="' + (mvFilt === 'lot' ? 'on' : '') + '" data-mvf="lot">Lots</button>' +
+       '<button class="' + (mvFilt === 'all' ? 'on' : '') + '" data-mvf="all">Tout</button>' +
+       '</div></div>';
+  h += '<div id="mv_res"></div>';
+  stkView(h);
+  var inp = $('mv_q');
+  inp.oninput = function(){
+    clearTimeout(inp._t);
+    inp._t = setTimeout(function(){ mvJ.q = inp.value; mvAfficher(); }, 320);
+  };
+  champX(inp, function(){ mvJ.q = ''; mvAfficher(); });
+  $('mv_dB').onclick = mvPanneau;
+  mvAfficher();
+}
+
+/* panneau des dates : les mois, puis les jours du mois touche */
+async function mvPanneau(){
+  var p = $('mv_dP');
+  if(!p) return;
+  if(!p.classList.contains('hide')){ p.classList.add('hide'); return; }
+  p.innerHTML = '<div class="mvDM">Chargement…</div>';
+  p.classList.remove('hide');
+  try{ await mvPanneauRemplir(); }
+  catch(e){ if($('mv_dP')) $('mv_dP').innerHTML = '<div class="mvDM">Lecture impossible, réessaie.</div>'; }
+}
+async function mvPanneauRemplir(){
+  var idx = await mvIndex();
+  var p = $('mv_dP');
+  if(!p || !mvJ) return;
+  var mois = Object.keys(idx.mois).sort().reverse();
+  if(!mvJ.ouvert && mvJ.jour) mvJ.ouvert = mvJ.jour.slice(0, 7);
+  if(!mvJ.ouvert && mois.length) mvJ.ouvert = mois[0];
+  if(!mois.length){ p.innerHTML = '<div class="mvDM">Aucun mouvement enregistré.</div>'; return; }
+  var h = '<div class="mvML">';
+  for(var i=0;i<mois.length;i++)
+    h += '<button class="famC' + (mois[i] === mvJ.ouvert ? ' on' : '') + '" data-mvmo="' + mois[i] + '">' + esc(moisLbl(mois[i])) + '</button>';
+  h += '</div><div class="mvJG" id="mv_jG"><div class="mvDM">Chargement…</div></div>';
+  p.innerHTML = h;
+  var sel = p.querySelector('.mvML .on');
+  if(sel && sel.scrollIntoView) sel.scrollIntoView({ block:'nearest', inline:'center' });
+  var list = await mvChargerMois(mvJ.ouvert);
+  var g = $('mv_jG');
+  if(!g || !mvJ) return;
+  var parJour = {};
+  for(var k=0;k<list.length;k++){ var j = mvJour(list[k]); parJour[j] = (parJour[j] || 0) + 1; }
+  var jours = Object.keys(parJour).sort().reverse();
+  g.innerHTML = jours.length ? jours.map(function(jj){
+    return '<button class="famC' + (jj === mvJ.jour ? ' on' : '') + '" data-mvj="' + jj + '"><b>' + parseInt(jj.slice(8), 10) +
+           '</b><small>' + parJour[jj] + '</small></button>';
+  }).join('') : '<div class="mvDM">Aucun mouvement ce mois-ci.</div>';
+}
+document.addEventListener('click', function(e){
+  var p = $('mv_dP');
+  if(!p || p.classList.contains('hide')) return;
+  var t;
+  if((t = e.target.closest('[data-mvmo]')) && p.contains(t)){
+    mvJ.ouvert = t.getAttribute('data-mvmo');
+    mvPanneauRemplir().catch(function(){ if($('mv_jG')) $('mv_jG').innerHTML = '<div class="mvDM">Lecture impossible, réessaie.</div>'; });
     return;
   }
-
-  var LIM = 300;
-  var nLot = 0;
-  for(var z=0;z<stkMoves.length;z++) if(stkMoves[z].s === 'lot' || stkMoves[z].s === 'retour') nLot++;
-
-  var src = (mvFilt === 'lot')
-    ? stkMoves.filter(function(m){ return m.s === 'lot' || m.s === 'retour'; })
-    : stkMoves;
-  var list = src.slice(-LIM).reverse();
-
-  var bar = '<div class="stkFB"><div class="sg">' +
-    '<button class="' + (mvFilt === 'lot' ? 'on' : '') + '" data-mvf="lot">Lots (' + nLot + ')</button>' +
-    '<button class="' + (mvFilt === 'all' ? 'on' : '') + '" data-mvf="all">Tout (' + stkMoves.length + ')</button>' +
-    '</div></div>';
-
-  /* un mouvement de sticker porte un nom de famille, pas un identifiant de
-     carte : inutile d'aller chercher une extension qui n'existe pas */
-  var keys = list.filter(function(m){ return m.v !== 'stk'; }).map(function(m){ return m.c; });
-  stkView(head('chargement…') + bar);
-  await ensureCards(keys);
-  if(!stkJournal || tab !== 'stock') return;
-
-  var sub = src.length + ' mouvement' + (src.length > 1 ? 's' : '');
-  if(src.length > LIM) sub += ' · ' + LIM + ' derniers affichés';
-  var h = head(sub) + bar, jour = null;
-
-  if(!list.length){
-    stkView(h + '<div class="pkE">Aucun mouvement lié à un lot pour l\'instant. Les cartes piochées ou remises apparaîtront ici.</div>');
+  if((t = e.target.closest('[data-mvj]')) && p.contains(t)){
+    mvJ.jour = t.getAttribute('data-mvj');
+    mvJ.q = '';
+    var inp = $('mv_q');
+    if(inp){ inp.value = ''; inp.dispatchEvent(new Event('input')); clearTimeout(inp._t); }
+    p.classList.add('hide');
+    var b = $('mv_dB');
+    if(b){ b.classList.add('on'); b.querySelector('span').textContent = jourLbl(mvJ.jour); }
+    window.scrollTo(0,0); mvAfficher();
     return;
   }
+  if(!p.contains(e.target) && !e.target.closest('#mv_dB')) p.classList.add('hide');
+});
 
-  for(var i=0;i<list.length;i++){
-    var m = list[i], stk = (m.v === 'stk'), c = stk ? null : cdbById[m.c];
-    var d = new Date(m.t), j = dt(m.t);
-    if(j !== jour){ jour = j; h += '<div class="stkJD">' + esc(j) + '</div>'; }
-
+/* liste affichee : resultats de recherche, ou le jour choisi */
+var mvTour = 0;
+async function mvAfficher(){
+  var res = $('mv_res'), sub = $('mv_sub');
+  if(!res || !mvJ) return;
+  var tour = ++mvTour;
+  var q = norm(mvJ.q || '');
+  var list = null, titre = '';
+  try{
+    if(q.length >= 2){
+      res.innerHTML = '<div class="ph">Recherche dans tout l\'historique…</div>';
+      await namesLoad();
+      var ids = {};
+      for(var nk in nameIdx) if(nk.indexOf(q) >= 0){ var li = nameIdx[nk]; for(var a=0;a<li.length;a++) ids[li[a]] = 1; }
+      var idx = await mvIndex(), mois = Object.keys(idx.mois);
+      var tous = await Promise.all(mois.map(mvChargerMois));
+      list = [];
+      for(var t=0;t<tous.length;t++) for(var z=0;z<tous[t].length;z++){
+        var m = tous[t][z];
+        if(m.v === 'stk' ? norm(String(m.c)).indexOf(q) >= 0 : ids[m.c]) list.push(m);
+      }
+      list.sort(function(x, y){ return mvOrdre(y, x); });
+      titre = 'toutes dates';
+    } else if(mvJ.jour){
+      res.innerHTML = '<div class="ph">Chargement…</div>';
+      var lm = await mvChargerMois(mvJ.jour.slice(0, 7));
+      list = lm.filter(function(m){ return mvJour(m) === mvJ.jour; });
+      titre = jourLbl(mvJ.jour);
+    }
+  }catch(e){
+    if(tour === mvTour && $('mv_res')) $('mv_res').innerHTML = '<div class="pkE">Lecture de l\'historique impossible. Vérifie la connexion et réessaie.</div>';
+    return;
+  }
+  if(tour !== mvTour || !$('mv_res')) return;
+  if(!list){
+    res.innerHTML = '<div class="pkE">Choisis une date, ou tape le nom d\'une carte pour voir tous ses mouvements.</div>';
+    if(sub) sub.textContent = 'choisis une date ou cherche une carte';
+    return;
+  }
+  var vue = mvFiltre(list);
+  if(sub) sub.textContent = titre + ' · ' + vue.length + ' mouvement' + (vue.length > 1 ? 's' : '');
+  if(q.length >= 2 && vue.length > 600) vue = vue.slice(0, 600);
+  await ensureCards(vue.filter(function(m){ return m.v !== 'stk'; }).map(function(m){ return m.c; }));
+  if(tour !== mvTour || !$('mv_res')) return;
+  if(!vue.length){
+    res.innerHTML = '<div class="pkE">' + (list.length ? 'Aucun mouvement lié à un lot.' : 'Aucun mouvement.') + '</div>';
+    return;
+  }
+  var noms = mvNoms(), h = '', jour = null;
+  for(var i=0;i<vue.length;i++){
+    var mv = vue[i], stk = (mv.v === 'stk'), c = stk ? null : cdbById[mv.c];
+    var d = new Date(mvMs(mv)), jd = mvJour(mv);
+    if(q.length >= 2 && jd !== jour){ jour = jd; h += '<div class="stkJD">' + esc(dt(d.toISOString())) + '</div>'; }
     var vs = c ? stkVars(c) : [];
     var det = [];
-    if(vs.length > 1 && VAR_FULL[m.v]) det.push(VAR_FULL[m.v]);
-    if(!stk && m.e && m.e !== 'nm') det.push(ET_LBL[m.e] || m.e);
+    if(vs.length > 1 && VAR_FULL[mv.v]) det.push(VAR_FULL[mv.v]);
+    if(!stk && mv.e && mv.e !== 'nm') det.push(ET_LBL[mv.e] || mv.e);
     var si = c ? setInfo(rootSet(c.s)) : null;
     if(si) det.push(si.name);
-    if(m.s && SRC_LBL[m.s]) det.push(SRC_LBL[m.s]);
-
-    var hh = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+    if(mv.s && SRC_LBL[mv.s]) det.push(SRC_LBL[mv.s]);
+    var hh = mv2(d.getHours()) + ':' + mv2(d.getMinutes());
+    var app = noms[mv._dev] || 'sans nom';
     h += '<div class="stkMv">' +
-         '<span class="d ' + (m.d > 0 ? 'p' : 'm') + '">' + (m.d > 0 ? '+' : '') + m.d + '</span>' +
-         '<span class="mt"><b>' + esc(c ? c.n : m.c) + (c ? ' <span style="color:var(--tx3);font-weight:600">n° ' + esc(c.u) + '</span>' : '') + '</b>' +
+         '<span class="d ' + (mv.d > 0 ? 'p' : 'm') + '">' + (mv.d > 0 ? '+' : '') + mv.d + '</span>' +
+         '<span class="mt"><b>' + esc(c ? c.n : (stk ? stickNomAff(mv.c) : mv.c)) + (c ? ' <span style="color:var(--tx3);font-weight:600">n° ' + esc(c.u) + '</span>' : '') + '</b>' +
          '<small>' + esc(det.join(' · ')) + '</small></span>' +
-         '<span class="mh">' + hh + (m.w ? ' · ' + esc(m.w) : '') + '</span></div>';
+         '<span class="mh">' + hh + '<br>' + esc(app) + '</span></div>';
   }
-  stkView(h + '</div>');
+  res.innerHTML = h;
 }
+function stickNomAff(k){ var g = (typeof stickGroup === 'function') ? stickGroup(k) : null; return (g && g.b) ? 'Sticker ' + g.b : String(k); }
 
 /* ---- panneau détail carte ---- */
 /* 'garder' rouvre la fiche sans empiler d'entree d'historique : sans cela,
@@ -5474,6 +5729,11 @@ function stkBind(){
     if((t = e.target.closest('[data-mvf]'))){
       mvFilt = t.getAttribute('data-mvf');
       localStorage.setItem(LS + 'mvf', mvFilt);
+      if(stkJournal && $('mv_res')){
+        var gf = t.closest('.sg');
+        if(gf){ var bf = gf.querySelectorAll('[data-mvf]'); for(var zf=0;zf<bf.length;zf++) bf[zf].classList.toggle('on', bf[zf].getAttribute('data-mvf') === mvFilt); }
+        mvAfficher(); return;
+      }
       window.scrollTo(0,0); render(); return;
     }
     if((t = e.target.closest('[data-stkj]'))){
