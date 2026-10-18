@@ -807,7 +807,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.52';
+var APP_VERSION = '4.53';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -4803,6 +4803,14 @@ function nomContient(k, m){
   return false;
 }
 var stkMemb = null, stkMembQ = null, stkMembBase = null, stkPastGarde = null;
+/* « Tous » : pastille de tete, valeur speciale '*' = tous les membres de la
+   famille affichee (stkFamNoms) */
+var STK_TOUS = '*', stkFamNoms = [];
+function famNomOk(nm, mn){
+  if(mn !== STK_TOUS) return nomContient(nm, mn);
+  for(var i=0;i<stkFamNoms.length;i++) if(nomContient(nm, stkFamNoms[i])) return true;
+  return false;
+}
 /* remet a jour le chiffre des pastilles apres un geste sur le stock */
 function stkPastQ(){
   var r = document.querySelector('#view .fmbR');
@@ -4851,7 +4859,7 @@ function famPastilles(f){
 function stkChipQ(mn, garde, parId){
   var vus = {}, t = 0;
   for(var nm in nameIdx){
-    if(!nomContient(nm, mn)) continue;
+    if(!famNomOk(nm, mn)) continue;
     var l = nameIdx[nm];
     for(var i=0;i<l.length;i++){
       if(vus[l[i]] || !garde(l[i])) continue;
@@ -4876,7 +4884,7 @@ async function stkRenderSearch(q){
   if(!cdb){ try{ await cdbLoad(); }catch(e){} }
   /* une nouvelle saisie efface le choix d'une pastille */
   if(stkMembQ !== q){ stkMemb = null; stkMembQ = q; }
-  var P = stkParse(q), n = stkMemb || P.nom;
+  var P = stkParse(q), n = (stkMemb && stkMemb !== STK_TOUS) ? stkMemb : P.nom;
   if(P.nom.length < 2){
     stkView('<div class="ph">Tape au moins deux lettres du nom' +
             ((P.num || P.code) ? ', par exemple « ronflex ' + esc(P.num || P.code) + ' »' : '') + '.</div>');
@@ -4914,8 +4922,11 @@ async function stkRenderSearch(q){
       var deb = fm.filter(function(x){ return x.n.indexOf(P.nom) === 0; });
       if(deb.length === 1) stkMembBase = deb[0].n;
     }
-    if(stkMemb && !fm.some(function(x){ return x.n === stkMemb; })){ stkMemb = null; n = P.nom; }
-    chipsH = '<div class="fmbR">';
+    if(stkMemb && stkMemb !== STK_TOUS && !fm.some(function(x){ return x.n === stkMemb; })){ stkMemb = null; n = P.nom; }
+    stkFamNoms = fm.map(function(x){ return x.n; });
+    var qt = stkChipQ(STK_TOUS, garde, parId);
+    chipsH = '<div class="fmbR"><button class="famC' + (stkMemb === STK_TOUS ? ' on' : '') + (qt ? '' : ' z') +
+             '" data-fmb="' + STK_TOUS + '">Tous<span class="fmbN">' + qt + '</span></button>';
     for(var fc=0;fc<fm.length;fc++){
       var qn = stkChipQ(fm[fc].n, garde, parId);
       var on = stkMemb ? (fm[fc].n === stkMemb) : (fm[fc].n === stkMembBase);
@@ -4924,9 +4935,10 @@ async function stkRenderSearch(q){
     }
     chipsH += '</div>';
   }
-  var large = (P.num || filtreSid) ? 4000 : 900;
+  var tous = (stkMemb === STK_TOUS && fm);
+  var large = (P.num || filtreSid || tous) ? 4000 : 900;
   for(var nm in nameIdx){
-    if(stkMemb ? !nomContient(nm, n) : nm.indexOf(n) < 0) continue;
+    if(tous ? !famNomOk(nm, STK_TOUS) : (stkMemb ? !nomContient(nm, n) : nm.indexOf(n) < 0)) continue;
     var lst = nameIdx[nm];
     for(var li=0;li<lst.length;li++){
       if(vusId[lst[li]] || !garde(lst[li])) continue;
@@ -4955,7 +4967,7 @@ async function stkRenderSearch(q){
     if(c && !vusC[c.i]){ vusC[c.i] = 1; cards.push(c); }
   }
   var withQ = cards.filter(function(c){ return stkCardQ(c.i) > 0; });
-  var LIM = 400, coupe = cards.length > LIM;
+  var LIM = tous ? 1500 : 400, coupe = cards.length > LIM;
   var show = cards.slice(0, LIM);          /* toujours tout, possede ou non */
   if(!show.length){ stkView(chipsH + noHit(EMPTY_CMD, 'ce Pokémon')); return; }
 
@@ -4971,7 +4983,7 @@ async function stkRenderSearch(q){
   var h = chipsH;
   if(P.num || P.code){
     var si0 = P.code && P.sids ? setInfo(P.sids[0]) : null;
-    h += '<div class="stkWarn">Recherche : ' + esc(n) +
+    h += '<div class="stkWarn">Recherche : ' + esc(tous ? 'famille ' + n : n) +
          (P.num ? ' · n° ' + esc(P.num) : '') +
          (P.code ? ' · ' + esc(si0 ? si0.name : P.code.toUpperCase()) : '') + '</div>';
   }
