@@ -807,7 +807,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.53';
+var APP_VERSION = '4.54';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -1442,9 +1442,19 @@ function hydratePhotos(){
 
 /* visionneuse plein écran */
 var lbReset = null;
-function showLightbox(src){
-  var lb = $('lb');
-  lb.querySelector('img').src = src;
+/* liste : sources de secours (visuels de cartes). Sans elle, une source
+   manquante laissait la visionneuse vide alors que la fiche, elle, passait
+   a la source suivante. */
+function showLightbox(src, liste){
+  var lb = $('lb'), im = lb.querySelector('img');
+  im.classList.remove('gone'); im.style.visibility = '';
+  if(liste && liste.length > 1){
+    im.setAttribute('data-cs', JSON.stringify(liste)); im.setAttribute('data-ci', '0');
+    im.onerror = function(){ cardImgErr(im); };
+  } else {
+    im.removeAttribute('data-cs'); im.removeAttribute('data-ci'); im.onerror = null;
+  }
+  im.src = src;
   if(typeof lbReset === 'function') lbReset();
   lb.classList.add('on');
   var hint = document.getElementById('lbHint');
@@ -5852,7 +5862,14 @@ function stkBind(){
     }
     if((t = e.target.closest('[data-stkzoom]'))){
       var cz = cdbById[t.getAttribute('data-stkzoom')];
-      if(cz && typeof showLightbox === 'function') showLightbox(cdbImgBig(cz));
+      if(cz && typeof showLightbox === 'function'){
+        /* partir de la source que la fiche affiche deja : elle est chargee */
+        var lz = null, iz = parseInt(t.getAttribute('data-ci') || '0', 10);
+        try{ lz = JSON.parse(t.getAttribute('data-cs') || 'null'); }catch(ez){ lz = null; }
+        if(!lz || !lz.length) lz = cardSrcs(cz, true);
+        else lz = lz.slice(iz >= 0 && iz < lz.length ? iz : 0);
+        if(lz.length) showLightbox(lz[0], lz);
+      }
       return;
     }
     if((t = e.target.closest('[data-stkvt]'))){
