@@ -467,6 +467,10 @@ color:var(--tx);font-size:14px;font-weight:800;cursor:pointer;flex:none;line-hei
 .stkMv .mt{flex:1;min-width:0}
 .stkMv .mt b{display:block;font-weight:700}
 .stkMv .mt small{display:block;color:var(--tx3);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jalL{padding:0 18px 4px;font-size:12px}
+.jalL div{display:flex;gap:10px;padding:5px 0;border-bottom:1px solid var(--bd)}
+.jalL b{flex:none;width:48px;text-align:right;color:var(--blu);font-weight:800}
+.jalL span{flex:1;min-width:0;color:var(--tx2)}
 .stkMv .mh{color:var(--tx3);font-size:10px;font-weight:700;flex:none;text-align:right;line-height:1.35}
 /* journal : choix de la date */
 .mvBarre{position:relative;margin:0 0 10px}
@@ -807,7 +811,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.54';
+var APP_VERSION = '4.55';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -842,6 +846,30 @@ var dirty = false, saving = false, pollTimer = null, sheetOpen = false, suppress
 var majTimer = null, majInt = null, syncInt = null, tokInt = null, visBound = false;
 var refreshTimer = null, booted = false, offline = false;
 var cfmCb = null;
+
+/* ═══ CHRONOMETRAGE DU DEMARRAGE (diagnostic, sans effet sur le fonctionnement) ═══
+   Chaque ouverture ou retour dans l'app note ses etapes, jusqu'a la vitrine
+   a jour (ou 3 minutes). Les 6 dernieres sont gardees et visibles depuis le
+   compte : « Derniers démarrages ». */
+var jalS = null;
+function jalDebut(type){
+  jalS = { type: type, debut: Date.now(), e: [], fin: false };
+  jalSauve();
+}
+function jal(txt, fin){
+  if(!jalS || jalS.fin || Date.now() - jalS.debut > 180000) return;
+  jalS.e.push([Date.now() - jalS.debut, txt]);
+  if(fin) jalS.fin = true;
+  jalSauve();
+}
+function jalSauve(){
+  try{
+    var l = JSON.parse(localStorage.getItem(LS + 'jal') || '[]') || [];
+    if(l.length && l[0].debut === jalS.debut) l[0] = jalS; else l.unshift(jalS);
+    localStorage.setItem(LS + 'jal', JSON.stringify(l.slice(0, 6)));
+  }catch(e){}
+}
+jalDebut('ouverture');
 
 /* ═══ UTIL ═══ */
 function $(id){ return document.getElementById(id); }
@@ -959,7 +987,9 @@ function loadCache(){
 function initGis(){
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID, scope: SCOPES,
+    error_callback: function(er){ jal('Google : échec de la fenêtre (' + ((er && er.type) || '?') + ')'); },
     callback: function(r){
+      jal(r.error ? 'Google : refus (' + r.error + ')' : 'Google : jeton reçu');
       if(r.error){ toast('Connexion refusée'); return; }
       token = r.access_token;
       tokenExp = Date.now() + (parseInt(r.expires_in,10) || 3500) * 1000;
@@ -988,6 +1018,7 @@ var reauthAt = 0;
 function reauth(){
   if(Date.now() - reauthAt < 4000) return;
   reauthAt = Date.now();
+  jal('jeton expiré : renouvellement demandé à Google' + ((me && me.email) ? '' : ' (compte non précisé)'));
   /* 'hint' indique a Google quel compte renouveler : sans lui, il affiche
      souvent le selecteur de compte au lieu de rendre la main en silence. */
   var o = { prompt: '' };
@@ -1155,6 +1186,7 @@ async function boot(){
   pollTimer = setInterval(function(){
     if(sheetOpen || saving || document.hidden) return;
     if(tab === 'stock') return;        /* cet onglet n'affiche aucun lot */
+    jal('relance automatique (45 s)');
     if(tokenValid()) sync(false);
     else reauth();
   }, POLL_MS);
@@ -1223,10 +1255,12 @@ function mergeInto(map, arr){
 }
 
 async function sync(full){
-  if(saving) return;
+  if(saving){ jal('synchro repoussée : écriture en cours'); return; }
   setSync('busy');
   try{
+    jal('lecture Drive : liste des fichiers…');
     var files = await listFiles();
+    jal('liste reçue : ' + files.length + ' fichier(s)');
     var map = {}, ownVus = {};
     myFileId = null;
     for(var i=0;i<files.length;i++){
@@ -1237,6 +1271,7 @@ async function sync(full){
          incomplete ferait croire a des lots disparus */
       if(!rr.ok) throw new Error('lecture');
       var data = await rr.json();
+      jal('lu ' + f.name + ' (' + ((data && data.lots) ? data.lots.length : 0) + ' lots)');
       if(data && data.lots){ mergeInto(map, data.lots); pendConfirm(data.lots); }
       if(f.name === myFile && data){
         var own = data.lots || [];
@@ -1286,7 +1321,9 @@ async function sync(full){
     /* L'onglet Stock n'affiche aucun lot : le reconstruire a chaque
        synchronisation rechargeait images et symboles pour rien. */
     if(tab !== 'stock') render();
+    jal('vitrine à jour', true);
   }catch(e){
+    jal('échec de la synchro : ' + (e && e.message));
     if(e.message !== 'auth') setSync('err');
   }
 }
@@ -2605,6 +2642,7 @@ function sheetAcc(){
 
     '<div class="accSec">Synchronisation</div>' +
     '<button class="accBtn" id="a_ref">Rafraîchir maintenant<span>' + lots.length + ' lots</span></button>' +
+    '<button class="accBtn" id="a_jal">Derniers démarrages<span>temps de chaque étape</span></button>' +
     '<div class="fld"><div class="tagBox" style="margin:0">Fichier d\'écriture : <b>' + esc(myFile) + '</b>' +
     (SOLO ? '<br>Compte unique : les deux appareils écrivent dans ce fichier, et tous les fichiers existants restent lus.'
           : '<br>Chaque appareil écrit dans son propre fichier. Aucune modification ne peut écraser celle de l\'autre.') +
@@ -2654,6 +2692,7 @@ function sheetAcc(){
   $('a_diag').onclick = function(){ closeSheet(); setTimeout(sheetDiag, 260); };
 
   $('a_ref').onclick = function(){ closeSheet(); sync(true); toast('Synchronisation…'); };
+  $('a_jal').onclick = function(){ closeSheet(); setTimeout(sheetJal, 260); };
   $('a_js').onclick = exportJson;
   $('a_cs').onclick = exportCsv;
   $('a_bak').onclick = async function(){
@@ -2674,6 +2713,25 @@ function sheetAcc(){
       $('app').classList.add('hide'); $('auth').classList.remove('hide');
     });
   };
+}
+
+function sheetJal(){
+  var l = [];
+  try{ l = JSON.parse(localStorage.getItem(LS + 'jal') || '[]') || []; }catch(e){}
+  var h = '<div class="shT">Derniers démarrages</div><div class="shS">v' + APP_VERSION + ' · du plus récent au plus ancien</div>';
+  if(!l.length) h += '<div class="pkE">Rien d\'enregistré pour l\'instant.</div>';
+  for(var i=0;i<l.length;i++){
+    var s = l[i], d = new Date(s.debut);
+    h += '<div class="accSec">' + esc(s.type) + ' · ' + esc(dt(d.toISOString())) + ' ' +
+         ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + '</div><div class="jalL">';
+    for(var j=0;j<s.e.length;j++)
+      h += '<div><b>' + (s.e[j][0] / 1000).toFixed(1).replace('.', ',') + ' s</b><span>' + esc(s.e[j][1]) + '</span></div>';
+    if(!s.fin) h += '<div><b>—</b><span>vitrine pas mise à jour dans les 3 minutes suivantes</span></div>';
+    h += '</div>';
+  }
+  h += '<div class="shF"><button class="bS" style="flex:1" id="x_jal">Fermer</button></div>';
+  openSheet(h);
+  $('x_jal').onclick = closeSheet;
 }
 
 async function sheetRestore(){
@@ -2943,8 +3001,10 @@ var _open = openSheet;
 openSheet = function(h){ $('sheet').classList.remove('shFix'); _open(h); history.pushState({ d:1 }, ''); };
 
 document.addEventListener('visibilitychange', function(){
-  if(document.hidden || sheetOpen || !booted) return;
-  if(tokenValid()){ scheduleRefresh(); sync(false); }
+  if(document.hidden || !booted) return;
+  jalDebut('retour dans l\'app');
+  if(sheetOpen){ jal('fenêtre ouverte : pas de relecture'); return; }
+  if(tokenValid()){ jal('jeton encore valable (' + Math.round(tokenLeft() / 60000) + ' min)'); scheduleRefresh(); sync(false); }
   else reauth();
 });
 window.addEventListener('online', function(){
@@ -2982,11 +3042,13 @@ document.addEventListener('visibilitychange', function(){
   var s = document.createElement('script');
   s.src = 'https://accounts.google.com/gsi/client';
   s.onload = function(){
+    jal('script Google chargé');
     initGis();
     var st = null;
     try{ st = JSON.parse(localStorage.getItem(LS + 'tk') || 'null'); }catch(e){}
     if(st && st.t && st.e > Date.now() + 60000){
       token = st.t; tokenExp = st.e;
+      jal('jeton encore valable (' + Math.round((st.e - Date.now()) / 60000) + ' min)');
       start();
       return;
     }
