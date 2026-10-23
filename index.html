@@ -435,6 +435,14 @@ color:var(--tx);font-size:14px;font-weight:800;cursor:pointer;flex:none;line-hei
 .stkTot .cell{flex:1;min-width:0;position:relative;padding:11px 13px;cursor:pointer;text-align:left}
 .stkTot .cell:active{background:var(--surf2)}
 .stkTot .cell+.cell{border-left:1px solid var(--bd)}
+.stkTot .stkStC{padding:0;cursor:pointer;border-radius:8px}
+/* avec la case Stickers : cinq cases, espacements resserres pour que les libelles tiennent */
+.stkTot:has(.stkStC){gap:4px;padding:11px 9px}
+.stkTot:has(.stkStC) span{letter-spacing:0}
+.stkTot:has(.stkStC)>div{flex:1 1 auto}
+.stkTot .stkStC b{color:var(--blu)}
+.stkTot .stkStC.z b{color:var(--tx3)}
+.stkTot .stkStC:active{background:var(--surf2)}
 .stkTot .cell .go{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--tx3);font-size:16px;line-height:1}
 .nvRow{display:flex;align-items:center;gap:10px;background:var(--surf);border:1px solid var(--bd);border-radius:11px;padding:9px 11px;margin-bottom:7px}
 .nvRow img{width:32px;height:44px;object-fit:cover;border-radius:5px;background:#0c1428;flex:none}
@@ -811,7 +819,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.55';
+var APP_VERSION = '4.57';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -1236,12 +1244,28 @@ function retrySave(){
   }, 20000);
 }
 
+/* Fichiers de lots uniquement (pks_<qui>.json). Drive renvoie aussi, pour
+   cette requete, les fichiers du stock et du journal (pkstk_..., pkstkmv_...) :
+   les lire un par un retardait la vitrine d'une vingtaine de secondes.
+   Liste stricte et complete : une erreur de Drive est une erreur (jamais une
+   liste vide, qui viderait la vitrine ou ferait creer un second fichier), et
+   toutes les pages sont lues. */
 async function listFiles(){
-  var url = 'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&pageSize=100&fields=files(id,name,modifiedTime)&q=' +
-    encodeURIComponent("name contains '" + PREFIX + "' and trashed=false");
-  var r = await api(url);
-  var j = await r.json();
-  return j.files || [];
+  var out = [], page = null;
+  do{
+    var url = 'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&pageSize=1000' +
+      '&fields=nextPageToken,files(id,name,modifiedTime)&q=' +
+      encodeURIComponent("name contains '" + PREFIX + "' and trashed=false") +
+      (page ? '&pageToken=' + encodeURIComponent(page) : '');
+    var r = await api(url);
+    if(!r.ok) throw new Error('liste');
+    var j = await r.json();
+    out = out.concat(j.files || []);
+    page = j.nextPageToken || null;
+  }while(page);
+  return out.filter(function(f){
+    return f.name && f.name.indexOf(PREFIX) === 0 && /\.json$/.test(f.name);
+  });
 }
 
 /* fusion : un lot gagne s'il a le updatedAt le plus récent */
@@ -3882,6 +3906,7 @@ function stkTouchUI(ids){
     return;
   }
   if(stkJournal || stkNever) return;   /* vues de consultation, relues a l'entree */
+  stkStickMaj();
   stkTouchSets();
 }
 
@@ -4897,6 +4922,37 @@ function stkPastQ(){
     bs[i].classList.toggle('z', !q);
   }
 }
+/* Stickers du Pokemon affiche par la recherche : le groupe de stickers de ce
+   nom (Salameche, Reptincel et Dracaufeu partagent un compteur ; chaque
+   evolution d'Evoli a le sien). Saisie partielle : retenue seulement si elle
+   ne designe qu'un seul groupe. Renvoie le nom affiche du groupe, ou null. */
+function stkStickBase(n){
+  if(!familles || !n || n.length < 2) return null;
+  if(familles[n]){ var g0 = stickGroup(n); return g0 ? g0.b : null; }
+  var base = null;
+  for(var k in familles){
+    if(k.indexOf(n) !== 0) continue;
+    var g = stickGroup(k);
+    if(!g) continue;
+    if(base && norm(base) !== norm(g.b)) return null;
+    base = g.b;
+  }
+  return base;
+}
+function stkStickCell(base){
+  var q = stickQ(base);
+  return '<div class="stkStC' + (q ? '' : ' z') + '" data-stkstq="' + esc(base) + '">' +
+         '<span>Stickers</span><b>' + q + '</b></div>';
+}
+/* une saisie de sticker (cet appareil ou un autre) met la case a jour */
+function stkStickMaj(){
+  var c = document.querySelector('#view [data-stkstq]');
+  if(!c) return;
+  var q = stickQ(c.getAttribute('data-stkstq')), b = c.querySelector('b');
+  if(b && b.textContent !== String(q)) b.textContent = q;
+  c.classList.toggle('z', !q);
+}
+
 function stkFamOf(n){
   if(!familles || !n || n.length < 2) return null;
   if(familles[n]) return familles[n];
@@ -5053,6 +5109,9 @@ async function stkRenderSearch(q){
   for(var t=0;t<withQ.length;t++) tot += stkCardQ(withQ[t].i);
 
   var h = chipsH;
+  /* stickers du Pokemon affiche (« Tous » : celui qui a ete tape) */
+  var stB = stkStickBase((stkMemb && stkMemb !== STK_TOUS) ? stkMemb : P.nom);
+  var stCell = stB ? stkStickCell(stB) : '';
   if(P.num || P.code){
     var si0 = P.code && P.sids ? setInfo(P.sids[0]) : null;
     h += '<div class="stkWarn">Recherche : ' + esc(tous ? 'famille ' + n : n) +
@@ -5061,14 +5120,14 @@ async function stkRenderSearch(q){
   }
   if(withQ.length){
     h += '<div class="stkTot">' +
-        '<div><span>Trouvées</span><b>' + show.length + '</b></div>' +
+        '<div><span>' + (stCell && !largeEcran() ? 'Cartes' : 'Trouvées') + '</span><b>' + show.length + '</b></div>' +
         '<div><span>J\'en ai</span><b>' + withQ.length + '</b></div>' +
         '<div><span>Exempl.</span><b>' + tot + '</b></div>' +
-        '<div><span>Extensions</span><b>' + Object.keys(grp).length + '</b></div></div>';
+        '<div><span>' + (stCell && !largeEcran() ? 'Ext.' : 'Extensions') + '</span><b>' + Object.keys(grp).length + '</b></div>' + stCell + '</div>';
   } else {
     h += '<div class="stkTot">' +
         '<div><span>Cartes trouvées</span><b>' + show.length + '</b></div>' +
-        '<div><span>Extensions</span><b>' + Object.keys(grp).length + '</b></div></div>';
+        '<div><span>Extensions</span><b>' + Object.keys(grp).length + '</b></div>' + stCell + '</div>';
     h += '<div class="stkWarn">Aucun exemplaire en stock pour ce nom.</div>';
   }
   if(coupe) h += '<div class="stkWarn">' + cards.length + ' cartes correspondent, seules les ' + LIM + ' premières sont affichées. Affine la recherche.</div>';
@@ -5869,6 +5928,10 @@ function stkBind(){
       var p = t.getAttribute('data-stkv').split('|');
       if(stkAdd(p[0], p[1], 'nm', 1)) majCompteur(t, p[0], p[1]);
       return;
+    }
+    if((t = e.target.closest('[data-stkstq]'))){
+      stkStick = true; stkInv = false; stkNever = false; stkJournal = false;
+      stickQry = t.getAttribute('data-stkstq'); stickLet = ''; window.scrollTo(0,0); render(); return;
     }
     if((t = e.target.closest('[data-stkst]'))){
       stkStick = true; stkInv = false; stkNever = false; stkJournal = false;
