@@ -475,6 +475,12 @@ color:var(--tx);font-size:14px;font-weight:800;cursor:pointer;flex:none;line-hei
 .stkMv .mt{flex:1;min-width:0}
 .stkMv .mt b{display:block;font-weight:700}
 .stkMv .mt small{display:block;color:var(--tx3);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.achS{margin:-6px 18px 13px;background:var(--surf);border:1px solid var(--bd);border-radius:11px;overflow:hidden}
+.achR{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--bd);padding:9px 13px;color:var(--tx);cursor:pointer}
+.achR:last-child{border-bottom:0}
+.achR:active{background:var(--surf2)}
+.achR b{display:block;font-size:14px;font-weight:700}
+.achR small{display:block;font-size:11px;color:var(--tx3);font-weight:600;margin-top:2px}
 .jalL{padding:0 18px 4px;font-size:12px}
 .jalL div{display:flex;gap:10px;padding:5px 0;border-bottom:1px solid var(--bd)}
 .jalL b{flex:none;width:48px;text-align:right;color:var(--blu);font-weight:800}
@@ -819,7 +825,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.57';
+var APP_VERSION = '4.58';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2010,6 +2016,7 @@ function sheetMultiSell(){
   var ins = document.querySelectorAll('[data-ms]');
   for(var j=0;j<ins.length;j++) ins[j].oninput = recalc;
   recalc();
+  achSugg($('ms_ach'));
   $('msx').onclick = closeSheet;
   $('msk').onclick = function(){
     var cmdId = nid(), stamp = now();
@@ -2383,31 +2390,74 @@ function sheetList(id){
   };
 }
 
+/* ═══ ACHETEURS : suggestions sous le champ ═══
+   Tires des lots vendus, communs a tous les appareils. Uniquement les
+   pseudos qui COMMENCENT par le texte tape (sans tenir compte des majuscules
+   ni des accents) : aucune correspondance approximative. Un meme pseudo
+   ecrit differemment compte pour un seul acheteur, sous son orthographe la
+   plus recente. */
+function achListe(){
+  var par = {};
+  for(var i=0;i<lots.length;i++){
+    var l = lots[i];
+    if(l.deleted || (l.st !== 'vendu' && l.st !== 'expedie')) continue;
+    var nom = (l.acheteur || '').trim();
+    if(!nom) continue;
+    var k = norm(nom), d = String(l.dtVente || l.updatedAt || '');
+    var a = par[k] || (par[k] = { nom: nom, n: 0, der: '' });
+    a.n++;
+    if(d > a.der){ a.der = d; a.nom = nom; }
+  }
+  var out = [];
+  for(var c in par){ par[c].k = c; out.push(par[c]); }
+  return out;
+}
+function achSugg(inp, apres){
+  if(!inp) return;
+  var box = document.createElement('div');
+  box.className = 'achS hide';
+  (apres || inp.closest('.fld') || inp).insertAdjacentElement('afterend', box);
+  var tous = null;
+  function achMaj(){
+    var q = norm(inp.value || '');
+    if(!q){ box.classList.add('hide'); box.innerHTML = ''; return; }
+    if(!tous) tous = achListe();
+    var r = tous.filter(function(a){ return a.k.indexOf(q) === 0; });
+    /* le pseudo deja saisi en entier : rien a proposer */
+    if(r.length === 1 && r[0].k === q) r = [];
+    r.sort(function(a, b){ return b.der.localeCompare(a.der); });
+    r = r.slice(0, 6);
+    if(!r.length){ box.classList.add('hide'); box.innerHTML = ''; return; }
+    box.innerHTML = r.map(function(a){
+      return '<button type="button" class="achR" data-achn="' + esc(a.nom) + '"><b>' + esc(a.nom) + '</b>' +
+             '<small>' + a.n + ' lot' + (a.n > 1 ? 's' : '') + (a.der ? ' · dernier achat le ' + esc(dt(a.der)) : '') + '</small></button>';
+    }).join('');
+    box.classList.remove('hide');
+  }
+  inp.addEventListener('input', achMaj);
+  /* mousedown empeche : le champ garde le focus, le clavier ne se ferme pas */
+  box.addEventListener('mousedown', function(e){ e.preventDefault(); });
+  box.addEventListener('click', function(e){
+    var t = e.target.closest('[data-achn]');
+    if(!t) return;
+    inp.value = t.getAttribute('data-achn');
+    box.classList.add('hide'); box.innerHTML = '';
+  });
+}
+
 /* vente */
 function sheetSell(id){
   var l = lots.filter(function(x){ return x.id === id; })[0];
   if(!l) return;
-  var buyers = {};
-  for(var i=0;i<lots.length;i++){ if(lots[i].st === 'vendu' && lots[i].acheteur) buyers[lots[i].acheteur] = 1; }
-  var bl = Object.keys(buyers);
-  var quick = bl.length
-    ? '<div class="fld"><label class="lbl">Commandes en cours</label><div class="chips">' +
-      bl.map(function(b){ return '<button class="aBtn p" data-buyer="' + esc(b) + '">' + esc(b) + '</button>'; }).join('') +
-      '</div></div>'
-    : '';
   openSheet(
     '<div class="shT">Lot vendu</div>' +
     '<div class="shS">' + esc(lotTitle(l)) + (num(l.pa)!=null ? ' · affiché ' + eur(num(l.pa)) : '') + '</div>' +
     '<div class="fld"><label class="lbl">Prix de vente réel</label><input class="inp" id="f_pv" type="number" inputmode="decimal" step="0.5" value="' + (l.pa==null?'':l.pa) + '"></div>' +
     '<div class="fld"><label class="lbl">Acheteur — pseudo Vinted</label><input class="inp" id="f_ach" placeholder="pseudo Vinted" autocomplete="off" value="' + esc(l.acheteur) + '"></div>' +
-    quick +
     '<div class="shF"><button class="bS" id="x3">Annuler</button><button class="bP g" id="k3">Enregistrer la vente</button></div>'
   );
   $('x3').onclick = closeSheet;
-  var qb = document.querySelectorAll('[data-buyer]');
-  for(var b=0;b<qb.length;b++){
-    qb[b].onclick = function(){ $('f_ach').value = this.getAttribute('data-buyer'); };
-  }
+  achSugg($('f_ach'));
   $('k3').onclick = function(){
     var pv = num($('f_pv').value);
     if(pv == null){ toast('Indique le prix de vente'); return; }
@@ -2444,6 +2494,7 @@ function sheetEdit(id){
     '<button class="dgr" id="k4d">Supprimer ce lot</button>'
   );
   bindPhoto();
+  achSugg($('f_ach'), $('f_ach').closest('.row2'));
   $('x4').onclick = closeSheet;
   $('k4d').onclick = function(){
     var nbk = lotCardCount(l);
