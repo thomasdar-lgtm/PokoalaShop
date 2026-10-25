@@ -825,7 +825,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.61';
+var APP_VERSION = '4.62';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -3230,6 +3230,7 @@ var MV_CAP   = 4000;             /* mouvements conserves */
 var CARDS_VER = '15';   /* fichiers cards/ et pks_names.json */
 var SETS_VER  = '18';
 var FAM_VER   = '11';   /* pks_familles.json */   /* pks_sets.json seul, pour ne pas invalider les cartes deja en cache */
+var ESP_VER   = '1';    /* pks_especes.json */
 /* Quatre variantes possibles. Le cosmos ne s'active que depuis la fiche :
    aucune source ne le recense, il releve donc toujours d'une saisie manuelle. */
 var VAR_LBL  = { n:'Norm', r:'Rev', h:'Holo', c:'Cosmos', p:'Pokéball', m:'Masterball' };
@@ -5533,7 +5534,7 @@ async function nvCountFill(){
   var el = document.getElementById('nvCount');
   if(!el) return;
   if(!keys.length){ el.textContent = '0'; return; }
-  try{ await ensureCards(keys); }catch(e){ return; }
+  try{ await Promise.all([ensureCards(keys), espLoad(), famLoad()]); }catch(e){ return; }
   el = document.getElementById('nvCount');
   if(el) el.textContent = neverList().length;
 }
@@ -5546,15 +5547,54 @@ function lotPokes(){
   var s = {};
   for(var i=0;i<lots.length;i++){
     var l = lots[i];
-    if(l.poke) s[norm(l.poke)] = 1;
+    if(l.poke) s[norm(l.poke)] = l.poke;
     var m = lotCards(l);
     for(var k in m){
       var c = cdbById[k.split('|')[0]];
-      if(c) s[norm(c.n)] = 1;
+      if(c) s[norm(c.n)] = c.n;
     }
   }
   return s;
 }
+/* ═══ ESPECE D'UNE CARTE ═══
+   Les fiches de cartes ne disent pas si une carte est un Pokemon ou un
+   Dresseur. Une carte est un Pokemon si son nom contient, en MOTS ENTIERS,
+   le nom d'une espece (francais ou anglais, pks_especes.json) :
+   « Dracaufeu-ex », « Pikachu de Sacha », « M-Alakazam EX », « Rocket's
+   Wobbuffet ». Les Dresseurs, Objets, Stades et Energies n'en contiennent
+   pas. Renvoie le nom francais normalise de l'espece, null si ce n'est pas
+   un Pokemon, undefined si la table n'est pas chargee. */
+var especes = null, espP = null, espCache = {};
+function espLoad(){
+  if(especes) return Promise.resolve(especes);
+  if(espP) return espP;
+  espP = jgetv('./pks_especes.json', ESP_VER).then(function(j){ especes = (j && j.e) || {}; espCache = {}; return especes; })
+    .catch(function(){ espP = null; return null; });
+  return espP;
+}
+function especeDe(nom){
+  if(!especes) return undefined;
+  if(!nom) return null;
+  if(nom in espCache) return espCache[nom];
+  var mots = String(nom).split(/[\s\-'’.,:;()&\/+_]+/).map(norm).filter(function(x){ return x; });
+  var r = null;
+  for(var i=0;i<mots.length && !r;i++){
+    var acc = '';
+    for(var j=i;j<Math.min(i + 3, mots.length);j++){
+      acc += mots[j];
+      if(especes[acc]) r = especes[acc];        /* le plus long a partir de ce mot */
+      else if(acc.indexOf('primo') === 0 && especes[acc.slice(5)]) r = especes[acc.slice(5)];
+    }
+  }
+  espCache[nom] = r;
+  return r;
+}
+/* famille (Pokemon de base) d'une espece */
+function especeBase(sp){
+  var f = familles && familles[sp];
+  return f ? (f.b || (f.m || [])[0] || sp) : null;
+}
+
 /* regroupe le stock par nom de Pokemon */
 function stockPokes(){
   var g = {};
@@ -5573,9 +5613,15 @@ function stockPokes(){
    sur une seule ligne, portant le nom du Pokemon de base. */
 function neverList(){
   var g = stockPokes(), faits = lotPokes(), grp = {}, out = [];
+  /* familles deja faites : chaque nom present dans un lot (champ Pokemon ou
+     cartes) compte pour la famille de son espece */
+  var faitsFam = {};
+  if(especes) for(var fn in faits){ var fsp = especeDe(faits[fn] === 1 ? fn : faits[fn]); var fb = fsp && especeBase(fsp); if(fb) faitsFam[norm(fb)] = 1; }
   for(var n in g){
     var p = g[n];
-    var b = familleBase(p.nom) || p.nom;
+    var sp = especeDe(p.nom);
+    if(sp === null) continue;            /* Dresseur, Objet, Stade, Energie : ecarte */
+    var b = (sp && especeBase(sp)) || familleBase(p.nom) || p.nom;
     var cle = norm(b);
     if(!grp[cle]) grp[cle] = { n: cle, nom: b, cartes: {}, ex: 0, img: p.img, membres: [] };
     var o = grp[cle];
@@ -5591,7 +5637,7 @@ function neverList(){
       var nm = norm(o2.membres[m]);
       if(faits[nm] || stkDone[nm]) fait = true;
     }
-    if(faits[k] || stkDone[k]) fait = true;
+    if(faits[k] || stkDone[k] || faitsFam[k]) fait = true;
     if(!fait){ o2.membres.sort(); out.push(o2); }
   }
   return out;
@@ -5656,7 +5702,7 @@ async function stkRenderNever(){
     return;
   }
   stkView(head('chargement…'));
-  try{ await ensureCards(keys); }catch(e){}
+  try{ await Promise.all([ensureCards(keys), espLoad(), famLoad()]); }catch(e){}
   if(!stkNever || tab !== 'stock') return;
 
   var liste = neverList();
