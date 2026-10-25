@@ -825,7 +825,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.59';
+var APP_VERSION = '4.60';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -3689,12 +3689,13 @@ var DEV = devId();
 var STK_MINE = STK_PREFIX + DEV + '.json';
 var MV_MINE  = MV_PREFIX  + DEV + '.json';
 
+/* Fichiers dont le nom COMMENCE par le prefixe. Drive renvoie pour cette
+   requete d'autres fichiers (ceux du journal, pkstkmv_...) : ecartes. Liste
+   stricte et complete (driveListQ) : une erreur de Drive est une erreur,
+   jamais une liste vide qui ferait disparaitre le stock des autres appareils. */
 async function driveList(prefix){
-  var url = 'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&pageSize=100&fields=files(id,name)&q=' +
-    encodeURIComponent("name contains '" + prefix + "' and trashed=false");
-  var r = await api(url);
-  var j = await r.json();
-  return j.files || [];
+  var fs = await driveListQ("name contains '" + prefix + "'");
+  return fs.filter(function(f){ return f.name && f.name.indexOf(prefix) === 0; });
 }
 async function driveFindExact(nom){
   var url = 'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&pageSize=10&fields=files(id,name)&q=' +
@@ -3836,8 +3837,15 @@ function stkLoadCache(){
 /* lecture reseau : recompose les couches depuis Drive */
 /* L'ancien fichier unique ne change jamais : une fois son emplacement connu,
    inutile de le rechercher a chaque lecture. 'non' signifie qu'il n'existe pas. */
+/* « non » (fichier absent) n'est cru qu'apres une verification stricte faite
+   pendant cette ouverture de l'app : avant la 4.60, un simple echec de Drive
+   pouvait l'avoir inscrit a tort, et l'ancien fichier n'etait plus jamais lu. */
+var legacyVerifie = false;
 function legacyId(){
-  try{ return localStorage.getItem(LS + 'oldstk'); }catch(e){ return null; }
+  var v = null;
+  try{ v = localStorage.getItem(LS + 'oldstk'); }catch(e){ return null; }
+  if(v === 'non' && !legacyVerifie) return null;
+  return v;
 }
 function setLegacyId(v){
   try{ localStorage.setItem(LS + 'oldstk', v || 'non'); }catch(e){}
@@ -3850,8 +3858,14 @@ async function stkFetch(){
      cumulaient cinq a six allers-retours vers Drive. */
   var pList = driveList(STK_PREFIX);
   var old = legacyId();
+  /* recherche stricte : un echec ne doit pas faire conclure que l'ancien
+     fichier n'existe pas (ce qui l'aurait ecarte pour toujours) */
   var pOld = (old === 'non') ? Promise.resolve(null)
-           : (old ? Promise.resolve(old) : driveFindExact(STK_LEGACY).then(function(id){ setLegacyId(id); return id; }));
+           : (old ? Promise.resolve(old) : driveListQ("name = '" + STK_LEGACY + "'").then(function(l){
+               var id = (l[0] && l[0].id) || null; legacyVerifie = true; setLegacyId(id); return id; }));
+  /* l'echec eventuel est traite plus bas (await pOld) : sans ce relais il
+     serait signale comme non traite s'il survient pendant l'attente de la liste */
+  pOld.catch(function(){});
 
   var files = await pList;
   /* Drive peut remonter l'ancien fichier dans ce listage : sans dedoublonnage
@@ -3863,13 +3877,15 @@ async function stkFetch(){
     (function(f){
       if(vus[f.id]) return;
       vus[f.id] = 1;
-      lectures.push(driveRead(f.id).then(function(d){ return { f: f, d: d }; }, function(){ return null; }));
+      /* un fichier illisible interrompt la lecture : l'ecran garde l'etat
+         precedent plutot que d'afficher un stock ampute d'un appareil */
+      lectures.push(driveRead(f.id).then(function(d){ return { f: f, d: d }; }));
     })(files[z]);
   }
   var oldId = await pOld;
   if(oldId && !vus[oldId]){
     vus[oldId] = 1;
-    lectures.push(driveRead(oldId).then(function(d){ return { f: { id: oldId, name: STK_LEGACY }, d: d }; }, function(){ return null; }));
+    lectures.push(driveRead(oldId).then(function(d){ return { f: { id: oldId, name: STK_LEGACY }, d: d }; }));
   }
 
   var res = await Promise.all(lectures);
