@@ -825,7 +825,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.60';
+var APP_VERSION = '4.61';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -1319,6 +1319,12 @@ async function sync(full){
     jal('lecture Drive : liste des fichiers…');
     var files = await listFiles();
     jal('liste reçue : ' + files.length + ' fichier(s)');
+    var sig = sigFichiers(files);
+    if(!full && sig && sig === lotsSig && !pendN() && Date.now() - lotsSigAt < RELECT_MAX){
+      offline = false; setSync('');
+      jal('rien de changé sur Drive : pas de téléchargement', true);
+      return;
+    }
     var map = {}, ownVus = {};
     myFileId = null;
     for(var i=0;i<files.length;i++){
@@ -1379,12 +1385,31 @@ async function sync(full){
     /* L'onglet Stock n'affiche aucun lot : le reconstruire a chaque
        synchronisation rechargeait images et symboles pour rien. */
     if(tab !== 'stock') render();
+    /* signature retenue seulement apres une lecture complete reussie */
+    lotsSig = sig; lotsSigAt = Date.now();
     jal('vitrine à jour', true);
   }catch(e){
     jal('échec de la synchro : ' + (e && e.message));
     if(e.message !== 'auth') setSync('err');
   }
 }
+
+/* ═══ RELECTURES ALLEGEES ═══
+   Signature d'une liste de fichiers : identifiants et dates de modification.
+   Tant qu'elle ne change pas, aucun fichier n'a ete modifie ni ajoute ni
+   retire : inutile de tout retelecharger. Par securite, une lecture complete
+   est refaite au moins toutes les 10 minutes, et toujours si une signature
+   manque ou si une date est absente. */
+var RELECT_MAX = 10 * 60 * 1000;
+function sigFichiers(fs){
+  var l = [];
+  for(var i=0;i<fs.length;i++){
+    if(!fs[i].modifiedTime) return null;      /* date absente : pas de raccourci */
+    l.push(fs[i].id + '@' + fs[i].modifiedTime);
+  }
+  return l.sort().join('|');
+}
+var lotsSig = null, lotsSigAt = 0;
 
 var savedLots = {};
 async function save(){
@@ -3851,7 +3876,9 @@ function setLegacyId(v){
   try{ localStorage.setItem(LS + 'oldstk', v || 'non'); }catch(e){}
 }
 
-async function stkFetch(){
+var stkSig = null, stkSigAt = 0;
+/* leger : relecture periodique, sautee si rien n'a change sur Drive */
+async function stkFetch(leger){
   /* saisies faites pendant cette lecture : voir le traitement de notre fichier */
   var genDepart = stkGen, attenteDepart = stkPending.length;
   /* Toutes les lectures en parallele : enchainees une par une, elles
@@ -3868,6 +3895,10 @@ async function stkFetch(){
   pOld.catch(function(){});
 
   var files = await pList;
+  var oldId0 = await pOld;
+  var sig = sigFichiers(files);
+  if(sig) sig += '|ancien:' + (oldId0 || '-');
+  if(leger && sig && sig === stkSig && !stkPending.length && Date.now() - stkSigAt < RELECT_MAX) return false;
   /* Drive peut remonter l'ancien fichier dans ce listage : sans dedoublonnage
      il serait lu une seconde fois par la recherche explicite ci-dessous, et
      ses quantites compteraient double. */
@@ -3944,6 +3975,11 @@ async function stkFetch(){
   stkRebuild();
   stkApplyStates();
   stkSaveCache();
+  /* signature retenue seulement si notre propre fichier a bien ete pris en
+     compte : sinon une saisie faite pendant la lecture serait masquee */
+  stkSig = (!attenteDepart && !stkPending.length && stkGen === genDepart) ? sig : null;
+  stkSigAt = Date.now();
+  return true;
 }
 
 async function stkLoad(){
@@ -3975,7 +4011,7 @@ async function stkSync(force){
     for(var k in stock) avant[k] = stock[k];
     var avStick = JSON.stringify(stickers);
     var avBox = JSON.stringify(stkBox), avOv = JSON.parse(JSON.stringify(stkOv));
-    await stkFetch();
+    if(!(await stkFetch(!force))){ stkSyncing = false; return; }   /* rien n'a change */
     /* ne rafraichir que les cartes reellement modifiees */
     var touchees = {};
     for(var k2 in stock) if(avant[k2] !== stock[k2]) touchees[k2.split('|')[0]] = 1;
@@ -4148,7 +4184,7 @@ async function driveListQ(q){
   var out = [], page = null;
   do{
     var url = 'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&pageSize=1000' +
-      '&fields=nextPageToken,files(id,name)&q=' + encodeURIComponent(q + ' and trashed=false') +
+      '&fields=nextPageToken,files(id,name,modifiedTime)&q=' + encodeURIComponent(q + ' and trashed=false') +
       (page ? '&pageToken=' + encodeURIComponent(page) : '');
     var r = await api(url);
     if(!r.ok) throw new Error('liste ' + r.status);
