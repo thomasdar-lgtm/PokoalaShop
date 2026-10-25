@@ -825,7 +825,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.58';
+var APP_VERSION = '4.59';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -860,6 +860,33 @@ var dirty = false, saving = false, pollTimer = null, sheetOpen = false, suppress
 var majTimer = null, majInt = null, syncInt = null, tokInt = null, visBound = false;
 var refreshTimer = null, booted = false, offline = false;
 var cfmCb = null;
+
+/* ═══ STOCKAGE LOCAL PROTEGE ═══
+   Sans cette demande, Android peut effacer les donnees locales de l'app
+   (copies des lots et du stock, modifications en attente) s'il manque de
+   place. Accordee une fois, la protection reste acquise. */
+var stoEtat = '';   /* oui | non | absent */
+function stoProt(){
+  try{
+    if(!navigator.storage || !navigator.storage.persist){ stoEtat = 'absent'; return; }
+    navigator.storage.persisted().then(function(deja){
+      if(deja){ stoEtat = 'oui'; return; }
+      return navigator.storage.persist().then(function(ok){ stoEtat = ok ? 'oui' : 'non'; });
+    }).catch(function(){ stoEtat = 'non'; });
+  }catch(e){ stoEtat = 'absent'; }
+}
+/* place occupee par l'app dans le petit espace (localStorage, ~5 Mo) */
+function stoPetit(){
+  var t = 0;
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var k = localStorage.key(i);
+      if(k && k.indexOf(LS) === 0) t += (k.length + (localStorage.getItem(k) || '').length) * 2;
+    }
+  }catch(e){}
+  return t;
+}
+function stoMo(o){ return (o / 1048576).toFixed(o < 10485760 ? 2 : 1).replace('.', ',') + ' Mo'; }
 
 /* ═══ CHRONOMETRAGE DU DEMARRAGE (diagnostic, sans effet sur le fonctionnement) ═══
    Chaque ouverture ou retour dans l'app note ses etapes, jusqu'a la vitrine
@@ -1163,6 +1190,7 @@ async function boot(){
   /* familles chargees des le depart : le regroupement des stickers en depend,
      y compris le total affiche dans la liste du Stock */
   famLoad();
+  stoProt();
 
   if(!tokenValid()){
     if(!hadCache) setSync('busy');
@@ -2729,6 +2757,12 @@ function sheetAcc(){
       '<button class="aBtn ' + (who==='thomas'?'p':'') + '" style="flex:1;padding:11px" data-sw="thomas">Thomas</button>' +
       '<button class="aBtn ' + (who==='cindy'?'o':'') + '" style="flex:1;padding:11px" data-sw="cindy">Cindy</button>' +
       '</div></div>') +
+
+    '<div class="accSec">Stockage local</div>' +
+    '<div class="fld"><div class="tagBox" style="margin:0" id="a_sto">' +
+      'Protection contre l\'effacement : <b>' + (stoEtat === 'oui' ? 'activée' : stoEtat === 'non' ? 'refusée par le téléphone' : stoEtat === 'absent' ? 'non prise en charge' : 'en cours…') + '</b>' +
+      '<br>Copies rapides (lots, stock, attente) : <b>' + stoMo(stoPetit()) + '</b> sur 5 Mo environ' +
+    '</div></div>' +
 
     '<div class="accSec">Données</div>' +
     '<button class="accBtn" id="a_bak">Sauvegarder maintenant<span>automatique toutes les 6 h</span></button>' +
