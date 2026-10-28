@@ -825,7 +825,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.62';
+var APP_VERSION = '4.63';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2765,6 +2765,7 @@ function sheetAcc(){
     '<div class="accSec">Stock</div>' +
     '<button class="accBtn" id="a_stk">Vérifier le stock<span>' + stkTotalEx() + ' exemplaires</span></button>' +
     '<button class="accBtn" id="a_holo">Désélectionner Normal sur les holos<span>nettoyage en un clic</span></button>' +
+    '<button class="accBtn" id="a_hdiag">Analyser les réglages Normal des holos<span>lecture seule</span></button>' +
     '<button class="accBtn" id="a_newc">Vérifier les nouvelles cartes<span>interroge TCGdex et complète les extensions</span></button>' +
     '<button class="accBtn" id="a_diag">Diagnostic des images<span>mesure le temps de réponse de chaque source</span></button>' +
 
@@ -2822,6 +2823,7 @@ function sheetAcc(){
   $('a_maj').onclick = hardReload;
   $('a_stk').onclick = sheetStkDiag;
   $('a_holo').onclick = function(){ closeSheet(); stkAutoHideNormal(); };
+  $('a_hdiag').onclick = function(){ closeSheet(); setTimeout(sheetHoloDiag, 260); };
   $('a_newc').onclick = function(){ closeSheet(); majCartes(true); };
   $('a_diag').onclick = function(){ closeSheet(); setTimeout(sheetDiag, 260); };
 
@@ -4549,6 +4551,97 @@ async function stkAutoHideNormal(){
   }
   toast(n ? ('Normal désélectionné sur ' + n + ' carte' + (n > 1 ? 's' : '')) : 'Rien à changer');
   if(tab === 'stock') render();
+}
+
+/* Diagnostic en LECTURE SEULE : pourquoi des cartes holo retrouvent-elles
+   « Normal » coche ? Chaque appareil garde, carte par carte, son dernier
+   reglage de versions et sa date ; le journal garde la date de chaque saisie
+   de holo. On regroupe les desactivations de Normal par jour (les
+   nettoyages), et pour le dernier nettoyage on distingue les holos saisis
+   depuis le precedent (nouveaux) de ceux qui auraient du deja etre regles. */
+async function sheetHoloDiag(){
+  openSheet('<div class="shT">Réglages Normal des holos</div><div class="ph" id="hd_ph">Analyse…</div>');
+  function ecrire(x){ var e = $('hd_ph'); if(e) e.outerHTML = x; }
+  try{ await stkLoad(); }catch(e){}
+  var idsH = {};
+  for(var k in stock){ var p = k.split('|'); if(stock[k] > 0 && p[1] === 'h') idsH[p[0]] = 1; }
+  var ids = Object.keys(idsH);
+  if(!ids.length){ ecrire('<div class="pkE">Aucun holo en stock.</div>'); return; }
+  try{ await ensureCards(ids.map(function(x){ return x + '|h|nm'; })); }catch(e){}
+  var noms = mvNoms();
+  var couches = stkLayers.map(function(L){ return { nom: noms[L.dev] || L.nom || 'autre appareil', ov: L.ov || {}, ovt: L.ovt || {}, st: L.stamp }; });
+  couches.push({ nom: devNom() || 'cet appareil', ov: myOv, ovt: myOvT, st: myStamp });
+  function jourDe(t){ return t ? String(t).slice(0, 10) : ''; }
+  function jfr(j){ return j ? j.slice(8, 10) + '/' + j.slice(5, 7) + '/' + j.slice(2, 4) : '?'; }
+  /* premieres saisies de holo, tout l'historique */
+  var prem = {}, jOk = true, garde = mvJ;
+  try{
+    mvJ = { idx: null, mois: {}, ouvert: null, jour: null, q: '' };
+    var idx = await mvIndex(), mois = Object.keys(idx.mois);
+    var tous = await Promise.all(mois.map(mvChargerMois));
+    for(var a=0;a<tous.length;a++) for(var b=0;b<tous[a].length;b++){
+      var m = tous[a][b];
+      if(m.v === 'h' && m.d > 0 && idsH[m.c]){ var tj = jourDe(new Date(mvMs(m)).toISOString()); if(!prem[m.c] || tj < prem[m.c]) prem[m.c] = tj; }
+    }
+  }catch(e){ jOk = false; }
+  mvJ = garde;
+  var off = 0, onSans = 0, nettoyages = {}, carte = {};
+  for(var i=0;i<ids.length;i++){
+    var id = ids[i], c = cdbById[id];
+    if(!c) continue;
+    var actuel = (stkOv[id] != null) ? stkOv[id] : masqueDefaut(c);
+    var nOff = !(actuel & VAR_BIT.n);
+    var ent = [];
+    for(var cc=0;cc<couches.length;cc++){
+      var L = couches[cc];
+      if(!(id in L.ov)) continue;
+      var val = L.ov[id], m2 = val ? val : masqueDefaut(c);
+      ent.push({ nom: L.nom, nOn: !!(m2 & VAR_BIT.n), j: jourDe(L.ovt[id]) });
+    }
+    carte[id] = { c: c, nOff: nOff, ent: ent };
+    if(nOff){ off++; } else if(!stkVarQ(id, 'n')) onSans++;
+    for(var e2=0;e2<ent.length;e2++) if(!ent[e2].nOn && ent[e2].j){
+      var cle = ent[e2].j + '|' + ent[e2].nom;
+      nettoyages[cle] = (nettoyages[cle] || 0) + 1;
+    }
+  }
+  var jours = Object.keys(nettoyages).sort().reverse();
+  var h = '<div class="shS">' + ids.length + ' cartes avec du holo en stock</div>' +
+    '<div class="accSec">État actuel</div><div class="jalL">' +
+    '<div><b>' + off + '</b><span>Normal désactivé</span></div>' +
+    '<div><b>' + onSans + '</b><span>Normal encore coché sans aucun exemplaire Normal</span></div></div>' +
+    '<div class="accSec">Désactivations de Normal, par jour et appareil</div><div class="jalL">' +
+    (jours.length ? jours.slice(0, 12).map(function(x){ var q = x.split('|'); return '<div><b>' + nettoyages[x] + '</b><span>' + jfr(q[0]) + ' · ' + esc(q[1]) + '</span></div>'; }).join('')
+                  : '<div><b>—</b><span>aucune date enregistrée</span></div>') + '</div>';
+  /* dernier nettoyage : cartes desactivees ce jour-la */
+  var jDer = jours.length ? jours[0].split('|')[0] : '';
+  var jPrec = '';
+  for(var z=0;z<jours.length;z++){ var jz = jours[z].split('|')[0]; if(jz < jDer && nettoyages[jours[z]] >= 10){ jPrec = jz; break; } }
+  if(jDer){
+    var nouv = 0, perdu = 0, inconnu = 0, ex = [];
+    for(var id2 in carte){
+      var o = carte[id2], dern = false;
+      for(var e3=0;e3<o.ent.length;e3++) if(!o.ent[e3].nOn && o.ent[e3].j === jDer) dern = true;
+      if(!dern) continue;
+      var pj = prem[id2];
+      if(!pj){ inconnu++; continue; }
+      if(jPrec && pj < jPrec){
+        perdu++;
+        if(ex.length < 8){
+          var ailleurs = o.ent.filter(function(x){ return x.nOn; }).map(function(x){ return 'Normal coché par ' + x.nom + (x.j ? ' le ' + jfr(x.j) : ''); });
+          ex.push(esc(o.c.n) + ' n° ' + esc(o.c.u) + ' · holo saisi le ' + jfr(pj) + (ailleurs.length ? ' · ' + esc(ailleurs.join(', ')) : ''));
+        }
+      } else nouv++;
+    }
+    h += '<div class="accSec">Nettoyage du ' + jfr(jDer) + (jPrec ? ' (précédent : ' + jfr(jPrec) + ')' : '') + '</div><div class="jalL">' +
+      '<div><b>' + nouv + '</b><span>holo saisi ' + (jPrec ? 'depuis le précédent nettoyage : nouveaux, normal' : '(pas de nettoyage précédent connu)') + '</span></div>' +
+      (jPrec ? '<div><b>' + perdu + '</b><span>holo saisi AVANT le précédent nettoyage : réglage perdu ou annulé</span></div>' : '') +
+      '<div><b>' + inconnu + '</b><span>date de saisie du holo inconnue' + (jOk ? '' : ' (journal illisible)') + '</span></div></div>';
+    if(ex.length) h += '<div class="jalL">' + ex.map(function(x){ return '<div><span>' + x + '</span></div>'; }).join('') + '</div>';
+  }
+  h += '<div class="shF"><button class="bS" style="flex:1" id="x_hd">Fermer</button></div>';
+  ecrire(h);
+  if($('x_hd')) $('x_hd').onclick = closeSheet;
 }
 
 /* ---- rendu ---- */
