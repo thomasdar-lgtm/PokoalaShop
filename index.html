@@ -831,7 +831,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.65';
+var APP_VERSION = '4.66';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -4686,6 +4686,24 @@ async function sheetHoloDiag(){
       (jPrec ? '<div><b>' + perdu + '</b><span>holo saisi AVANT le précédent nettoyage : réglage perdu ou annulé</span></div>' : '') +
       '<div><b>' + inconnu + '</b><span>date de saisie du holo inconnue' + (jOk ? '' : ' (journal illisible)') + '</span></div></div>';
     if(ex.length) h += '<div class="jalL">' + ex.map(function(x){ return '<div><span>' + x + '</span></div>'; }).join('') + '</div>';
+    /* repartition, semaine par semaine, de la premiere saisie du holo des
+       cartes de ce nettoyage : des saisies recentes = nouveaux holos ; des
+       saisies anciennes = reglages qui avaient ete perdus */
+    var sem = {};
+    for(var id3 in carte){
+      var o3 = carte[id3], d3 = false;
+      for(var e4=0;e4<o3.ent.length;e4++) if(!o3.ent[e4].nOn && o3.ent[e4].j === jDer) d3 = true;
+      if(!d3 || !prem[id3]) continue;
+      var dd = new Date(prem[id3] + 'T12:00:00'), lun = new Date(dd);
+      lun.setDate(dd.getDate() - ((dd.getDay() + 6) % 7));
+      var cs = lun.toISOString().slice(0, 10);
+      sem[cs] = (sem[cs] || 0) + 1;
+    }
+    var ls = Object.keys(sem).sort().reverse();
+    if(ls.length){
+      h += '<div class="accSec">Holos de ce nettoyage : saisis la semaine du…</div><div class="jalL">' +
+           ls.map(function(x){ return '<div><b>' + sem[x] + '</b><span>' + jfr(x) + '</span></div>'; }).join('') + '</div>';
+    }
   }
   h += '<div class="shF"><button class="bS" style="flex:1" id="x_hd">Fermer</button></div>';
   ecrire(h);
