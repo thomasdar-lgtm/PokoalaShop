@@ -831,7 +831,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.66';
+var APP_VERSION = '4.67';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -3058,7 +3058,7 @@ for(var n=0;n<navs.length;n++){
     for(var i=0;i<navs.length;i++) navs[i].classList.remove('on');
     this.classList.add('on');
     tab = cible;
-    if(tab !== 'stock'){ mvJ = null; stkJournal = false; stkInv = false; stkNever = false; stkStick = false; stkBoxF = null; }
+    if(tab !== 'stock'){ autoNAppliquer(); mvJ = null; stkJournal = false; stkInv = false; stkNever = false; stkStick = false; stkBoxF = null; }
     if(tab !== 'stock' && stkSet){ stkSet = null; stkQry = ''; if(history.state && history.state.d === 3) history.back(); }
     $('fab').classList.toggle('hide', tab !== 'vitrine' && tab !== 'afaire');
     $('q').value = '';
@@ -3164,6 +3164,7 @@ window.addEventListener('online', function(){
 });
 /* avant que l'app passe en arriere-plan : derniere tentative d'ecriture */
 document.addEventListener('visibilitychange', function(){
+  if(document.hidden && booted){ try{ autoNAppliquer(); }catch(e){} }
   if(document.hidden && booted && pendN() && tokenValid() && !saving) save();
 });
 
@@ -4189,6 +4190,7 @@ function stkAdd(id, v, e, d, src){
   if(!nv) delete stock[k];
   myDelta[k] = (myDelta[k] || 0) + vrai;
   if(!myDelta[k]) delete myDelta[k];
+  if(v === 'h' && vrai > 0 && (!src || src === 'saisie')) autoNNote(id);
   var mv = { t: now(), c: id, v: v, e: e, d: vrai, w: who || '', s: src || 'saisie' };
   stkPending.push(mv);
   mvNew.push(mv); mvCount++;
@@ -4558,6 +4560,34 @@ function stkSetOv(id, mask){
   stkQueue(); stkSaveCache();
 }
 
+/* ═══ NORMAL DECOCHE AUTOMATIQUEMENT SUR LES HOLOS (4.67) ═══
+   Une carte ou l'on saisit du Holo sans aucun exemplaire Normal perd la case
+   Normal. Jamais pendant la saisie : retirer une version decalerait les
+   boutons sous le doigt (la pastille ou la ligne suivante prendrait sa
+   place) et un second appui rapide tomberait sur une autre version. Les
+   cartes concernees sont notees, et le reglage est applique en quittant
+   l'ecran (autre vue, autre onglet, app en arriere-plan). La liste est
+   gardee sur l'appareil : une app fermee entre-temps l'applique au retour. */
+var autoN = (function(){ try{ return JSON.parse(localStorage.getItem(LS + 'autoN') || '{}') || {}; }catch(e){ return {}; } })();
+function autoNSauve(){ try{ localStorage.setItem(LS + 'autoN', JSON.stringify(autoN)); }catch(e){} }
+function autoNNote(id){ if(!autoN[id]){ autoN[id] = 1; autoNSauve(); } }
+function autoNAppliquer(){
+  var n = 0, reste = {};
+  for(var id in autoN){
+    var c = cdbById[id];
+    if(!c){ reste[id] = 1; continue; }             /* extension pas encore chargee : plus tard */
+    if(!(stkVarQ(id, 'h') > 0) || stkVarQ(id, 'n') > 0) continue;
+    var m = (stkOv[id] != null) ? stkOv[id] : masqueDefaut(c);
+    if(!(m & VAR_BIT.n)) continue;
+    var nv = m & ~VAR_BIT.n;
+    if(!nv) continue;
+    stkSetOv(id, nv === masqueDefaut(c) ? 0 : nv);
+    n++;
+  }
+  autoN = reste; autoNSauve();
+  return n;
+}
+
 /* Nettoyage en un clic : sur toute carte ou du Holo a ete saisi mais dont
    le Normal (active par defaut sur les raretes classiques) n'a jamais
    recu le moindre exemplaire, on desactive Normal. Rien n'est supprime :
@@ -4831,6 +4861,7 @@ async function renderStock(){
   }
   if(!stkLoaded) await stkLoad();
   else stkSync();                      /* relire en arriere-plan a chaque entree */
+  autoNAppliquer();                    /* changement d'ecran : jamais pendant une saisie */
   if(stkStick) return stkRenderStick();
   if(stkNever) return stkRenderNever();
   if(stkInv) return stkRenderInv();
@@ -6365,6 +6396,8 @@ function stkBind(){
       if(!cv) return;
       var actuel = (stkOv[pv[0]] != null) ? stkOv[pv[0]] : masqueDefaut(cv);
       var bit = VAR_BIT[pv[1]], est = !!(actuel & bit);
+      /* un choix manuel sur Normal l'emporte sur le decochage automatique */
+      if(pv[1] === 'n' && autoN[pv[0]]){ delete autoN[pv[0]]; autoNSauve(); }
       if(est){
         if(stkVarQ(pv[0], pv[1])){
           var det = [];
@@ -6387,6 +6420,7 @@ function stkBind(){
     }
     if((t = e.target.closest('[data-stkreset]'))){
       var ir = t.getAttribute('data-stkreset');
+      if(autoN[ir]){ delete autoN[ir]; autoNSauve(); }
       stkSetOv(ir, 0);
       sheetStkCard(ir, true); stkRefresh(ir);
       return;
