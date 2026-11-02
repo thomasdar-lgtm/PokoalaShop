@@ -81,6 +81,12 @@ main{padding:4px 16px 20px}
 
 
 .accSec{font-size:10.5px;font-weight:800;color:var(--tx3);letter-spacing:.8px;text-transform:uppercase;padding:0 18px;margin:18px 0 8px}
+.majBox{margin:4px 18px 14px;background:var(--surf2);border:1px solid var(--bd);border-radius:var(--r2);padding:12px 13px;display:flex;align-items:center;gap:12px}
+.majBox .mbT{flex:1;min-width:0}
+.majBox .mbT b{display:block;font-size:15px;font-weight:800}
+.majBox .mbT small{display:block;font-size:12px;color:var(--tx2);font-weight:600;margin-top:2px}
+.majBox .aBtn{flex:none;padding:10px 16px;font-size:13px;background:var(--bluS);color:var(--blu)}
+.majBox .aBtn.p{background:var(--grnS);color:var(--grn)}
 .accBtn{width:calc(100% - 36px);margin:0 18px 8px;background:var(--surf2);border:1px solid transparent;border-radius:var(--r2);padding:12px 13px;color:var(--tx);font-size:14px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .accBtn span{font-size:11.5px;color:var(--tx2);font-weight:500;text-align:right}
 .bakRow{display:flex;align-items:center;justify-content:space-between;gap:10px;width:calc(100% - 36px);margin:0 18px 7px;background:var(--surf2);border:1px solid transparent;border-radius:var(--r2);padding:11px 13px;color:var(--tx);font-size:13.5px;font-weight:600;cursor:pointer;text-align:left}
@@ -825,7 +831,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.64';
+var APP_VERSION = '4.65';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2751,10 +2757,14 @@ function sheetAcc(){
     '<div class="shT">' + (SOLO ? 'PoKoalaShop' : 'Cet appareil : ' + esc(WHOS[who] || '?')) + '</div>' +
     '<div class="shS">v' + APP_VERSION + '</div>' +
 
+    '<div class="majBox"><div class="mbT"><b>Mise à jour</b><small id="a_ms">' +
+      ((majVue && majVue !== APP_VERSION) ? 'Version ' + esc(majVue) + ' disponible' : 'Installée : v' + APP_VERSION) + '</small></div>' +
+      '<button class="aBtn' + ((majVue && majVue !== APP_VERSION) ? ' p' : '') + '" id="a_mv">' + ((majVue && majVue !== APP_VERSION) ? 'Installer' : 'Vérifier') + '</button></div>' +
+
     '<div class="accSec">Applications</div>' +
     '<a class="accBtn" style="text-decoration:none" href="https://thomasdar-lgtm.github.io/PokoalaShop/" target="_blank" rel="noopener">PokoalaShop<span>Gestion boutique</span></a>' +
     '<a class="accBtn" style="text-decoration:none" href="https://thomasdar-lgtm.github.io/Pokoala/" target="_blank" rel="noopener">Pokoala<span>Application liée</span></a>' +
-    '<button class="accBtn" id="a_maj">Recharger l\'app<span>vide le cache et redémarre</span></button>' +
+    '<button class="accBtn" id="a_maj">Réinstallation complète<span>dépannage : vide le cache et redémarre</span></button>' +
 
     '<div class="accSec">Cet appareil</div>' +
     '<div class="fld"><div style="display:flex;gap:9px"><input class="inp" id="f_devnom" style="flex:1;min-width:0" maxlength="20" placeholder="ex. S25, Tablette, Oppo" value="' + esc(devNom()) + '"' + noAuto() + '>' +
@@ -2825,6 +2835,7 @@ function sheetAcc(){
     toast('Appareil : ' + v);
   };
   $('a_maj').onclick = hardReload;
+  $('a_mv').onclick = majBouton;
   $('a_stk').onclick = sheetStkDiag;
   $('a_holo').onclick = function(){ closeSheet(); stkAutoHideNormal(); };
   $('a_hdiag').onclick = function(){ closeSheet(); setTimeout(sheetHoloDiag, 260); };
@@ -4690,6 +4701,26 @@ var stkPreloaded = false;
    sans aucun recours. On verifie donc nous-memes, en contournant tous les
    caches, et on propose un rechargement explicite. */
 var majVue = null;
+
+/* Bouton du compte : verifier tout de suite, puis proposer l'installation */
+async function majBouton(){
+  var b = $('a_mv'), s = $('a_ms');
+  if(!b || !s) return;
+  if(majVue && majVue !== APP_VERSION){ b.textContent = '…'; b.disabled = true; hardReload(); return; }
+  b.disabled = true; b.textContent = '…'; s.textContent = 'Vérification…';
+  var v = null;
+  try{
+    var r = await fetch('./index.html?_=' + Date.now(), { cache: 'no-store' });
+    if(r.ok){ var m = (await r.text()).match(/APP_VERSION\s*=\s*'([^']+)'/); if(m) v = m[1]; }
+  }catch(e){}
+  if(!$('a_mv')) return;
+  b.disabled = false;
+  if(!v){ s.textContent = 'Vérification impossible (hors ligne ?)'; b.textContent = 'Réessayer'; return; }
+  if(v === APP_VERSION){ s.textContent = 'À jour · v' + APP_VERSION; b.textContent = 'Vérifier'; b.classList.remove('p'); return; }
+  majVue = v;
+  s.textContent = 'Version ' + v + ' disponible (installée : v' + APP_VERSION + ')';
+  b.textContent = 'Installer'; b.classList.add('p');
+}
 
 async function checkUpdate(){
   try{
