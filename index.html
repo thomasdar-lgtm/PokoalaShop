@@ -81,6 +81,9 @@ main{padding:4px 16px 20px}
 
 
 .accSec{font-size:10.5px;font-weight:800;color:var(--tx3);letter-spacing:.8px;text-transform:uppercase;padding:0 18px;margin:18px 0 8px}
+.accDep{width:calc(100% - 36px);margin:16px 18px 8px;background:none;border:0;border-top:1px solid var(--bd);padding:14px 2px 6px;color:var(--tx3);font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.accDep .chev{font-size:18px;line-height:1;transition:transform .2s;color:var(--tx3)}
+.accDep.on .chev{transform:rotate(90deg)}
 .majBox{margin:4px 18px 14px;background:var(--surf2);border:1px solid var(--bd);border-radius:var(--r2);padding:12px 13px;display:flex;align-items:center;gap:12px}
 .majBox .mbT{flex:1;min-width:0}
 .majBox .mbT b{display:block;font-size:15px;font-weight:800}
@@ -845,7 +848,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.68';
+var APP_VERSION = '4.69';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -2770,39 +2773,22 @@ function sheetAcc(){
   openSheet(
     '<div class="shT">' + (SOLO ? 'PoKoalaShop' : 'Cet appareil : ' + esc(WHOS[who] || '?')) + '</div>' +
     '<div class="shS">v' + APP_VERSION + '</div>' +
+    /* etat de la connexion : une seule ligne en tete */
+    '<div class="fld"><div class="gAcc' + (etatOk ? ' ok' : ' ko') + '">' +
+    '<span class="gDot"></span><span class="gTx"><b>' + esc(etatLbl) + '</b>' +
+    (etatSub ? '<small>' + esc(etatSub) + '</small>' : '') + '</span></div></div>' +
 
     '<div class="majBox"><div class="mbT"><b>Mise à jour</b><small id="a_ms">' +
       ((majVue && majVue !== APP_VERSION) ? 'Version ' + esc(majVue) + ' disponible' : 'Installée : v' + APP_VERSION) + '</small></div>' +
       '<button class="aBtn' + ((majVue && majVue !== APP_VERSION) ? ' p' : '') + '" id="a_mv">' + ((majVue && majVue !== APP_VERSION) ? 'Installer' : 'Vérifier') + '</button></div>' +
 
-    '<div class="accSec">Applications</div>' +
-    '<a class="accBtn" style="text-decoration:none" href="https://thomasdar-lgtm.github.io/PokoalaShop/" target="_blank" rel="noopener">PokoalaShop<span>Gestion boutique</span></a>' +
-    '<a class="accBtn" style="text-decoration:none" href="https://thomasdar-lgtm.github.io/Pokoala/" target="_blank" rel="noopener">Pokoala<span>Application liée</span></a>' +
-    '<button class="accBtn" id="a_maj">Réinstallation complète<span>dépannage : vide le cache et redémarre</span></button>' +
-
     '<div class="accSec">Cet appareil</div>' +
-    '<div class="fld"><div style="display:flex;gap:9px"><input class="inp" id="f_devnom" style="flex:1;min-width:0" maxlength="20" placeholder="ex. S25, Tablette, Oppo" value="' + esc(devNom()) + '"' + noAuto() + '>' +
+    '<div class="fld"><div style="display:flex;gap:9px"><input class="inp" id="f_devnom" style="flex:1;min-width:0" maxlength="20" placeholder="Nom : S25, Tablette, Oppo…" value="' + esc(devNom()) + '"' + noAuto() + '>' +
     '<button class="aBtn" id="a_devnom" style="flex:none;padding:0 15px">Enregistrer</button></div>' +
-    '<div class="tagBox" style="margin:7px 0 0">Ce nom s\'affiche dans le journal des mouvements, sur chaque geste fait depuis cet appareil.</div></div>' +
-
-    '<div class="accSec">Compte Google</div>' +
-    '<div class="fld"><div class="gAcc' + (etatOk ? ' ok' : ' ko') + '">' +
-    '<span class="gDot"></span><span class="gTx"><b>' + esc(etatLbl) + '</b>' +
-    (etatSub ? '<small>' + esc(etatSub) + '</small>' : '') + '</span></div></div>' +
-
-    '<div class="accSec">Stock</div>' +
-    '<button class="accBtn" id="a_stk">Vérifier le stock<span>' + stkTotalEx() + ' exemplaires</span></button>' +
-    '<button class="accBtn" id="a_holo">Désélectionner Normal sur les holos<span>nettoyage en un clic</span></button>' +
-    '<button class="accBtn" id="a_hdiag">Analyser les réglages Normal des holos<span>lecture seule</span></button>' +
-    '<button class="accBtn" id="a_newc">Vérifier les nouvelles cartes<span>interroge TCGdex et complète les extensions</span></button>' +
-    '<button class="accBtn" id="a_diag">Diagnostic des images<span>mesure le temps de réponse de chaque source</span></button>' +
-
-    '<div class="accSec">Synchronisation</div>' +
-    '<button class="accBtn" id="a_ref">Rafraîchir maintenant<span>' + lots.length + ' lots</span></button>' +
-    '<button class="accBtn" id="a_jal">Derniers démarrages<span>temps de chaque étape</span></button>' +
-    '<div class="fld"><div class="tagBox" style="margin:0">Fichier d\'écriture : <b>' + esc(myFile) + '</b>' +
-    (SOLO ? '<br>Compte unique : les deux appareils écrivent dans ce fichier, et tous les fichiers existants restent lus.'
-          : '<br>Chaque appareil écrit dans son propre fichier. Aucune modification ne peut écraser celle de l\'autre.') +
+    '<div class="tagBox" style="margin:7px 0 0" id="a_sto">' +
+      'Nom affiché dans le journal des mouvements.' +
+      '<br>Stockage local protégé : <b>' + (stoEtat === 'oui' ? 'oui' : stoEtat === 'non' ? 'refusé par le téléphone' : stoEtat === 'absent' ? 'non pris en charge' : 'en cours…') + '</b>' +
+      ' · copies rapides : <b>' + stoMo(stoPetit()) + '</b> sur 5 Mo' +
     '</div></div>' +
 
     (SOLO ? '' :
@@ -2812,18 +2798,32 @@ function sheetAcc(){
       '<button class="aBtn ' + (who==='cindy'?'o':'') + '" style="flex:1;padding:11px" data-sw="cindy">Cindy</button>' +
       '</div></div>') +
 
-    '<div class="accSec">Stockage local</div>' +
-    '<div class="fld"><div class="tagBox" style="margin:0" id="a_sto">' +
-      'Protection contre l\'effacement : <b>' + (stoEtat === 'oui' ? 'activée' : stoEtat === 'non' ? 'refusée par le téléphone' : stoEtat === 'absent' ? 'non prise en charge' : 'en cours…') + '</b>' +
-      '<br>Copies rapides (lots, stock, attente) : <b>' + stoMo(stoPetit()) + '</b> sur 5 Mo environ' +
-    '</div></div>' +
-
     '<div class="accSec">Données</div>' +
+    '<button class="accBtn" id="a_ref">Rafraîchir maintenant<span>' + lots.length + ' lots</span></button>' +
     '<button class="accBtn" id="a_bak">Sauvegarder maintenant<span>automatique toutes les 6 h</span></button>' +
     '<button class="accBtn" id="a_res">Restaurer une sauvegarde<span>revenir en arrière</span></button>' +
-    '<button class="accBtn" id="a_js">Télécharger mes données<span>fichier JSON complet</span></button>' +
     '<button class="accBtn" id="a_cs">Exporter les ventes<span>CSV pour la déclaration</span></button>' +
+    '<button class="accBtn" id="a_js">Télécharger mes données<span>fichier JSON complet</span></button>' +
 
+    '<div class="accSec">Stock</div>' +
+    '<button class="accBtn" id="a_stk">Vérifier le stock<span>' + stkTotalEx() + ' exemplaires</span></button>' +
+    '<button class="accBtn" id="a_newc">Vérifier les nouvelles cartes<span>complète les extensions</span></button>' +
+
+    /* outils de diagnostic et de rattrapage : replies par defaut */
+    '<button class="accDep" id="a_dep" aria-expanded="false">Dépannage<span class="chev">›</span></button>' +
+    '<div class="hide" id="a_depC">' +
+    '<button class="accBtn" id="a_hdiag">Analyser les réglages Normal des holos<span>lecture seule</span></button>' +
+    '<button class="accBtn" id="a_holo">Désélectionner Normal sur les holos<span>rattrapage en un clic</span></button>' +
+    '<button class="accBtn" id="a_jal">Derniers démarrages<span>temps de chaque étape</span></button>' +
+    '<button class="accBtn" id="a_diag">Diagnostic des images<span>temps de réponse des sources</span></button>' +
+    '<button class="accBtn" id="a_maj">Réinstallation complète<span>vide le cache et redémarre</span></button>' +
+    '<div class="fld"><div class="tagBox" style="margin:0">Fichier d\'écriture : <b>' + esc(myFile) + '</b>' +
+    (SOLO ? '<br>Compte unique : tous les appareils écrivent dans ce fichier, et tous les fichiers existants restent lus.'
+          : '<br>Chaque appareil écrit dans son propre fichier. Aucune modification ne peut écraser celle de l\'autre.') +
+    '</div></div>' +
+    '</div>' +
+
+    '<a class="accBtn" style="text-decoration:none;margin-top:14px" href="https://thomasdar-lgtm.github.io/Pokoala/" target="_blank" rel="noopener">Ouvrir Pokoala<span>application liée</span></a>' +
     '<div class="shF"><button class="bS" style="flex:1" id="x7">Fermer</button></div>' +
     '<button class="dgr" id="k7">Se déconnecter</button>'
   );
@@ -2839,6 +2839,12 @@ function sheetAcc(){
     };
   }
   $('x7').onclick = closeSheet;
+  $('a_dep').onclick = function(){
+    var c = $('a_depC'), ouvert = c.classList.toggle('hide') === false;
+    this.setAttribute('aria-expanded', ouvert ? 'true' : 'false');
+    this.classList.toggle('on', ouvert);
+    if(ouvert) setTimeout(function(){ try{ $('a_depC').scrollIntoView({ block:'nearest', behavior:'smooth' }); }catch(e){} }, 30);
+  };
   $('a_devnom').onclick = function(){
     var v = $('f_devnom').value.trim().slice(0, 20);
     if(!v){ toast('Donne un nom à cet appareil'); return; }
