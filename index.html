@@ -848,7 +848,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.70';
+var APP_VERSION = '4.71';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -3269,23 +3269,25 @@ function gisCharger(){
        la nouvelle version. hadCtrl evite de recharger a la toute premiere visite,
        ou clients.claim() declenche aussi cet evenement. */
     var hadCtrl = !!navigator.serviceWorker.controller, swReloaded = false;
+    /* redemarrage seulement si l'utilisateur a demande l'installation */
     navigator.serviceWorker.addEventListener('controllerchange', function(){
-      if(!hadCtrl || swReloaded || sheetOpen) return;
+      if(!hadCtrl || swReloaded || !majDemandee) return;
       swReloaded = true;
       location.reload();
     });
     navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(function(reg){
-      /* un service worker deja installe mais bloque en attente ne prendrait
-         la main qu'apres fermeture complete de l'app : on le debloque */
-      function pousser(){ if(reg.waiting) reg.waiting.postMessage('skipWaiting'); }
-      pousser();
+      /* PREVENU, JE DECIDE (4.71) : une nouvelle version telechargee attend.
+         On le signale (bandeau) ; elle ne prend la main que sur appui sur
+         Installer, ou au prochain lancement apres fermeture complete. */
+      function prete(){ if(reg.waiting) checkUpdate(); }
+      prete();
       reg.addEventListener('updatefound', function(){
         var sw = reg.installing;
-        if(sw) sw.addEventListener('statechange', pousser);
+        if(sw) sw.addEventListener('statechange', function(){ if(sw.state === 'installed') prete(); });
       });
       reg.update();
       document.addEventListener('visibilitychange', function(){
-        if(document.visibilityState === 'visible'){ reg.update(); pousser(); }
+        if(document.visibilityState === 'visible') reg.update();
       });
     }).catch(function(){});
   }
@@ -4776,7 +4778,7 @@ var majVue = null;
 async function majBouton(){
   var b = $('a_mv'), s = $('a_ms');
   if(!b || !s) return;
-  if(majVue && majVue !== APP_VERSION){ b.textContent = '…'; b.disabled = true; hardReload(); return; }
+  if(majVue && majVue !== APP_VERSION){ b.textContent = '…'; b.disabled = true; majInstaller(); return; }
   b.disabled = true; b.textContent = '…'; s.textContent = 'Vérification…';
   var v = null;
   try{
@@ -4809,12 +4811,12 @@ function showMaj(v){
   var d = document.createElement('div');
   d.className = 'majBar';
   d.id = 'majBar';
-  d.innerHTML = '<span>Version <b>' + v + '</b> disponible</span>' +
-                '<button class="mj" id="majGo">Recharger</button>' +
+  d.innerHTML = '<span>Version <b>' + v + '</b> prête</span>' +
+                '<button class="mj" id="majGo">Installer</button>' +
                 '<button class="mx" id="majNo" aria-label="Plus tard">×</button>';
   document.body.appendChild(d);
   document.getElementById('majNo').onclick = function(){ d.remove(); };
-  document.getElementById('majGo').onclick = hardReload;
+  document.getElementById('majGo').onclick = majInstaller;
 }
 
 /* purge tous les caches (coquille + donnees de cartes) puis recharge.
@@ -4824,6 +4826,27 @@ function showMaj(v){
    chaque rechargement manuel plutot que de compter dessus. Cout : jusqu'a
    2,7 Mo retelecharges a chaque appui sur "Recharger", au lieu de jamais -
    c'est un geste explicite de l'utilisateur, pas automatique. */
+/* Installer : fait prendre la main a la version en attente, puis redemarre.
+   Contrairement a hardReload, aucun cache n'est vide (images conservees). */
+var majDemandee = false;
+async function majInstaller(){
+  majDemandee = true;
+  var b = document.getElementById('majGo');
+  if(b){ b.textContent = '…'; b.disabled = true; }
+  var reg = null;
+  try{ reg = await navigator.serviceWorker.getRegistration(); }catch(e){}
+  try{ if(reg) await reg.update(); }catch(e){}
+  if(reg && reg.waiting){
+    reg.waiting.postMessage('skipWaiting');
+    /* filet : si la prise de main tarde, on recharge quand meme */
+    setTimeout(function(){ location.replace(location.pathname + '?maj=' + Date.now()); }, 4000);
+  } else {
+    /* pas de nouvelle version du service worker : la page, servie reseau
+       d'abord, suffit a recharger */
+    location.replace(location.pathname + '?maj=' + Date.now());
+  }
+}
+
 async function hardReload(){
   var b = document.getElementById('majGo');
   if(b){ b.textContent = '…'; b.disabled = true; }
