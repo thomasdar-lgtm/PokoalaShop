@@ -1,4 +1,4 @@
-const CACHE_VERSION = '4.70';
+const CACHE_VERSION = '4.71';
 const CACHE_NAME = 'pokoalashop-v' + CACHE_VERSION;
 /* cache non versionne : la base de cartes est versionnee par son URL (?v=N),
    inutile de re-telecharger 2,7 Mo a chaque montee de version */
@@ -21,7 +21,9 @@ self.addEventListener('install', e => {
     caches.open(CACHE_NAME)
       .then(c => Promise.all(ASSETS.map(u => c.add(u).catch(() => null))))
       .catch(() => null)
-      .then(() => self.skipWaiting())
+      /* plus de skipWaiting automatique (4.71) : la nouvelle version attend
+         que l'utilisateur appuie sur Installer, ou le prochain lancement de
+         l'app apres fermeture complete */
   );
 });
 
