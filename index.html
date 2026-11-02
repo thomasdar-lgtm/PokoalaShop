@@ -849,7 +849,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.72';
+var APP_VERSION = '4.73';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -3321,7 +3321,7 @@ var MV_CAP   = 4000;             /* mouvements conserves */
 var CARDS_VER = '15';   /* fichiers cards/ et pks_names.json */
 var SETS_VER  = '18';
 var FAM_VER   = '11';   /* pks_familles.json */   /* pks_sets.json seul, pour ne pas invalider les cartes deja en cache */
-var ESP_VER   = '1';    /* pks_especes.json */
+var ESP_VER   = '2';    /* pks_especes.json */
 /* Quatre variantes possibles. Le cosmos ne s'active que depuis la fiche :
    aucune source ne le recense, il releve donc toujours d'une saisie manuelle. */
 var VAR_LBL  = { n:'Norm', r:'Rev', h:'Holo', c:'Cosmos', p:'Pokéball', m:'Masterball' };
@@ -5435,6 +5435,7 @@ async function stkRenderSearch(q){
     try{ await namesLoad(); }catch(e){ stkView(empty(EMPTY_CMD, 'Recherche indisponible.')); return; }
     if(query() !== q || tab !== 'stock') return;
   }
+  if(!especes){ try{ await espLoad(); }catch(e){} if(query() !== q || tab !== 'stock') return; }
   /* Une carte peut correspondre a plusieurs entrees de l'index — son nom
      francais et son nom anglais, par exemple « Arcanin » et « Arcanine ».
      Sans dedoublonnage elle apparaitrait autant de fois. */
@@ -5551,6 +5552,31 @@ async function stkRenderSearch(q){
     var dest = (stkCardQ(show[g].i) > 0) ? grpOui : grpNon;
     (dest[rg] = dest[rg] || []).push(show[g]);
   }
+  /* dans chaque extension : l'extension principale avant ses
+     sous-extensions, puis l'ordre d'evolution (bebe, base, 1re, 2e
+     evolution : rang PokeAPI dans pks_especes.json), puis le numero. Le
+     numero seul ne suffit pas : dans les premieres extensions les cartes
+     rares viennent en tete (Dracaufeu n° 4, Salameche n° 46). Avant 4.73,
+     l'ordre etait celui de l'index des noms. */
+  function rangEvo(c){
+    var sp = especeDe(c.n); var r = sp ? espOrdre[sp] : null;
+    /* Nidoran ♀ et ♂ ont le meme nom simplifie : le ♂ ouvre sa propre ligne */
+    if(sp === 'nidoran' && /♂|\bm\b|male/i.test(c.n)) r = 33.5;
+    return r == null ? 99999 : r;
+  }
+  function parNumero(x, y){
+    var px = rootSet(x.s) === x.s ? 0 : 1, py = rootSet(y.s) === y.s ? 0 : 1;
+    if(px !== py) return px - py;
+    if(x.s !== y.s) return x.s < y.s ? -1 : 1;
+    var ex = rangEvo(x), ey = rangEvo(y);
+    if(ex !== ey) return ex - ey;
+    var nx = parseInt(String(x.u).replace(/^\D+/, ''), 10), ny = parseInt(String(y.u).replace(/^\D+/, ''), 10);
+    if(isNaN(nx) !== isNaN(ny)) return isNaN(nx) ? 1 : -1;
+    if(!isNaN(nx) && nx !== ny) return nx - ny;
+    return String(x.u).localeCompare(String(y.u), 'fr', { numeric: true });
+  }
+  for(var go in grpOui) grpOui[go].sort(parNumero);
+  for(var gn in grpNon) grpNon[gn].sort(parNumero);
   var sections = [];
   if(withQ.length) sections.push({ t: 'En stock', g: grpOui });
   sections.push({ t: withQ.length ? 'Autres cartes' : '', g: grpNon });
@@ -5838,11 +5864,11 @@ function lotPokes(){
    Wobbuffet ». Les Dresseurs, Objets, Stades et Energies n'en contiennent
    pas. Renvoie le nom francais normalise de l'espece, null si ce n'est pas
    un Pokemon, undefined si la table n'est pas chargee. */
-var especes = null, espP = null, espCache = {};
+var especes = null, espOrdre = {}, espP = null, espCache = {};
 function espLoad(){
   if(especes) return Promise.resolve(especes);
   if(espP) return espP;
-  espP = jgetv('./pks_especes.json', ESP_VER).then(function(j){ especes = (j && j.e) || {}; espCache = {}; return especes; })
+  espP = jgetv('./pks_especes.json', ESP_VER).then(function(j){ especes = (j && j.e) || {}; espOrdre = (j && j.o) || {}; espCache = {}; return especes; })
     .catch(function(){ espP = null; return null; });
   return espP;
 }
