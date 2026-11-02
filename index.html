@@ -62,6 +62,7 @@ header{position:sticky;top:0;z-index:60;background:var(--bg);padding:calc(10px +
 .srch input::-webkit-search-results-button{-webkit-appearance:none;appearance:none;display:none}
 .srch input:focus{border-color:var(--red)}
 .srch .ic{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--tx3);font-size:13px}
+.srch .clr::after,.fxW .fx::after,.stkSrch .sx::after{content:'';position:absolute;top:-10px;bottom:-10px;left:-10px;right:-9px}
 .srch .clr{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--surf2);border:0;color:var(--tx2);width:22px;height:22px;border-radius:50%;font-size:13px;cursor:pointer}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;padding-bottom:10px}
 .st{background:var(--surf);border-radius:10px;padding:7px 4px;text-align:center}
@@ -848,7 +849,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.71';
+var APP_VERSION = '4.72';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -3091,7 +3092,25 @@ for(var n=0;n<navs.length;n++){
 }
 
 $('q').oninput = render;
-$('qClr').onclick = function(){ $('q').value = ''; render(); $('q').focus(); };
+/* Barres de recherche (principale, extension, panneaux) : la touche Entree
+   ferme le clavier, et chaque nouvelle saisie ramene en haut des resultats. */
+function champRecherche(t){
+  return !!(t && t.tagName === 'INPUT' && (t.id === 'q' || t.id === 'stkq' || (t.closest && t.closest('.fxW'))));
+}
+document.addEventListener('keydown', function(e){
+  if(e.key !== 'Enter' || !champRecherche(e.target)) return;
+  e.preventDefault();
+  e.target.blur();
+}, true);
+function hautResultats(t){
+  var sh = t.closest && t.closest('#sheet');
+  if(sh){ sh.scrollTop = 0; var o = $('ovl'); if(o) o.scrollTop = 0; }
+  else window.scrollTo(0, 0);
+}
+document.addEventListener('input', function(e){
+  if(champRecherche(e.target)) hautResultats(e.target);
+}, true);
+$('qClr').onclick = function(){ $('q').value = ''; window.scrollTo(0, 0); render(); $('q').focus(); };
 /* Boutons × des recherches : l'appui ne doit pas retirer le focus du champ,
    sinon Android ferme le clavier. Empecher le mousedown garde le focus. */
 document.addEventListener('mousedown', function(e){
