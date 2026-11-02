@@ -825,7 +825,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.63';
+var APP_VERSION = '4.64';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -1039,7 +1039,7 @@ function initGis(){
       scheduleRefresh();
       fetchMe();
       if(booted){ setSync('busy'); sync(false); }
-      else start();
+      else if(!demarre){ demarre = true; start(); }
     }
   });
 }
@@ -1057,6 +1057,10 @@ function signIn(){ tokenClient.requestAccessToken({ prompt: '' }); }
 
 var reauthAt = 0;
 function reauth(){
+  /* sans script Google, rien n'est demande : le delai anti-repetition ne
+     doit pas courir, sinon la vraie demande, a l'arrivee du script, serait
+     ignoree */
+  if(!tokenClient){ offline = true; setSync('err'); gisCharger(); return; }
   if(Date.now() - reauthAt < 4000) return;
   reauthAt = Date.now();
   jal('jeton expiré : renouvellement demandé à Google' + ((me && me.email) ? '' : ' (compte non précisé)'));
@@ -3174,28 +3178,61 @@ document.addEventListener('visibilitychange', function(){
 
 /* le script Google n'a pas a attendre que toutes les images de la page soient
    arrivees : on le lance des maintenant */
-(function(){
+/* HORS CONNEXION : le demarrage n'attend plus le script Google. S'il ne
+   repond pas (pas de reseau, reseau tres lent), l'app demarre au bout de
+   3 s avec ses donnees locales, en « hors ligne » ; le script est redemande
+   au retour du reseau et la connexion reprend d'elle-meme. Avant 4.64,
+   l'app restait vide sans reseau. */
+var gisPret = false, gisEnCours = false, demarre = false;
+function sessionConnue(){
+  var w = SOLO;
+  if(!w){ try{ w = localStorage.getItem(LS + 'who'); }catch(e){} }
+  return !!(w && WHOS[w]);
+}
+function jetonStocke(){
+  var st = null;
+  try{ st = JSON.parse(localStorage.getItem(LS + 'tk') || 'null'); }catch(e){}
+  if(st && st.t && st.e > Date.now() + 60000){ token = st.t; tokenExp = st.e; return true; }
+  return false;
+}
+function demarrer(){ if(demarre) return; demarre = true; start(); }
+function gisCharger(){
+  if(gisPret || gisEnCours) return;
+  gisEnCours = true;
   var s = document.createElement('script');
   s.src = 'https://accounts.google.com/gsi/client';
   s.onload = function(){
+    gisEnCours = false; gisPret = true;
     jal('script Google chargé');
     initGis();
-    var st = null;
-    try{ st = JSON.parse(localStorage.getItem(LS + 'tk') || 'null'); }catch(e){}
-    if(st && st.t && st.e > Date.now() + 60000){
-      token = st.t; tokenExp = st.e;
-      jal('jeton encore valable (' + Math.round((st.e - Date.now()) / 60000) + ' min)');
-      start();
+    var valable = jetonStocke();
+    if(!demarre){
+      if(valable){
+        jal('jeton encore valable (' + Math.round((tokenExp - Date.now()) / 60000) + ' min)');
+        demarrer();
+        return;
+      }
+      if(sessionConnue()){ demarrer(); setTimeout(reauth, 150); }
       return;
     }
-    var w = SOLO;
-    if(!w){ try{ w = localStorage.getItem(LS + 'who'); }catch(e){} }
-    if(w && WHOS[w]){
-      start();
-      setTimeout(reauth, 150);
-    }
+    /* l'app tournait deja sur ses donnees locales : on se reconnecte */
+    if(tokenValid()){ scheduleRefresh(); sync(false); } else reauth();
+  };
+  s.onerror = function(){
+    gisEnCours = false;
+    s.remove();
+    jal('script Google injoignable');
+    if(!demarre && sessionConnue()){ jetonStocke(); jal('démarrage sur les données locales'); demarrer(); }
   };
   document.head.appendChild(s);
+}
+(function(){
+  gisCharger();
+  /* reseau tres lent : ne pas laisser l'ecran vide */
+  setTimeout(function(){
+    if(!demarre && sessionConnue()){ jetonStocke(); jal('script Google trop lent : démarrage sur les données locales'); demarrer(); }
+  }, 3000);
+  window.addEventListener('online', function(){ if(!gisPret) gisCharger(); });
   if('serviceWorker' in navigator){
     /* un nouveau service worker prend la main : recharger une fois pour afficher
        la nouvelle version. hadCtrl evite de recharger a la toute premiere visite,
