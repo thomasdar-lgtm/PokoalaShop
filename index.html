@@ -137,6 +137,11 @@ main{padding:4px 16px 20px}
 .cPh{width:76px;flex-shrink:0;align-self:stretch;background:var(--surf2);display:flex;align-items:center;justify-content:center;color:var(--tx3);cursor:pointer;overflow:hidden;position:relative}
 .cPh img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 .cPh.has .ph-holder{display:none}
+#rotMsg{display:none;position:fixed;inset:0;z-index:99999;background:var(--bg);align-items:center;justify-content:center;text-align:center;padding:24px}
+#rotMsg.on{display:flex}
+#rotMsg svg{width:44px;height:44px;color:var(--tx3);display:block;margin:0 auto 14px}
+#rotMsg b{display:block;font-size:17px;font-weight:800;margin-bottom:6px}
+#rotMsg span{display:block;font-size:13px;color:var(--tx2)}
 #lb{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,2,10,.94);align-items:center;justify-content:center;padding:16px}
 #lb.on{display:flex}
 #lb img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
@@ -849,7 +854,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.73';
+var APP_VERSION = '4.74';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -3228,6 +3233,44 @@ document.addEventListener('visibilitychange', function(){
 
 /* le script Google n'a pas a attendre que toutes les images de la page soient
    arrivees : on le lance des maintenant */
+/* ═══ PORTRAIT SUR TELEPHONE (4.74) ═══
+   Telephone = plus petit cote de l'ecran sous 600 px ; une tablette garde
+   les deux orientations. On demande a Android de verrouiller le portrait ;
+   si le navigateur refuse (possible selon le navigateur et le mode
+   d'installation), un message invite a tourner le telephone. On se fie a
+   l'ecran et non a la fenetre : le clavier ouvert reduit la fenetre et la
+   ferait passer pour du paysage. */
+function estTelephone(){ return Math.min(screen.width, screen.height) < 600; }
+function verrouPortrait(){
+  if(!estTelephone()) return;
+  try{
+    if(screen.orientation && screen.orientation.lock)
+      screen.orientation.lock('portrait').catch(function(){});
+  }catch(e){}
+  rotMsgMaj();
+}
+function enPaysage(){
+  var t = screen.orientation && screen.orientation.type;
+  if(t) return t.indexOf('landscape') === 0;
+  return Math.abs(window.orientation || 0) === 90;
+}
+function rotMsgMaj(){
+  var m = document.getElementById('rotMsg');
+  if(m) m.classList.toggle('on', estTelephone() && enPaysage());
+}
+(function(){
+  var m = document.createElement('div');
+  m.id = 'rotMsg';
+  m.innerHTML = '<div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>' +
+                '<b>Tourne ton téléphone</b><span>PoKoalaShop s\'utilise en portrait sur téléphone.</span></div>';
+  document.body.appendChild(m);
+  verrouPortrait();
+  if(screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', rotMsgMaj);
+  window.addEventListener('orientationchange', function(){ setTimeout(rotMsgMaj, 150); });
+  /* le verrou peut se perdre en arriere-plan : on le redemande au retour */
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) verrouPortrait(); });
+})();
+
 /* HORS CONNEXION : le demarrage n'attend plus le script Google. S'il ne
    repond pas (pas de reseau, reseau tres lent), l'app demarre au bout de
    3 s avec ses donnees locales, en « hors ligne » ; le script est redemande
