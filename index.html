@@ -854,7 +854,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.76';
+var APP_VERSION = '4.77';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -3542,7 +3542,10 @@ function setLoad(sid){
    des fichiers : une requete donne le nombre de cartes de chaque extension,
    seules celles qui en ont gagne sont examinees en detail. */
 var TCGDEX = 'https://api.tcgdex.net/v2/fr';
-var majEnCours = false;
+var majEnCours = false, majManuel = false;
+/* reponses toujours fraiches : sans cela le cache du navigateur pouvait
+   resservir une liste d'extensions recente sans interroger TCGdex */
+function xGet(u){ return fetch(u, { cache: 'no-store' }).then(function(r){ if(!r.ok) throw new Error('tcgdex ' + r.status); return r.json(); }); }
 function xIndex(){
   if(!nameIdx) return;
   for(var sid in xCards){
@@ -3576,13 +3579,16 @@ function xIdCarte(sid, arr, localId){
   return sid + '-' + n;
 }
 async function majCartes(manuel){
-  if(majEnCours) return;
+  if(manuel) majManuel = true;
+  /* une verification automatique tourne deja : l'appui en recevra le
+     resultat au lieu d'etre ignore en silence */
+  if(majEnCours){ if(manuel) toast('Vérification déjà en cours…'); return; }
   majEnCours = true;
   if(manuel) toast('Vérification des nouvelles cartes…');
-  var ajouts = 0, inconnues = [];
+  var ajouts = 0, inconnues = [], verifiees = 0;
   try{
     if(!cdb) await cdbLoad();
-    var dist = await fetch(TCGDEX + '/sets').then(function(r){ return r.json(); });
+    var dist = await xGet(TCGDEX + '/sets');
     /* index par identifiant TCGdex : le champ t quand il differe du notre */
     var parT = {}, skip = {};
     for(var i=0;i<cdb.sets.length;i++){
@@ -3598,9 +3604,10 @@ async function majCartes(manuel){
       var st = parT[sd.id];
       var total = (sd.cardCount && (sd.cardCount.total || sd.cardCount.official)) || 0;
       if(!st){ if(total) inconnues.push(sd.name || sd.id); continue; }
+      verifiees++;
       var connues = (st.n || 0) + ((xCards[st.id] || []).length);
       if(total <= connues) continue;
-      var det = await fetch(TCGDEX + '/sets/' + sd.id).then(function(r){ return r.json(); });
+      var det = await xGet(TCGDEX + '/sets/' + sd.id);
       var liste = det.cards || [];
       var arr = await setLoad(st.id).catch(function(){ return []; });
       var vus = {};
@@ -3608,7 +3615,7 @@ async function majCartes(manuel){
       for(var c=0;c<liste.length;c++){
         var br = liste[c];
         if(vus[xNum(br.localId)]) continue;
-        var fi = await fetch(TCGDEX + '/cards/' + br.id).then(function(r){ return r.json(); }).catch(function(){ return null; });
+        var fi = await xGet(TCGDEX + '/cards/' + br.id).catch(function(){ return null; });
         var carte = {
           i: xIdCarte(st.id, arr, br.localId),
           n: (fi && fi.name) || br.name || br.localId,
@@ -3629,13 +3636,14 @@ async function majCartes(manuel){
     }
     if(ajouts){ xSave(); xIndex(); }
   }catch(e){
-    if(manuel) toast('Vérification impossible');
-    majEnCours = false;
+    if(majManuel) toast('Vérification impossible (hors ligne ?)');
+    majEnCours = false; majManuel = false;
     return;
   }
   majEnCours = false;
+  var dire = majManuel; majManuel = false;
   if(ajouts) toast(ajouts + ' nouvelle' + (ajouts > 1 ? 's' : '') + ' carte' + (ajouts > 1 ? 's' : '') + ' ajoutée' + (ajouts > 1 ? 's' : ''));
-  else if(manuel) toast('Aucune nouvelle carte');
+  else if(dire) toast('Aucune nouvelle carte · ' + verifiees + ' extensions vérifiées');
   if(inconnues.length) toast('Nouvelle extension à intégrer : ' + inconnues.slice(0, 2).join(', '));
   if(ajouts && tab === 'stock') render();
 }
