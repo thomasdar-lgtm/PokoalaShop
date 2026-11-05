@@ -854,7 +854,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.75';
+var APP_VERSION = '4.76';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -6580,6 +6580,9 @@ function stkBind(){
         stkSetOv(pv[0], nv2 === masqueDefaut(cv) ? 0 : nv2);
       } else {
         var na = actuel | bit;
+        /* activer Holo sur une carte sans aucun exemplaire Normal decoche
+           Normal tout de suite (4.76) : la fiche se redessine de toute facon */
+        if(pv[1] === 'h' && (na & VAR_BIT.n) && !stkVarQ(pv[0], 'n')) na = na & ~VAR_BIT.n;
         stkSetOv(pv[0], na === masqueDefaut(cv) ? 0 : na);
       }
       sheetStkCard(pv[0], true); stkRefresh(pv[0]);
