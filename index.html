@@ -854,7 +854,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.74';
+var APP_VERSION = '4.75';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -5447,7 +5447,7 @@ function stkChipQ(mn, garde, parId){
     for(var i=0;i<l.length;i++){
       if(vus[l[i]] || !garde(l[i])) continue;
       vus[l[i]] = 1;
-      if(parId[l[i]] > 0) t++;
+      if(parId[l[i]] > 0 && carteDuMembre(cdbById[l[i]], mn)) t++;
     }
   }
   return t;
@@ -5550,6 +5550,8 @@ async function stkRenderSearch(q){
     var c = cdbById[ids[j]];
     if(c && !vusC[c.i]){ vusC[c.i] = 1; cards.push(c); }
   }
+  /* pastille de membre ou « Tous » : seulement les cartes de ces Pokemon */
+  if(stkMemb && fm) cards = cards.filter(function(c){ return carteDuMembre(c, stkMemb); });
   var withQ = cards.filter(function(c){ return stkCardQ(c.i) > 0; });
   var LIM = tous ? 1500 : 400, coupe = cards.length > LIM;
   var show = cards.slice(0, LIM);          /* toujours tout, possede ou non */
@@ -5932,6 +5934,38 @@ function especeDe(nom){
   espCache[nom] = r;
   return r;
 }
+/* toutes les especes nommees dans une carte (« Togepi, Melo et Toudoudou
+   GX » : togepi, melo, toudoudou) ; [] pour un Dresseur, un Objet... */
+var espTousCache = {};
+function especesDe(nom){
+  if(!especes || !nom) return [];
+  if(nom in espTousCache) return espTousCache[nom];
+  var mots = String(nom).split(/[\s\-'’.,:;()&\/+_]+/).map(norm).filter(function(x){ return x; });
+  var out = [];
+  for(var i=0;i<mots.length;i++){
+    var acc = '', r = null;
+    for(var j=i;j<Math.min(i + 3, mots.length);j++){
+      acc += mots[j];
+      if(especes[acc]) r = especes[acc];
+      else if(acc.indexOf('primo') === 0 && especes[acc.slice(5)]) r = especes[acc.slice(5)];
+    }
+    if(r && out.indexOf(r) < 0) out.push(r);
+  }
+  espTousCache[nom] = out;
+  return out;
+}
+/* Pastilles de famille : la carte represente-t-elle ce Pokemon (ou un
+   membre de la famille, pour « Tous ») ? Ecarte les Dresseurs dont le nom
+   contient celui d'un Pokemon (Meloco, Lona sous Melo). Sans la table des
+   especes, on garde l'ancien comportement. */
+function carteDuMembre(c, mn){
+  if(!especes || !c) return true;
+  var sp = especesDe(c.n);
+  if(mn !== STK_TOUS) return sp.indexOf(mn) >= 0;
+  for(var i=0;i<stkFamNoms.length;i++) if(sp.indexOf(stkFamNoms[i]) >= 0) return true;
+  return false;
+}
+
 /* famille (Pokemon de base) d'une espece */
 function especeBase(sp){
   var f = familles && familles[sp];
