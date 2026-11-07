@@ -106,6 +106,7 @@
 - Côté Thomas/Cindy : donner le nom du Pokémon dont Cindy a saisi 2 Pokéball non pris en compte (à chercher dans le journal) ; vérifier que le total « Exemplaires » est identique sur les 3 appareils ; relancer l'analyse holo dans 1–2 semaines (la ligne « Normale encore cochée sans exemplaire » doit rester à 0).
 - Ixon de Galar : le journal montre +2 Pokéball saisis sur la tablette le 16/09 à 18:32 (probables erreurs de clic), puis −2 sur le S25.
 - APK écarté : on reste en PWA.
+- **Changements d'identifiant d'appareil (01/11, 02/11, 06/11)** : cause = effacement des données de Chrome sur le S25 (pour le dev de Koalarcade). Toutes les PWA `thomasdar-lgtm.github.io` partagent le même stockage local : effacer les données du site efface aussi PoKoalaShop (identifiant, nom, saisies non envoyées). Consigne donnée : tester les autres apps en navigation privée. S25 actuel = `mw4pmh3rylp1ug` (à renommer).
 
 ## 10. Repères de versions récentes
 4.52 journal mensuel · 4.60 fiabilisation des listes Stock · 4.69–4.70 réorganisation de Compte · 4.71 mises à jour sur accord · 4.74 portrait · 4.77 vérification des nouvelles cartes · 4.78 Règne Delta · **4.79 export du stock (actuelle)**.
