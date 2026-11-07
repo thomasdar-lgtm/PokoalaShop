@@ -1,4 +1,4 @@
-# PoKoalaShop — brief de reprise (v4.78, 07/11/2026)
+# PoKoalaShop — brief de reprise (v4.79, 07/11/2026)
 
 > Fichier chargé automatiquement à chaque session. **À mettre à jour à chaque version** (repères, constantes, en attente), dans le même commit que `index.html`.
 
@@ -30,11 +30,11 @@
 - Messages de commit en français, préfixés `vX.YZ : …`, terminés par les lignes d'attribution demandées par la session.
 - Vérification après push : `git show origin/main:index.html | grep APP_VERSION` et idem `sw.js`.
 - Accès réseau de l'environnement de dev (vérifié le 07/11) : GitHub, `api.tcgdex.net`, `assets.tcgdex.net`, `www.pokepedia.fr`, `api.pokemontcg.io`, `images.pokemontcg.io`, `pokeapi.co`. **Non joignable** : `assets.pokemon.com` (source d'images pokemon.fr) ⇒ cette étape de la chaîne d'images ne peut pas être testée ici. WebFetch ne renvoie que des résumés : préférer `curl`.
-- Données de test réelles : voir `test/LISEZMOI.md` quand il existera (exports fournis par Thomas, jamais poussés sur le dépôt public).
+- Données de test réelles et tests Playwright : dossier `test/` (voir `test/LISEZMOI.md`). Les noms d'acheteurs ne sont pas sensibles (accord de Thomas) : les exports peuvent être poussés.
 
 ## 4. Architecture générale
 ### Constantes clés
-`APP_VERSION '4.78'` · `CARDS_VER '16'` · `SETS_VER '19'` · `FAM_VER '11'` · `ESP_VER '2'` · `PREFIX 'pks_'` · `SOLO 'cindy'` · `POLL_MS 45000` · `RELECT_MAX 10 min` · `BAK_KEEP 10`, `BAK_EVERY 6 h` · `TCGDEX 'https://api.tcgdex.net/v2/fr'`.
+`APP_VERSION '4.79'` · `CARDS_VER '16'` · `SETS_VER '19'` · `FAM_VER '11'` · `ESP_VER '2'` · `PREFIX 'pks_'` · `SOLO 'cindy'` · `POLL_MS 45000` · `RELECT_MAX 10 min` · `BAK_KEEP 10`, `BAK_EVERY 6 h` · `TCGDEX 'https://api.tcgdex.net/v2/fr'`.
 - Les fichiers de données sont chargés avec `?v=<VER>` : modifier un fichier de données ⇒ incrémenter la constante correspondante.
 
 ### Service worker (sw.js)
@@ -88,7 +88,7 @@
 ## 7. Autres fonctions
 - **Acheteurs** : `achListe`, suggestions `achSugg(inp, apres)` — **préfixe uniquement**, 6 max, dans les fiches Vendre / Vente multiple / Modifier. Plus de statut « expédié » : un lot est marqué vendu et part dans l'historique.
 - **Mises à jour (4.71)** : `prete()` → `checkUpdate` quand `reg.waiting` ; bannière « Version X prête · Installer » ; `majInstaller()` envoie skipWaiting, pose `majDemandee`, recharge (sans purge de cache). `controllerchange` ne recharge que si `majDemandee`. Bouton `majBox`/`majBouton` (Vérifier / Installer) en haut de Compte. `hardReload` = « Réinstallation complète » (dans Dépannage).
-- **Compte (4.69/4.70)** : ligne d'état · Mise à jour · Cet appareil (nom + stockage) · Données · Stock · Dépannage replié (`#a_dep`, `#a_depC`) : analyse holo, Désélectionner Normale, Derniers démarrages, Diagnostic images, Réinstallation, infos fichiers. Plus de liens vers les autres apps.
+- **Compte (4.69/4.70)** : ligne d'état · Mise à jour · Cet appareil (nom + stockage) · Données · Stock (Vérifier le stock, **Télécharger le stock** `stkExport` : copie brute de tous les fichiers `pkstk*` + saisies en attente, lecture seule, tout ou rien) · Dépannage replié (`#a_dep`, `#a_depC`) : analyse holo, Désélectionner Normale, Derniers démarrages, Diagnostic images, Réinstallation, infos fichiers. Plus de liens vers les autres apps.
 - **Démarrage / hors ligne** : journal de démarrage `jalDebut`/`jal`/`sheetJal` ; `gisCharger()` avec onerror et repli `demarrer()` après 3 s ; `sessionConnue`, `jetonStocke`, drapeau `demarre` ; `reauth()` sort sans consommer le délai anti-rafale si `!tokenClient`. La vitrine se met à jour en < 5 s.
 - **Portrait sur téléphone (4.74)** : `estTelephone()` (petit côté < 600), `verrouPortrait()` (refusé par le S25) et message de secours `#rotMsg` « Tourne ton téléphone ». En pratique Thomas utilise une **routine Samsung** (elle reste active tant que l'app n'est pas complètement fermée ; accepté).
 - **Images** : chaîne TCGdex FR → pokemon.fr (FR) → pokemontcg.io (EN) ; la visionneuse reprend la chaîne depuis la source affichée.
@@ -108,4 +108,4 @@
 - APK écarté : on reste en PWA.
 
 ## 10. Repères de versions récentes
-4.52 journal mensuel · 4.60 fiabilisation des listes Stock · 4.69–4.70 réorganisation de Compte · 4.71 mises à jour sur accord · 4.74 portrait · 4.77 vérification des nouvelles cartes · **4.78 Règne Delta (actuelle)**.
+4.52 journal mensuel · 4.60 fiabilisation des listes Stock · 4.69–4.70 réorganisation de Compte · 4.71 mises à jour sur accord · 4.74 portrait · 4.77 vérification des nouvelles cartes · 4.78 Règne Delta · **4.79 export du stock (actuelle)**.

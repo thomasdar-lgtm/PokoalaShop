@@ -854,7 +854,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.78';
+var APP_VERSION = '4.79';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -1730,6 +1730,38 @@ function exportJson(){
   download('pokoalashop_' + stamp + '.json',
     JSON.stringify({ v: APP_VERSION, at: now(), count: lots.length, lots: lots }, null, 1));
   toast('Fichier téléchargé');
+}
+
+/* Export du stock : copie brute de TOUS les fichiers de stock et du journal
+   (tous appareils, tous mois) tels qu'ils sont sur Drive, plus les saisies
+   pas encore envoyees de cet appareil. Lecture seule. Un seul fichier
+   illisible annule l'export : jamais de fichier incomplet. */
+var stkExportEnCours = false;
+async function stkExport(){
+  if(stkExportEnCours) return;
+  if(!token){ toast('Connexion à Drive nécessaire'); return; }
+  stkExportEnCours = true;
+  var b = $('a_stkx');
+  if(b){ b.disabled = true; b.innerHTML = 'Lecture du stock…'; }
+  try{
+    var fs = await driveListQ("name contains 'pkstk'");
+    fs = fs.filter(function(f){ return f.name && f.name.indexOf('pkstk') === 0; });
+    fs.sort(function(a, c){ return a.name < c.name ? -1 : a.name > c.name ? 1 : 0; });
+    var lus = await Promise.all(fs.map(function(f){
+      return driveRead(f.id).then(function(d){ return { name: f.name, id: f.id, modifiedTime: f.modifiedTime, data: d }; });
+    }));
+    var stamp = toDateInput(now());
+    download('pokoalashop_stock_' + stamp + '.json', JSON.stringify({
+      v: APP_VERSION, at: now(), dev: DEV, devNom: devNom(),
+      count: lus.length, fichiers: lus,
+      attente: { stock: stkPending.slice(), journal: mvNew.slice() }
+    }, null, 1));
+    toast(lus.length + ' fichiers de stock téléchargés');
+  }catch(e){
+    toast('Échec : stock non téléchargé');
+  }
+  stkExportEnCours = false;
+  if(b){ b.disabled = false; b.innerHTML = 'Télécharger le stock<span>tous les appareils + journal</span>'; }
 }
 
 function csvCell(v){
@@ -2813,6 +2845,7 @@ function sheetAcc(){
 
     '<div class="accSec">Stock</div>' +
     '<button class="accBtn" id="a_stk">Vérifier le stock<span>' + stkTotalEx() + ' exemplaires</span></button>' +
+    '<button class="accBtn" id="a_stkx">Télécharger le stock<span>tous les appareils + journal</span></button>' +
     '<button class="accBtn" id="a_newc">Vérifier les nouvelles cartes<span>complète les extensions</span></button>' +
 
     /* outils de diagnostic et de rattrapage : replies par defaut */
@@ -2865,6 +2898,7 @@ function sheetAcc(){
   $('a_holo').onclick = function(){ closeSheet(); stkAutoHideNormal(); };
   $('a_hdiag').onclick = function(){ closeSheet(); setTimeout(sheetHoloDiag, 260); };
   $('a_newc').onclick = function(){ closeSheet(); majCartes(true); };
+  $('a_stkx').onclick = stkExport;
   $('a_diag').onclick = function(){ closeSheet(); setTimeout(sheetDiag, 260); };
 
   $('a_ref').onclick = function(){ closeSheet(); sync(true); toast('Synchronisation…'); };
