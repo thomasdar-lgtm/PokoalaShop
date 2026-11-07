@@ -857,7 +857,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.82';
+var APP_VERSION = '4.83';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -888,7 +888,7 @@ var WHOS = { thomas:'Thomas', cindy:'Cindy' };
    n'est perdu si un ancien fichier existe. Mettre SOLO a null retablit le
    fonctionnement a deux comptes. */
 var SOLO = 'cindy';
-var dirty = false, saving = false, pollTimer = null, sheetOpen = false, suppressPop = false;
+var dirty = false, saving = false, pollTimer = null, sheetOpen = false, suppressPop = false, sheetPushed = false;
 var majTimer = null, majInt = null, syncInt = null, tokInt = null, visBound = false;
 var refreshTimer = null, booted = false, offline = false;
 var cfmCb = null;
@@ -2173,7 +2173,8 @@ function closeSheet(){
      gestionnaire popstate : sheetOpen est deja a false a ce moment-la, donc
      sans ce garde-fou le popstate croit a un retour "normal" et applique sa
      regle suivante (effacer la recherche en cours). */
-  if(was && history.state && history.state.d === 1){ suppressPop = true; history.back(); }
+  /* 4.83 : seulement si CETTE fenetre a ajoute son entree (sheetPushed) */
+  if(was && sheetPushed){ sheetPushed = false; suppressPop = true; history.back(); }
 }
 
 var pendingPhoto = null;
@@ -3231,15 +3232,21 @@ $('lb').onclick = function(e){ if(e.target === $('lb')) closeLightbox(); };
 $('cfmN').onclick = closeCfm;
 $('cfmY').onclick = function(){ var c = cfmCb; closeCfm(); if(c) c(); };
 
-/* back Android : ferme les feuilles avant de quitter */
+/* back Android : ferme les feuilles avant de quitter.
+   4.83 : JAMAIS d'ajout d'entree ici. Une entree ajoutee sans geste de
+   l'utilisateur (le retour n'en est pas un) fait marquer par Chrome l'entree
+   courante comme « a sauter » : le retour suivant la sautait et l'app se
+   fermait au lieu de revenir a l'ecran precedent. Chaque fenetre ajoute son
+   entree a l'ouverture (geste) ; le retour la consomme, rien de plus. */
 history.replaceState({ d:0 }, '');
 window.addEventListener('popstate', function(){
   if(suppressPop){ suppressPop = false; return; }
   if($('lb').classList.contains('on')){ $('lb').classList.remove('on'); return; }
-  if(selMode && !sheetOpen){ exitSel(); history.pushState({d:1},''); return; }
-  if($('cfm').classList.contains('on')){ closeCfm(); history.pushState({d:1},''); return; }
-  if(sheetOpen){ closeSheet(); history.pushState({d:1},''); return; }
-  if(query()){ $('q').value = ''; render(); history.pushState({d:1},''); return; }
+  if(selMode && !sheetOpen){ exitSel(); return; }
+  /* l'entree consommee est celle de la fenetre sous la confirmation */
+  if($('cfm').classList.contains('on')){ closeCfm(); if(sheetOpen){ sheetPushed = false; closeSheet(); } return; }
+  if(sheetOpen){ sheetPushed = false; closeSheet(); return; }
+  if(query()){ $('q').value = ''; render(); return; }
   if(history.state && history.state.d === 3) return;           /* retour sur la grille depuis un panneau */
   /* une entree de panneau restee en trop ne doit jamais faire quitter la vue */
   if(history.state && history.state.d === 1 && tab === 'stock' &&
@@ -3251,7 +3258,13 @@ window.addEventListener('popstate', function(){
   if(tab === 'stock' && stkSet){ stkSet = null; stkQry = ''; window.scrollTo(0,0); render(); return; }
 });
 var _open = openSheet;
-openSheet = function(h){ $('sheet').classList.remove('shFix'); _open(h); history.pushState({ d:1 }, ''); };
+/* une fenetre qui en remplace une autre reutilise son entree : sans cela,
+   chaque enchainement de fenetres laissait une entree en trop */
+openSheet = function(h){
+  var deja = sheetOpen;
+  $('sheet').classList.remove('shFix'); _open(h);
+  if(!deja){ history.pushState({ d:1 }, ''); sheetPushed = true; }
+};
 
 document.addEventListener('visibilitychange', function(){
   if(document.hidden || !booted) return;
@@ -7236,7 +7249,7 @@ function pickRows(keys, inLot){
 /* remplace le contenu du panneau sans reempiler d'etat d'historique */
 function openSheetKeep(html){
   $('sheet').innerHTML = '<div class="grab"></div>' + html;
-  if(!sheetOpen){ $('ovl').classList.add('on'); sheetOpen = true; }
+  if(!sheetOpen){ $('ovl').classList.add('on'); sheetOpen = true; history.pushState({ d:1 }, ''); sheetPushed = true; }
 }
 
 document.addEventListener('click', function(e){
