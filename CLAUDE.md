@@ -1,4 +1,4 @@
-# PoKoalaShop — brief de reprise (v4.81, 07/11/2026)
+# PoKoalaShop — brief de reprise (v4.82, 07/11/2026)
 
 > Fichier chargé automatiquement à chaque session. **À mettre à jour à chaque version** (repères, constantes, en attente), dans le même commit que `index.html`.
 
@@ -34,7 +34,7 @@
 
 ## 4. Architecture générale
 ### Constantes clés
-`APP_VERSION '4.81'` · `CARDS_VER '16'` · `SETS_VER '19'` · `FAM_VER '11'` · `ESP_VER '2'` · `PREFIX 'pks_'` · `SOLO 'cindy'` · `POLL_MS 45000` · `RELECT_MAX 10 min` · `BAK_KEEP 10`, `BAK_EVERY 6 h` · `TCGDEX 'https://api.tcgdex.net/v2/fr'`.
+`APP_VERSION '4.82'` · `CARDS_VER '16'` · `SETS_VER '19'` · `FAM_VER '11'` · `ESP_VER '2'` · `PREFIX 'pks_'` · `SOLO 'cindy'` · `POLL_MS 45000` · `RELECT_MAX 10 min` · `BAK_KEEP 10`, `BAK_EVERY 6 h` · `TCGDEX 'https://api.tcgdex.net/v2/fr'`.
 - Les fichiers de données sont chargés avec `?v=<VER>` : modifier un fichier de données ⇒ incrémenter la constante correspondante.
 
 ### Service worker (sw.js)
@@ -93,7 +93,8 @@
 - **Compte (4.69/4.70)** : ligne d'état · Nom de l'appareil · Mise à jour · Cet appareil (stockage) · Données · Stock (Vérifier le stock, **Télécharger le stock** `stkExport` : copie brute de tous les fichiers `pkstk*` + saisies en attente, lecture seule, tout ou rien) · Dépannage replié (`#a_dep`, `#a_depC`) : analyse holo, Désélectionner Normale, Derniers démarrages, Diagnostic images, Réinstallation, infos fichiers. Plus de liens vers les autres apps.
 - **Démarrage / hors ligne** : journal de démarrage `jalDebut`/`jal`/`sheetJal` ; `gisCharger()` avec onerror et repli `demarrer()` après 3 s ; `sessionConnue`, `jetonStocke`, drapeau `demarre` ; `reauth()` sort sans consommer le délai anti-rafale si `!tokenClient`. La vitrine se met à jour en < 5 s.
 - **Portrait sur téléphone (4.74)** : `estTelephone()` (petit côté < 600), `verrouPortrait()` (refusé par le S25) et message de secours `#rotMsg` « Tourne ton téléphone ». En pratique Thomas utilise une **routine Samsung** (elle reste active tant que l'app n'est pas complètement fermée ; accepté).
-- **Images** : chaîne TCGdex FR → pokemon.fr (FR) → pokemontcg.io (EN) ; la visionneuse reprend la chaîne depuis la source affichée.
+- **Images** : chaîne TCGdex FR → pokemon.fr (FR) → pokemontcg.io (EN) ; la visionneuse reprend la chaîne depuis la source affichée. pokemon.fr (`assets.pokemon.com/.../cms2-fr-fr/...`) **ne répond plus après SV06** (SV07–SV10 et Méga-Évolution : 404) : les codes `sv7`–`sv10` de `PKM_CODES` sont des demandes inutiles (à retirer, correctif séparé).
+- **Scans en attente de TCGdex (4.82)** : `TCG_ATTENTE` (aujourd'hui `me6` → pika-collect `…/me06/%03d-480.webp`, 141 scans FR vérifiés, filigrane Pokécardex léger). Tant que `pks_tcgok[sid]` est absent, `cardSrcs` ne demande **pas** TCGdex : source provisoire puis pokemontcg.io. `tcgVerifier(manuel)` (démarrage +9 s, retour dans l'app, bouton « Vérifier les nouvelles cartes » ; max 1×/h via `pks_tcgchk` sauf manuel) : `GET /sets/me06`, exige `cards[0].image === g1` puis l'image `…/001/low.webp` en CORS ⇒ pose `tcgok`, `tcgPurger` retire du cache images + symboles les entrées pika et TCGdex me06 (un 404 opaque mis en cache masquerait sinon les nouveaux scans), toast « Scans TCGdex disponibles ». Adresse différente ⇒ pas de bascule, toast (manuel) « données à mettre à jour ». `pika-collect.fr` ajouté à `IMAGE_HOSTS` (sw.js). **Après publication** : retirer l'entrée de `TCG_ATTENTE` et l'hôte pika.
 - **Vérification des nouvelles cartes (4.77)** : `xGet(u)` en `cache: 'no-store'` ; `majManuel` récupère le résultat même si une vérification auto tourne ; message « N extensions vérifiées ».
 
 ## 8. Ajouter une extension (procédure Règne Delta, 4.78)
@@ -104,11 +105,11 @@
 - Attention aux collisions de normalisation (Nidoran♀ / Nidoran♂ : corrigées à la main).
 
 ## 9. En attente
-- Règne Delta (me6, DLR, 141 cartes) intégrée **sans images** : TCGdex ne l'avait pas encore publiée au 07/11 (absente de `/v2/fr/series/me`, dernière = me05). Dès publication : vérifier les images (chemin me06) et ajouter les noms EN manquants de 16 dresseurs/énergies.
+- Règne Delta (me6, DLR, 141 cartes) : scans provisoires pika-collect depuis 4.82, bascule automatique sur TCGdex dès publication (voir § 7). Après la bascule : retirer la source provisoire, ajouter les noms EN manquants de 16 dresseurs/énergies.
 - Côté Thomas/Cindy : donner le nom du Pokémon dont Cindy a saisi 2 Pokéball non pris en compte (à chercher dans le journal) ; vérifier que le total « Exemplaires » est identique sur les 3 appareils ; relancer l'analyse holo dans 1–2 semaines (la ligne « Normale encore cochée sans exemplaire » doit rester à 0).
 - Ixon de Galar : le journal montre +2 Pokéball saisis sur la tablette le 16/09 à 18:32 (probables erreurs de clic), puis −2 sur le S25.
 - APK écarté : on reste en PWA.
 - **Changements d'identifiant d'appareil (01/11, 02/11, 06/11)** : cause = effacement des données de Chrome sur le S25 (pour le dev de Koalarcade). Toutes les PWA `thomasdar-lgtm.github.io` partagent le même stockage local : effacer les données du site efface aussi PoKoalaShop (identifiant, nom, saisies non envoyées). Consigne donnée : tester les autres apps en navigation privée. S25 actuel = `mw4pmh3rylp1ug`, renommé « S25 » à la main avant la 4.80 (donc déjà une trace sur Drive : pas de question, comportement normal). Deux couches « S25 » coexistent (`mvz6xb9bmb5lvt` jusqu'au 05/11, `mw4pmh3rylp1ug` ensuite) : additionnées, aucun impact sur les totaux.
 
 ## 10. Repères de versions récentes
-4.52 journal mensuel · 4.60 fiabilisation des listes Stock · 4.69–4.70 réorganisation de Compte · 4.71 mises à jour sur accord · 4.74 portrait · 4.77 vérification des nouvelles cartes · 4.78 Règne Delta · 4.79 export du stock · 4.80 reprise d'identité · **4.81 nom de l'appareil verrouillé (actuelle)**.
+4.52 journal mensuel · 4.60 fiabilisation des listes Stock · 4.69–4.70 réorganisation de Compte · 4.71 mises à jour sur accord · 4.74 portrait · 4.77 vérification des nouvelles cartes · 4.78 Règne Delta · 4.79 export du stock · 4.80 reprise d'identité · 4.81 nom de l'appareil verrouillé · **4.82 scans provisoires Règne Delta + bascule TCGdex (actuelle)**.

@@ -857,7 +857,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.81';
+var APP_VERSION = '4.82';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -1244,6 +1244,7 @@ async function boot(){
   /* nouvelles cartes : une seule requete, en arriere-plan, sans bloquer */
   xLoad();
   setTimeout(function(){ majCartes(false); }, 6000);
+  setTimeout(function(){ tcgVerifier(false); }, 9000);
 
   /* toujours annuler avant d'installer : un second passage dans boot()
      multiplierait les minuteries au lieu de les remplacer */
@@ -1256,7 +1257,7 @@ async function boot(){
   if(!visBound){
     visBound = true;
     document.addEventListener('visibilitychange', function(){
-      if(document.visibilityState === 'visible'){ checkUpdate(); stkSync(true); watchToken(true); }
+      if(document.visibilityState === 'visible'){ checkUpdate(); stkSync(true); watchToken(true); tcgVerifier(false); }
     });
   }
 
@@ -3643,6 +3644,7 @@ async function majCartes(manuel){
   if(majEnCours){ if(manuel) toast('Vérification déjà en cours…'); return; }
   majEnCours = true;
   if(manuel) toast('Vérification des nouvelles cartes…');
+  if(manuel) tcgVerifier(true);
   var ajouts = 0, inconnues = [], verifiees = 0;
   try{
     if(!cdb) await cdbLoad();
@@ -3848,8 +3850,84 @@ function pkmImg(c){
    DOS DE CARTE et non une erreur, la source suivante n'est donc jamais
    essayee et le dos reste affiche. On n'interroge pas ce site pour elles. */
 var NO_PTCG = { mep:1 };
+/* ---- Scans en attente de TCGdex (4.82) ----
+   Extension sortie avant que TCGdex publie ses scans : une source francaise
+   provisoire est utilisee, et TCGdex n'est PAS interroge carte par carte
+   (aucune requete vouee a l'echec). tcgVerifier() pose une seule question a
+   TCGdex (au demarrage, au retour dans l'app, au plus une fois par heure) :
+   des que l'extension ET l'image de sa 1re carte repondent, l'extension
+   bascule sur TCGdex, et les copies provisoires ou en echec sont retirees du
+   cache des images pour que les nouveaux scans s'affichent tout de suite. */
+var TCG_ATTENTE = {
+  me6: { t: 'me06', nom: 'Règne Delta', g1: 'https://assets.tcgdex.net/fr/me/me06/001',
+         src: 'https://pika-collect.fr/img/card-images/me06/%03d-480.webp',
+         purge: ['pika-collect.fr/img/card-images/me06/', 'assets.tcgdex.net/fr/me/me06/', 'assets.tcgdex.net/univ/me/me06/'] }
+};
+var TCG_INTERVALLE = 3600 * 1000;
+function tcgOk(){ try{ return JSON.parse(localStorage.getItem(LS + 'tcgok') || '{}') || {}; }catch(e){ return {}; } }
+function tcgPret(sid){ return !!tcgOk()[sid]; }
+function tcgProvisoire(c){
+  var a = TCG_ATTENTE[c.s];
+  if(!a || c.u == null) return '';
+  return a.src.replace('%03d', ('00' + c.u).slice(-3));
+}
+var tcgEnCours = false;
+async function tcgVerifier(manuel){
+  if(tcgEnCours) return;
+  var ok = tcgOk(), reste = Object.keys(TCG_ATTENTE).filter(function(k){ return !ok[k]; });
+  if(!reste.length) return;
+  var der = 0;
+  try{ der = +localStorage.getItem(LS + 'tcgchk') || 0; }catch(e){}
+  if(!manuel && Date.now() - der < TCG_INTERVALLE) return;
+  tcgEnCours = true;
+  try{ localStorage.setItem(LS + 'tcgchk', String(Date.now())); }catch(e){}
+  for(var i=0;i<reste.length;i++){
+    var sid = reste[i], a = TCG_ATTENTE[sid];
+    try{
+      var det = await xGet(TCGDEX + '/sets/' + a.t);
+      var c1 = (det.cards || [])[0];
+      if(!c1 || !c1.image) continue;
+      /* adresse differente de celle de nos fichiers : bascule impossible
+         sans mise a jour des donnees (le signaler, ne rien casser) */
+      if(c1.image !== a.g1){ if(manuel) toast(a.nom + ' : TCGdex publié, données à mettre à jour'); continue; }
+      /* l'annonce ne suffit pas : l'image elle-meme doit repondre */
+      var r = await fetch(c1.image + '/low.webp', { mode: 'cors', cache: 'no-store' });
+      if(!r.ok) continue;
+      ok[sid] = new Date().toISOString();
+      try{ localStorage.setItem(LS + 'tcgok', JSON.stringify(ok)); }catch(e){ continue; }
+      await tcgPurger(a.purge);
+      toast('Scans TCGdex disponibles : ' + a.nom);
+      if(tab === 'stock') render();
+    }catch(e){ /* pas encore publie, ou hors ligne : on reessaiera */ }
+  }
+  tcgEnCours = false;
+}
+async function tcgPurger(motifs){
+  if(!window.caches) return;
+  try{
+    /* images et symboles : un echec mis en cache avant la publication
+       masquerait sinon les nouveaux fichiers indefiniment */
+    var noms = ['pokoalashop-img2', 'pokoalashop-sym'];
+    for(var n=0;n<noms.length;n++){
+      var c = await caches.open(noms[n]);
+      var ks = await c.keys();
+      for(var i=0;i<ks.length;i++)
+        for(var j=0;j<motifs.length;j++)
+          if(ks[i].url.indexOf(motifs[j]) >= 0){ await c.delete(ks[i]); break; }
+    }
+  }catch(e){}
+}
+
 function cardSrcs(c, big){
   var l = [];
+  var prov = tcgProvisoire(c);
+  if(prov && !tcgPret(c.s)){
+    /* TCGdex pas encore publie : source provisoire seule, puis le secours anglais */
+    l.push(prov);
+    var pe = NO_PTCG[c.s] ? '' : ptcgImg(c, big);
+    if(pe) l.push(pe);
+    return l;
+  }
   /* Vignettes : TCGdex, seule source d'apercus legers en francais (245x342).
      Fiche detaillee : pokemon.fr d'abord, scans officiels francais pleine
      definition, mesures a 805 ms contre 2710 ms pour TCGdex. Son image
@@ -3868,6 +3946,7 @@ function cardSrcs(c, big){
     if(big) l.push(sx + '/small');
     return l;
   }
+  if(prov) l.push(prov);
   var pt = NO_PTCG[c.s] ? '' : ptcgImg(c, big);
   if(pt) l.push(pt);
   if(big && !NO_PTCG[c.s]){ var pl = ptcgImg(c, false); if(pl) l.push(pl); }
