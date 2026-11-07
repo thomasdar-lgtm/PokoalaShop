@@ -48,7 +48,7 @@
 
 ### Identité
 - `pks_who` : thomas / cindy. Fichiers lots : `pks_thomas.json`, `pks_cindy.json` (`SOLO='cindy'` évite le double comptage).
-- `DEV = devId()` : identifiant d'appareil pour les fichiers Stock et Journal ; nom lisible via `devNom()` (stocké dans les fichiers stock sous `nom`). S25 et tablette nommés ; **Oppo pas encore nommé**.
+- `DEV = devId()` : identifiant d'appareil pour les fichiers Stock et Journal ; nom lisible via `devNom()` (stocké dans les fichiers stock sous `nom`). Appareils nommés : Tablette, S25, Oppo (`mvdtytc1vf7kr7`). Plusieurs anciens identifiants sans nom : voir `test/LISEZMOI.md`.
 
 ## 5. Synchronisation des lots
 - `listFiles()` : strict (une erreur Drive ≠ liste vide), paginé (pageSize 1000 + nextPageToken), filtre les noms commençant par `pks_`.
@@ -103,7 +103,7 @@
 
 ## 9. En attente
 - Règne Delta (me6, DLR, 141 cartes) intégrée **sans images** : TCGdex ne l'avait pas encore publiée au 07/11 (absente de `/v2/fr/series/me`, dernière = me05). Dès publication : vérifier les images (chemin me06) et ajouter les noms EN manquants de 16 dresseurs/énergies.
-- Côté Thomas/Cindy : nommer l'Oppo (Compte › Cet appareil) ; donner le nom du Pokémon dont Cindy a saisi 2 Pokéball non pris en compte (à chercher dans le journal) ; vérifier que le total « Exemplaires » est identique sur les 3 appareils ; relancer l'analyse holo dans 1–2 semaines (la ligne « Normale encore cochée sans exemplaire » doit rester à 0).
+- Côté Thomas/Cindy : donner le nom du Pokémon dont Cindy a saisi 2 Pokéball non pris en compte (à chercher dans le journal) ; vérifier que le total « Exemplaires » est identique sur les 3 appareils ; relancer l'analyse holo dans 1–2 semaines (la ligne « Normale encore cochée sans exemplaire » doit rester à 0).
 - Ixon de Galar : le journal montre +2 Pokéball saisis sur la tablette le 16/09 à 18:32 (probables erreurs de clic), puis −2 sur le S25.
 - APK écarté : on reste en PWA.
 
