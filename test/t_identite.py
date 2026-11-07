@@ -1,5 +1,5 @@
 """Test 4.80 « Quel appareil es-tu ? » sur les vrais exports du 07/11.
-Usage : python3 test/t_identite.py <scenario>   (s25 | vide | oppo | normal | nouveau | saisie)"""
+Usage : python3 test/t_identite.py <scenario>   (s25 | vide | oppo | normal | nouveau | saisie | nom | nomvide)"""
 import json, re, sys, os, threading, http.server, functools
 from urllib.parse import urlparse, parse_qs
 from playwright.sync_api import sync_playwright
@@ -42,7 +42,8 @@ def drive(route):
         return route.fulfill(status=200,content_type='application/json',body=json.dumps({'files':out}))
     return route.fulfill(status=200,content_type='application/json',body='{}')
 INIT={'s25':{'pks_dev':'mw4pmh3rylp1ug'},'vide':{},'oppo':{'pks_dev':'mw4pmh3rylp1ug'},
-      'normal':{'pks_dev':'mvdtytc1vf7kr7','pks_devnom':'Oppo'},'nouveau':{'pks_dev':'mw4pmh3rylp1ug'},'saisie':{'pks_dev':'mw4pmh3rylp1ug'}}[SC]
+      'normal':{'pks_dev':'mvdtytc1vf7kr7','pks_devnom':'Oppo'},'nouveau':{'pks_dev':'mw4pmh3rylp1ug'},'saisie':{'pks_dev':'mw4pmh3rylp1ug'},
+      'nom':{'pks_dev':'mvdtytc1vf7kr7','pks_devnom':'Oppo'},'nomvide':{'pks_dev':'mvdtytc1vf7kr7'}}[SC]
 js="if(!sessionStorage.getItem('init')){sessionStorage.setItem('init','1');localStorage.setItem('pks_tk',JSON.stringify({t:'TOK',e:Date.now()+3600e3}));localStorage.setItem('pks_who','cindy');"+''.join("localStorage.setItem(%r,%r);"%kv for kv in INIT.items())+"}"
 def total(pg): return pg.evaluate("Object.keys(stock).reduce(function(s,k){return s+stock[k]},0)")
 with sync_playwright() as p:
@@ -89,6 +90,21 @@ with sync_playwright() as p:
         print('confirmation:',pg.inner_text('#sheet').replace('\n',' | ')[:200])
         pg.click('#x_idno'); pg.wait_for_timeout(300)
         print('retour à la liste:',pg.is_visible('text=Quel appareil es-tu ?'),'DEV',pg.evaluate('DEV'))
+    if SC in('nom','nomvide'):
+        pg.click('#btnAcc'); pg.wait_for_selector('#a_devz')
+        print('champ de saisie visible:',pg.is_visible('#f_devnom'),'| affichage:',pg.inner_text('#a_devz').replace('\n',' | '))
+        pg.wait_for_timeout(600); pg.screenshot(path='/tmp/nom_%s_1.png'%SC)
+        if SC=='nom':
+            pg.click('#a_devmod'); print('après Modifier: champ',pg.is_visible('#f_devnom'),pg.input_value('#f_devnom'))
+            pg.click('#a_devx'); print('après Annuler: champ',pg.is_visible('#f_devnom'),'|',pg.inner_text('#a_devz'))
+            pg.click('#a_devmod'); pg.fill('#f_devnom','Oppo Cindy'); pg.click('#a_devnom')
+        else:
+            pg.fill('#f_devnom','Oppo'); pg.click('#a_devnom')
+        pg.wait_for_timeout(4000)
+        print('après Enregistrer: champ',pg.is_visible('#f_devnom'),'|',pg.inner_text('#a_devz'),'| devNom',pg.evaluate('devNom()'))
+        w=[json.loads(b)['nom'] for m,n,b in ECR if n=='pkstk_mvdtytc1vf7kr7.json']
+        print('nom écrit dans la couche Oppo:',w)
+        pg.screenshot(path='/tmp/nom_%s_2.png'%SC)
     if SC=='nouveau':
         pg.click('[data-idch="nouv"]'); pg.wait_for_timeout(300)
         pg.reload(); pg.wait_for_timeout(6000)
