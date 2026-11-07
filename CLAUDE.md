@@ -1,4 +1,4 @@
-# PoKoalaShop — brief de reprise (v4.79, 07/11/2026)
+# PoKoalaShop — brief de reprise (v4.80, 07/11/2026)
 
 > Fichier chargé automatiquement à chaque session. **À mettre à jour à chaque version** (repères, constantes, en attente), dans le même commit que `index.html`.
 
@@ -34,7 +34,7 @@
 
 ## 4. Architecture générale
 ### Constantes clés
-`APP_VERSION '4.79'` · `CARDS_VER '16'` · `SETS_VER '19'` · `FAM_VER '11'` · `ESP_VER '2'` · `PREFIX 'pks_'` · `SOLO 'cindy'` · `POLL_MS 45000` · `RELECT_MAX 10 min` · `BAK_KEEP 10`, `BAK_EVERY 6 h` · `TCGDEX 'https://api.tcgdex.net/v2/fr'`.
+`APP_VERSION '4.80'` · `CARDS_VER '16'` · `SETS_VER '19'` · `FAM_VER '11'` · `ESP_VER '2'` · `PREFIX 'pks_'` · `SOLO 'cindy'` · `POLL_MS 45000` · `RELECT_MAX 10 min` · `BAK_KEEP 10`, `BAK_EVERY 6 h` · `TCGDEX 'https://api.tcgdex.net/v2/fr'`.
 - Les fichiers de données sont chargés avec `?v=<VER>` : modifier un fichier de données ⇒ incrémenter la constante correspondante.
 
 ### Service worker (sw.js)
@@ -49,6 +49,7 @@
 ### Identité
 - `pks_who` : thomas / cindy. Fichiers lots : `pks_thomas.json`, `pks_cindy.json` (`SOLO='cindy'` évite le double comptage).
 - `DEV = devId()` : identifiant d'appareil pour les fichiers Stock et Journal ; nom lisible via `devNom()` (stocké dans les fichiers stock sous `nom`). Appareils nommés : Tablette, S25, Oppo (`mvdtytc1vf7kr7`). Plusieurs anciens identifiants sans nom : voir `test/LISEZMOI.md`.
+- **Reprise d'identité (4.80)** : `idVerifier()` (appelé après la 1re lecture réussie du stock) — si l'appareil n'a aucune trace `pkstk*_<DEV>` sur Drive, aucune saisie en attente et `pks_devok ≠ DEV`, fenêtre « Quel appareil es-tu ? » (`sheetIdChoix`, noms des couches + dernière activité, « Nouvel appareil » pose `devok`). Confirmation si activité < 24 h (`ID_RECENT`). `idReprendre` relit la couche choisie, la pose dans le cache `stkc`, écrit `dev`/`devnom`/`devok`, puis recharge. Pas de bouton manuel (refusé par Thomas).
 
 ## 5. Synchronisation des lots
 - `listFiles()` : strict (une erreur Drive ≠ liste vide), paginé (pageSize 1000 + nextPageToken), filtre les noms commençant par `pks_`.
@@ -106,7 +107,7 @@
 - Côté Thomas/Cindy : donner le nom du Pokémon dont Cindy a saisi 2 Pokéball non pris en compte (à chercher dans le journal) ; vérifier que le total « Exemplaires » est identique sur les 3 appareils ; relancer l'analyse holo dans 1–2 semaines (la ligne « Normale encore cochée sans exemplaire » doit rester à 0).
 - Ixon de Galar : le journal montre +2 Pokéball saisis sur la tablette le 16/09 à 18:32 (probables erreurs de clic), puis −2 sur le S25.
 - APK écarté : on reste en PWA.
-- **Changements d'identifiant d'appareil (01/11, 02/11, 06/11)** : cause = effacement des données de Chrome sur le S25 (pour le dev de Koalarcade). Toutes les PWA `thomasdar-lgtm.github.io` partagent le même stockage local : effacer les données du site efface aussi PoKoalaShop (identifiant, nom, saisies non envoyées). Consigne donnée : tester les autres apps en navigation privée. S25 actuel = `mw4pmh3rylp1ug` (à renommer).
+- **Changements d'identifiant d'appareil (01/11, 02/11, 06/11)** : cause = effacement des données de Chrome sur le S25 (pour le dev de Koalarcade). Toutes les PWA `thomasdar-lgtm.github.io` partagent le même stockage local : effacer les données du site efface aussi PoKoalaShop (identifiant, nom, saisies non envoyées). Consigne donnée : tester les autres apps en navigation privée. S25 actuel = `mw4pmh3rylp1ug` : en 4.80 il doit recevoir la question et reprendre « S25 » (`mvz6xb9bmb5lvt`).
 
 ## 10. Repères de versions récentes
-4.52 journal mensuel · 4.60 fiabilisation des listes Stock · 4.69–4.70 réorganisation de Compte · 4.71 mises à jour sur accord · 4.74 portrait · 4.77 vérification des nouvelles cartes · 4.78 Règne Delta · **4.79 export du stock (actuelle)**.
+4.52 journal mensuel · 4.60 fiabilisation des listes Stock · 4.69–4.70 réorganisation de Compte · 4.71 mises à jour sur accord · 4.74 portrait · 4.77 vérification des nouvelles cartes · 4.78 Règne Delta · 4.79 export du stock · **4.80 reprise d'identité (actuelle)**.

@@ -854,7 +854,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.79';
+var APP_VERSION = '4.80';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -4172,8 +4172,118 @@ async function stkLoad(){
     if(vuEnCache && tab === 'stock') render();
     stkLoaded = true;
     stkNet = true;
+    idVerifier().catch(function(){});
   }catch(e){
     if(!vuEnCache) toast('Stock : lecture impossible');
+  }
+}
+
+/* ---- « Quel appareil es-tu ? » (4.80) ----
+   Un appareil dont la memoire a ete videe (donnees de Chrome effacees) recoit
+   un nouvel identifiant et repartirait d'une couche vide. S'il n'a AUCUNE
+   trace sur Drive (ni stock, ni journal) et aucune saisie en attente, on lui
+   propose de reprendre l'identite d'un appareil nomme. La couche reprise est
+   relue sur Drive et posee dans le cache local AVANT le rechargement : une
+   saisie faite ensuite s'ajoute a ce contenu, jamais a une couche vide. */
+var ID_RECENT = 24 * 3600 * 1000;
+var idVu = false;
+function idAge(ms){
+  var m = Math.max(1, Math.round((Date.now() - ms) / 60000));
+  if(m < 60) return m + ' min';
+  return Math.round(m / 60) + ' h';
+}
+function idQuand(ms){
+  var d = new Date(ms);
+  return dt(d.toISOString()) + ' à ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+}
+async function idVerifier(){
+  if(idVu) return;
+  idVu = true;
+  try{ if(localStorage.getItem(LS + 'devok') === DEV) return; }catch(e){ return; }
+  if(stkFileId || stkPending.length || mvNew.length) return;
+  var fs = await driveListQ("name contains 'pkstk'");
+  var act = {}, re = /^pkstk(?:mv)?_([a-z0-9]+)(?:_[^.]*)?\.json$/;
+  for(var i=0;i<fs.length;i++){
+    var m = re.exec(fs[i].name || '');
+    if(!m) continue;
+    var t = Date.parse(fs[i].modifiedTime) || 0;
+    if(!act[m[1]] || t > act[m[1]]) act[m[1]] = t;
+  }
+  if(act[DEV]) return;                     /* l'appareil a deja une trace : rien a demander */
+  var parNom = {};
+  for(var j=0;j<stkLayers.length;j++){
+    var L = stkLayers[j], n = (L.nom || '').trim();
+    if(!n || !L.dev || L.dev === DEV || L.dev === 'legacy') continue;
+    var a = act[L.dev] || 0, k = n.toLowerCase();
+    if(!parNom[k] || a > parNom[k].a) parNom[k] = { nom: n, dev: L.dev, a: a };
+  }
+  var choix = Object.keys(parNom).map(function(k){ return parNom[k]; });
+  if(!choix.length) return;
+  choix.sort(function(x, y){ return y.a - x.a; });
+  idAttendre(choix);
+}
+function idAttendre(choix){
+  /* jamais par-dessus une autre fenetre : on attend qu'elle soit fermee */
+  if(sheetOpen || $('cfm').classList.contains('on')){ setTimeout(function(){ idAttendre(choix); }, 3000); return; }
+  sheetIdChoix(choix);
+}
+function sheetIdChoix(choix){
+  var h = '<div class="shT">Quel appareil es-tu ?</div>' +
+    '<div class="shS">La mémoire de cet appareil a été vidée. Choisis-le pour qu\'il reprenne son stock.</div>';
+  for(var i=0;i<choix.length;i++)
+    h += '<button class="accBtn" data-idch="' + i + '">' + esc(choix[i].nom) +
+         '<span>' + (choix[i].a ? 'dernière activité le ' + esc(idQuand(choix[i].a)) : 'activité inconnue') + '</span></button>';
+  h += '<button class="accBtn" data-idch="nouv">Nouvel appareil<span>ne reprendre aucun stock</span></button>';
+  openSheet(h);
+  var bs = document.querySelectorAll('[data-idch]');
+  for(var b=0;b<bs.length;b++) bs[b].onclick = function(){
+    var v = this.getAttribute('data-idch');
+    if(v === 'nouv'){
+      try{ localStorage.setItem(LS + 'devok', DEV); }catch(e){}
+      closeSheet(); toast('Nouvel appareil');
+      return;
+    }
+    var c = choix[+v];
+    if(c.a && Date.now() - c.a < ID_RECENT){
+      openSheet('<div class="shT">Es-tu vraiment ' + esc(c.nom) + ' ?</div>' +
+        '<div class="shS">' + esc(c.nom) + ' a été utilisé il y a ' + idAge(c.a) +
+        '. Si cet appareil est toujours en service, choisir son nom mélangerait leurs stocks.</div>' +
+        '<div class="shF"><button class="bS" style="flex:1" id="x_idno">Retour</button>' +
+        '<button class="bP" style="flex:1" id="x_idok">Oui, je suis ' + esc(c.nom) + '</button></div>');
+      $('x_idno').onclick = function(){ sheetIdChoix(choix); };
+      $('x_idok').onclick = function(){ idReprendre(c); };
+      return;
+    }
+    idReprendre(c);
+  };
+}
+async function idReprendre(c){
+  openSheet('<div class="shT">Reprise de ' + esc(c.nom) + '…</div><div class="shS">Lecture du stock sur Drive.</div>');
+  try{
+    if(stkPending.length || mvNew.length) throw new Error('saisie');
+    var nom = STK_PREFIX + c.dev + '.json';
+    var ex = await driveListQ("name = '" + nom + "'");
+    if(ex.length !== 1) throw new Error('fichier');
+    var d = await driveRead(ex[0].id);
+    if(!d || d.dev !== c.dev) throw new Error('contenu');
+    if(stkPending.length || mvNew.length) throw new Error('saisie');
+    /* identite et couche reprises ensemble, puis rechargement : tout
+       redemarre proprement sous l'ancien identifiant */
+    DEV = c.dev; STK_MINE = nom; MV_MINE = MV_PREFIX + c.dev + '.json';
+    stkFileId = ex[0].id;
+    myDelta = d.delta || {}; myStick = d.stick || {}; myOv = d.ov || {}; myBox = d.box || {};
+    myOvT = d.ovt || {}; myBoxT = d.boxt || {}; myDone = d.done || {}; myStamp = d.stamp || 0;
+    stkLayers = stkLayers.filter(function(L){ return L.dev !== c.dev; });
+    stkSaveCache();
+    localStorage.setItem(LS + 'dev', c.dev);
+    localStorage.setItem(LS + 'devnom', d.nom || c.nom);
+    localStorage.setItem(LS + 'devok', c.dev);
+    location.reload();
+  }catch(e){
+    openSheet('<div class="shT">Reprise impossible</div><div class="shS">' +
+      (e && e.message === 'saisie' ? 'Une saisie est en cours sur cet appareil.' : 'Drive n\'a pas pu être lu. Rien n\'a été modifié ; la question reviendra au prochain démarrage.') +
+      '</div><div class="shF"><button class="bS" style="flex:1" id="x_idf">Fermer</button></div>');
+    $('x_idf').onclick = closeSheet;
   }
 }
 
