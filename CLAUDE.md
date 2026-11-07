@@ -1,4 +1,4 @@
-# PoKoalaShop — brief de reprise (v4.80, 07/11/2026)
+# PoKoalaShop — brief de reprise (v4.81, 07/11/2026)
 
 > Fichier chargé automatiquement à chaque session. **À mettre à jour à chaque version** (repères, constantes, en attente), dans le même commit que `index.html`.
 
@@ -34,7 +34,7 @@
 
 ## 4. Architecture générale
 ### Constantes clés
-`APP_VERSION '4.80'` · `CARDS_VER '16'` · `SETS_VER '19'` · `FAM_VER '11'` · `ESP_VER '2'` · `PREFIX 'pks_'` · `SOLO 'cindy'` · `POLL_MS 45000` · `RELECT_MAX 10 min` · `BAK_KEEP 10`, `BAK_EVERY 6 h` · `TCGDEX 'https://api.tcgdex.net/v2/fr'`.
+`APP_VERSION '4.81'` · `CARDS_VER '16'` · `SETS_VER '19'` · `FAM_VER '11'` · `ESP_VER '2'` · `PREFIX 'pks_'` · `SOLO 'cindy'` · `POLL_MS 45000` · `RELECT_MAX 10 min` · `BAK_KEEP 10`, `BAK_EVERY 6 h` · `TCGDEX 'https://api.tcgdex.net/v2/fr'`.
 - Les fichiers de données sont chargés avec `?v=<VER>` : modifier un fichier de données ⇒ incrémenter la constante correspondante.
 
 ### Service worker (sw.js)
@@ -50,6 +50,7 @@
 - `pks_who` : thomas / cindy. Fichiers lots : `pks_thomas.json`, `pks_cindy.json` (`SOLO='cindy'` évite le double comptage).
 - `DEV = devId()` : identifiant d'appareil pour les fichiers Stock et Journal ; nom lisible via `devNom()` (stocké dans les fichiers stock sous `nom`). Appareils nommés : Tablette, S25, Oppo (`mvdtytc1vf7kr7`). Plusieurs anciens identifiants sans nom : voir `test/LISEZMOI.md`.
 - **Reprise d'identité (4.80)** : `idVerifier()` (appelé après la 1re lecture réussie du stock) — si l'appareil n'a aucune trace `pkstk*_<DEV>` sur Drive, aucune saisie en attente et `pks_devok ≠ DEV`, fenêtre « Quel appareil es-tu ? » (`sheetIdChoix`, noms des couches + dernière activité, « Nouvel appareil » pose `devok`). Confirmation si activité < 24 h (`ID_RECENT`). `idReprendre` relit la couche choisie, la pose dans le cache `stkc`, écrit `dev`/`devnom`/`devok`, puis recharge. Pas de bouton manuel (refusé par Thomas).
+- **Nom dans Compte (4.81)** : `devZone(edit)` dans `#a_devz`, sous la ligne de connexion. Nom grisé en lecture seule + bouton « Modifier » (`#a_devmod`) ; champ `#f_devnom` + « Annuler » (`#a_devx`) / « Enregistrer » (`#a_devnom`) seulement en modification, ou directement si aucun nom.
 
 ## 5. Synchronisation des lots
 - `listFiles()` : strict (une erreur Drive ≠ liste vide), paginé (pageSize 1000 + nextPageToken), filtre les noms commençant par `pks_`.
@@ -89,7 +90,7 @@
 ## 7. Autres fonctions
 - **Acheteurs** : `achListe`, suggestions `achSugg(inp, apres)` — **préfixe uniquement**, 6 max, dans les fiches Vendre / Vente multiple / Modifier. Plus de statut « expédié » : un lot est marqué vendu et part dans l'historique.
 - **Mises à jour (4.71)** : `prete()` → `checkUpdate` quand `reg.waiting` ; bannière « Version X prête · Installer » ; `majInstaller()` envoie skipWaiting, pose `majDemandee`, recharge (sans purge de cache). `controllerchange` ne recharge que si `majDemandee`. Bouton `majBox`/`majBouton` (Vérifier / Installer) en haut de Compte. `hardReload` = « Réinstallation complète » (dans Dépannage).
-- **Compte (4.69/4.70)** : ligne d'état · Mise à jour · Cet appareil (nom + stockage) · Données · Stock (Vérifier le stock, **Télécharger le stock** `stkExport` : copie brute de tous les fichiers `pkstk*` + saisies en attente, lecture seule, tout ou rien) · Dépannage replié (`#a_dep`, `#a_depC`) : analyse holo, Désélectionner Normale, Derniers démarrages, Diagnostic images, Réinstallation, infos fichiers. Plus de liens vers les autres apps.
+- **Compte (4.69/4.70)** : ligne d'état · Nom de l'appareil · Mise à jour · Cet appareil (stockage) · Données · Stock (Vérifier le stock, **Télécharger le stock** `stkExport` : copie brute de tous les fichiers `pkstk*` + saisies en attente, lecture seule, tout ou rien) · Dépannage replié (`#a_dep`, `#a_depC`) : analyse holo, Désélectionner Normale, Derniers démarrages, Diagnostic images, Réinstallation, infos fichiers. Plus de liens vers les autres apps.
 - **Démarrage / hors ligne** : journal de démarrage `jalDebut`/`jal`/`sheetJal` ; `gisCharger()` avec onerror et repli `demarrer()` après 3 s ; `sessionConnue`, `jetonStocke`, drapeau `demarre` ; `reauth()` sort sans consommer le délai anti-rafale si `!tokenClient`. La vitrine se met à jour en < 5 s.
 - **Portrait sur téléphone (4.74)** : `estTelephone()` (petit côté < 600), `verrouPortrait()` (refusé par le S25) et message de secours `#rotMsg` « Tourne ton téléphone ». En pratique Thomas utilise une **routine Samsung** (elle reste active tant que l'app n'est pas complètement fermée ; accepté).
 - **Images** : chaîne TCGdex FR → pokemon.fr (FR) → pokemontcg.io (EN) ; la visionneuse reprend la chaîne depuis la source affichée.
@@ -110,4 +111,4 @@
 - **Changements d'identifiant d'appareil (01/11, 02/11, 06/11)** : cause = effacement des données de Chrome sur le S25 (pour le dev de Koalarcade). Toutes les PWA `thomasdar-lgtm.github.io` partagent le même stockage local : effacer les données du site efface aussi PoKoalaShop (identifiant, nom, saisies non envoyées). Consigne donnée : tester les autres apps en navigation privée. S25 actuel = `mw4pmh3rylp1ug` : en 4.80 il doit recevoir la question et reprendre « S25 » (`mvz6xb9bmb5lvt`).
 
 ## 10. Repères de versions récentes
-4.52 journal mensuel · 4.60 fiabilisation des listes Stock · 4.69–4.70 réorganisation de Compte · 4.71 mises à jour sur accord · 4.74 portrait · 4.77 vérification des nouvelles cartes · 4.78 Règne Delta · 4.79 export du stock · **4.80 reprise d'identité (actuelle)**.
+4.52 journal mensuel · 4.60 fiabilisation des listes Stock · 4.69–4.70 réorganisation de Compte · 4.71 mises à jour sur accord · 4.74 portrait · 4.77 vérification des nouvelles cartes · 4.78 Règne Delta · 4.79 export du stock · 4.80 reprise d'identité · **4.81 nom de l'appareil verrouillé (actuelle)**.
