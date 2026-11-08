@@ -866,7 +866,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.86';
+var APP_VERSION = '4.87';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -897,7 +897,7 @@ var WHOS = { thomas:'Thomas', cindy:'Cindy' };
    n'est perdu si un ancien fichier existe. Mettre SOLO a null retablit le
    fonctionnement a deux comptes. */
 var SOLO = 'cindy';
-var dirty = false, saving = false, pollTimer = null, sheetOpen = false, suppressPop = false, sheetPushed = false;
+var dirty = false, saving = false, pollTimer = null, sheetOpen = false, suppressPop = false, sheetPushed = false, qPushed = false, qUnder = null;
 var majTimer = null, majInt = null, syncInt = null, tokInt = null, visBound = false;
 var refreshTimer = null, booted = false, offline = false;
 var cfmCb = null;
@@ -3143,17 +3143,24 @@ var navs = document.querySelectorAll('.nv');
 for(var n=0;n<navs.length;n++){
   navs[n].onclick = function(){
     var cible = this.getAttribute('data-t');
+    /* 4.87 : entrees a retirer (recherche, puis panneau dessous) en UN seul
+       retour : deux history.back() d'affilee se marchent dessus */
+    var nRet = 0, rech = false;
+    if(qPushed && history.state && history.state.d === 5){ nRet = 1; rech = true; }
+    qPushed = false;
+    function haut3(){ return rech ? qUnder === 3 : !!(history.state && history.state.d === 3); }
     /* retoucher l'onglet deja actif ramene a son accueil */
     if(cible === tab){
       if(tab === 'stock'){ stkSet = null; stkQry = ''; stkJournal = false; stkInv = false; stkNever = false; stkStick = false; }
       if(selMode) exitSel();
-      if(history.state && history.state.d === 3) history.back();
+      if(haut3()) nRet++;
     }
     for(var i=0;i<navs.length;i++) navs[i].classList.remove('on');
     this.classList.add('on');
     tab = cible;
     if(tab !== 'stock'){ autoNAppliquer(); mvJ = null; stkJournal = false; stkInv = false; stkNever = false; stkStick = false; stkBoxF = null; }
-    if(tab !== 'stock' && stkSet){ stkSet = null; stkQry = ''; if(history.state && history.state.d === 3) history.back(); }
+    if(tab !== 'stock' && stkSet){ stkSet = null; stkQry = ''; if(haut3() && nRet < (rech ? 2 : 1)) nRet++; }
+    if(nRet){ suppressPop = true; history.go(-nRet); }
     $('fab').classList.toggle('hide', tab !== 'vitrine' && tab !== 'afaire');
     $('q').value = '';
     window.scrollTo(0,0);
@@ -3165,7 +3172,20 @@ for(var n=0;n<navs.length;n++){
   };
 }
 
-$('q').oninput = render;
+/* 4.87 : une recherche saisie ajoute UNE entree d'historique (la saisie est
+   un geste) : le retour efface alors la recherche au lieu de quitter. Vider
+   le champ (croix, effacement au clavier) retire cette entree. */
+function qDrop(){
+  if(!qPushed) return;
+  qPushed = false;
+  if(history.state && history.state.d === 5){ suppressPop = true; history.back(); }
+}
+$('q').oninput = function(){
+  var v = query();
+  if(v && !qPushed){ qUnder = history.state ? history.state.d : null; history.pushState({ d:5 }, ''); qPushed = true; }
+  else if(!v) qDrop();
+  render();
+};
 /* Barres de recherche (principale, extension, panneaux) : la touche Entree
    ferme le clavier, et chaque nouvelle saisie ramene en haut des resultats. */
 function champRecherche(t){
@@ -3184,7 +3204,7 @@ function hautResultats(t){
 document.addEventListener('input', function(e){
   if(champRecherche(e.target)) hautResultats(e.target);
 }, true);
-$('qClr').onclick = function(){ $('q').value = ''; window.scrollTo(0, 0); render(); $('q').focus(); };
+$('qClr').onclick = function(){ $('q').value = ''; qDrop(); window.scrollTo(0, 0); render(); $('q').focus(); };
 /* Boutons × des recherches : l'appui ne doit pas retirer le focus du champ,
    sinon Android ferme le clavier. Empecher le mousedown garde le focus. */
 document.addEventListener('mousedown', function(e){
@@ -3255,7 +3275,7 @@ window.addEventListener('popstate', function(){
   /* l'entree consommee est celle de la fenetre sous la confirmation */
   if($('cfm').classList.contains('on')){ closeCfm(); if(sheetOpen){ sheetPushed = false; closeSheet(); } return; }
   if(sheetOpen){ sheetPushed = false; closeSheet(); return; }
-  if(query()){ $('q').value = ''; render(); return; }
+  if(query()){ qPushed = false; $('q').value = ''; render(); return; }
   if(history.state && history.state.d === 3) return;           /* retour sur la grille depuis un panneau */
   /* une entree de panneau restee en trop ne doit jamais faire quitter la vue */
   if(history.state && history.state.d === 1 && tab === 'stock' &&
