@@ -72,7 +72,7 @@ with sync_playwright() as p:
         print('   ouvert :',pg.evaluate(ECRAN)); retours(pg,5); pg.close()
     if 'recherche' in SC:
         print('C. Stock > recherche « Pikachu » > carte, puis retours'); pg=neuf()
-        pg.fill('#q','Pikachu'); pg.wait_for_timeout(1200)
+        pg.locator('#q').press_sequentially('Pikachu',delay=60); pg.wait_for_timeout(1200)
         pg.locator('[data-stkid]').first.click(); pg.wait_for_timeout(800)
         print('   ouvert :',pg.evaluate(ECRAN)); retours(pg,5); pg.close()
     if 'zoom' in SC:
@@ -95,5 +95,29 @@ with sync_playwright() as p:
         print('G. Stock > Jamais fait, puis retours'); pg=neuf()
         pg.click('[data-stknv]'); pg.wait_for_timeout(1500)
         print('   ouvert :',pg.evaluate(ECRAN)); retours(pg,4); pg.close()
+    if 'rechext' in SC:
+        print('H. Stock > extension > recherche dans l\'extension « ex », puis retours'); pg=neuf()
+        pg.click('.stkSet[data-stkset="me6"]'); pg.wait_for_timeout(1200)
+        pg.locator('#stkq').press_sequentially('ex',delay=80); pg.wait_for_timeout(800)
+        print('   ouvert :',pg.evaluate(ECRAN)); retours(pg,4); pg.close()
+    if 'croix' in SC:
+        print('I. Stock > recherche « Pika », effacée par la croix, puis retours'); pg=neuf()
+        pg.locator('#q').press_sequentially('Pika',delay=80); pg.wait_for_timeout(800)
+        pg.click('#qClr'); pg.wait_for_timeout(600)
+        print('   ouvert :',pg.evaluate(ECRAN)); retours(pg,3); pg.close()
+    if 'clavier' in SC:
+        print('J. Stock > recherche « Pi », effacée au clavier, puis retours'); pg=neuf()
+        pg.locator('#q').press_sequentially('Pi',delay=80); pg.wait_for_timeout(500)
+        pg.locator('#q').press('Backspace'); pg.locator('#q').press('Backspace'); pg.wait_for_timeout(600)
+        print('   ouvert :',pg.evaluate(ECRAN)); retours(pg,3); pg.close()
+    if 'onglet' in SC:
+        print('K. Stock > recherche, puis onglet Vitrine, puis retours'); pg=neuf()
+        pg.locator('#q').press_sequentially('Pika',delay=80); pg.wait_for_timeout(600)
+        pg.click('.nv[data-t="vitrine"]'); pg.wait_for_timeout(800)
+        print('   ouvert :',pg.evaluate(ECRAN)); retours(pg,3); pg.close()
+    if 'vitrine' in SC:
+        print('L. Vitrine > recherche, puis retours'); pg=ctx.new_page(); pg.goto('http://127.0.0.1:8768/index.html'); pg.wait_for_timeout(7000)
+        pg.locator('#q').press_sequentially('Pika',delay=80); pg.wait_for_timeout(600)
+        print('   ouvert :',pg.evaluate(ECRAN)); retours(pg,3); pg.close()
     b.close()
 srv.shutdown()
