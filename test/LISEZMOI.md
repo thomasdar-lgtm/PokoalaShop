@@ -12,6 +12,7 @@ Exports fournis par Thomas, utilisés pour les tests Playwright (jamais lus par 
 - `t_identite.py <scénario>` (4.80) : `s25`, `vide`, `oppo` (confirmation < 24 h), `normal` (pas de question), `nouveau`, `saisie` (reprise puis saisie avec la couche illisible sur Drive : la couche écrite doit valoir Drive + la saisie), `nom` / `nomvide` (4.81, nom de l'appareil dans Compte).
 - `t_scans_me6.py` (4.82) : non publié ⇒ 1 seule demande API, images pika, aucune image TCGdex ; rechargement < 1 h ⇒ 0 demande ; publication + clic « Vérifier les nouvelles cartes » ⇒ bascule, purge des caches, images TCGdex ; ensuite plus aucune vérification.
 - `t_retour.py [ext extplus recherche zoom bouton compte jamais]` (4.83) : gestes retour, écran après chaque retour, et nombre d'entrées ajoutées sans activation (doit rester 0). Playwright n'applique pas le saut d'entrées de Chrome : on le détecte via `navigator.userActivation.isActive` après 6 s d'attente.
+- `t_fiche_entete.py` (4.84) : défilement de la fiche carte (téléphone 412×640, tablette 1100×800), l'en-tête reste en haut et la flèche retour reste utilisable.
 - Pièges : enregistrer la route « tout le reste » AVANT celle de googleapis (la dernière route gagne) ; viewport ≥ 600 px de petit côté (sinon `#rotMsg` bloque les clics) ; l'erreur JS `google is not defined` vient du faux script GIS vide.
 
 ## Constats sur l'export des lots du 07/11 (non corrigés)
