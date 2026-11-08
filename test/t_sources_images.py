@@ -1,4 +1,4 @@
-"""4.86 : sources d'images demandées quand TCGdex échoue (vrais clics).
+"""4.86 / 4.88 : sources d'images demandées quand TCGdex échoue (vrais clics).
 EV06 doit encore passer par pokemon.fr ; EV07-EV10 ne doivent plus le demander.
 python3 test/t_sources_images.py"""
 import json, re, os, threading, http.server, functools
@@ -45,6 +45,18 @@ with sync_playwright() as p:
             sum('assets.pokemon.com' in u for u in REQ),
             sum('images.pokemontcg.io' in u and 'symbol' not in u for u in REQ)))
         pg.click('[data-stkback]'); pg.wait_for_timeout(800)
+    # 4.88 : fiche detaillee, ordre des sources quand tout echoue
+    for sid in ['sv6','sv1']:
+        REQ.clear()
+        pg.click('.stkSet[data-stkset="%s"]'%sid); pg.wait_for_timeout(2000)
+        REQ.clear()
+        pg.locator('[data-stkid]').first.click(); pg.wait_for_timeout(2500)
+        ordre=[]
+        for u in REQ:
+            k=('TCGdex high' if 'high.webp' in u else 'TCGdex low' if 'low.webp' in u else 'pokemon.fr' if 'pokemon.com' in u else 'pokemontcg.io' if 'pokemontcg' in u else u)
+            if k not in ordre: ordre.append(k)
+        print('fiche %s, ordre des sources : %s'%(sid,' → '.join(ordre)))
+        pg.click('#shBack'); pg.wait_for_timeout(500); pg.click('[data-stkback]'); pg.wait_for_timeout(800)
     print('erreurs JS :',[e for e in errs if 'google is not defined' not in e])
     b.close()
 srv.shutdown()
