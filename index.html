@@ -866,7 +866,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.85';
+var APP_VERSION = '4.86';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -3859,9 +3859,10 @@ function ptcgImg(c, big){
    entre TCGdex FR et pokemontcg.io (anglais). TCGdex reste prioritaire et
    reprend la main des qu'il publie le scan. Codes ajoutes bloc par bloc,
    apres verification. */
+/* 4.86 : pokemon.fr n'a pas d'images apres SV06 (SV07-SV10 : 404 mesure le
+   08/11 sur les cartes 1, 2, 50, 100) : ne plus les demander */
 var PKM_CODES = {
-  sv1:'SV01', sv2:'SV02', sv3:'SV03', sv4:'SV04', sv5:'SV05',
-  sv6:'SV06', sv7:'SV07', sv8:'SV08', sv9:'SV09', sv10:'SV10'
+  sv1:'SV01', sv2:'SV02', sv3:'SV03', sv4:'SV04', sv5:'SV05', sv6:'SV06'
 };
 function pkmImg(c){
   var k = c && PKM_CODES[c.s];
