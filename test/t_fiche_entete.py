@@ -37,6 +37,7 @@ with sync_playwright() as p:
         pg.click('.nv[data-t="stock"]'); pg.wait_for_timeout(1200)
         pg.click('.stkSet[data-stkset="me6"]'); pg.wait_for_timeout(1200)
         pg.locator('[data-stkid]').first.click(); pg.wait_for_timeout(1500)
+        g0=pg.eval_on_selector('#sheet .grab','e=>Math.round(e.getBoundingClientRect().top)+(getComputedStyle(e).display==="none"?" (masquée)":"")')
         y0=pg.eval_on_selector('.shHd2','e=>e.getBoundingClientRect().top'); s0=pg.eval_on_selector('#sheet','e=>e.getBoundingClientRect().top')
         pg.screenshot(path='/tmp/entete_%s_0.png'%nom)
         # vrai geste : molette / glisser au milieu de la fiche
@@ -46,8 +47,11 @@ with sync_playwright() as p:
         pg.wait_for_timeout(500)
         st=pg.evaluate("['#sheet','#ovl','.ovl'].map(function(q){var e=document.querySelector(q);return q+'='+(e?e.scrollTop:'-')}).join(' ')+' html='+document.scrollingElement.scrollTop")
         y1=pg.eval_on_selector('.shHd2','e=>e.getBoundingClientRect().top')
+        g1=pg.eval_on_selector('#sheet .grab','e=>Math.round(e.getBoundingClientRect().top)+(getComputedStyle(e).display==="none"?" (masquée)":"")')
+        trou=pg.evaluate("(function(){var g=document.querySelector('#sheet .grab'),h=document.querySelector('.shHd2');if(getComputedStyle(g).display==='none')return 0;return Math.round(h.getBoundingClientRect().top-g.getBoundingClientRect().bottom)})()")
+        print('   espace entre poignée et en-tête (doit être 0) :',trou)
         pg.screenshot(path='/tmp/entete_%s_1.png'%nom)
-        print(nom,': défilement',st,'px | en-tête avant',round(y0),'après',round(y1),'(haut de la fiche',round(s0),')',
+        print(nom,': défilement',st,'px | en-tête avant',round(y0),'après',round(y1),'(haut de la fiche',round(s0),') | poignée avant',g0,'après',g1,
               '| visible :',pg.is_visible('#shBack'))
         pg.click('#shBack'); pg.wait_for_timeout(500)
         print('   flèche retour après défilement → fiche fermée :',not pg.evaluate('sheetOpen'),'| erreurs JS :',[e for e in errs if 'google is not defined' not in e])
