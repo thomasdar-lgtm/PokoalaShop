@@ -866,7 +866,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.88';
+var APP_VERSION = '4.89';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -7100,6 +7100,55 @@ function familleBase(nom){
 }
 
 var pickLot = null;
+/* 4.89 : extension tapee seule dans « Cartes du lot » (nom complet ou code
+   d'au moins 3 lettres). Si le meme mot est aussi un nom de carte (« mew »
+   = code de 151, « arceus », « tempete », « detectivepikachu »), les deux
+   resultats sont montres, le nom de carte d'abord. */
+var PICK_MAX = 400;
+function pickExtension(q){
+  if(!cdb) return null;
+  var w = norm(q);
+  if(w.length < 3) return null;
+  var sids = [], noms = [];
+  for(var i=0;i<cdb.sets.length;i++){
+    var st = cdb.sets[i];
+    if(norm(st.name) === w || norm(st.code || '') === w){ sids.push(st.id); noms.push(st.name + (st.code ? ' (' + st.code + ')' : '')); }
+  }
+  if(!sids.length) return null;
+  /* code a proposer pour affiner : seulement s'il est reconnu par la
+     recherche nom + code (au moins 3 lettres, une seule extension) */
+  var cd = sids.length === 1 ? (setInfo(sids[0]) || {}).code || '' : '';
+  if(norm(cd).length < 3) cd = '';
+  return { sids: sids, titre: noms.join(', '), code: cd, aussiNom: !!(nameIdx && nameIdx[w]) };
+}
+function pickParExtension(ext, inLot){
+  var ok = {};
+  for(var i=0;i<ext.sids.length;i++) ok[ext.sids[i]] = 1;
+  var r = [];
+  for(var k in stock){
+    if(!(stock[k] > 0) || inLot[k]) continue;
+    var cid = k.split('|')[0], d = cid.lastIndexOf('-');
+    if(d > 0 && ok[cid.slice(0, d)]) r.push(k);
+  }
+  return r;
+}
+/* ordre de l'extension : numero de la carte (ordre du fichier), puis variante, puis etat */
+function pickTriExtension(keys){
+  var rang = {};
+  for(var s in setCards){
+    var a = setCards[s];
+    if(a) for(var i=0;i<a.length;i++) rang[a[i].i] = i;
+  }
+  var et = {}; for(var e=0;e<ETS.length;e++) et[ETS[e][0]] = e;
+  function cle(k){
+    var p = k.split('|');
+    return [rang[p[0]] == null ? 1e9 : rang[p[0]], VAR_ORDRE.indexOf(p[1]), et[p[2]] == null ? 9 : et[p[2]]];
+  }
+  return keys.sort(function(x, y){
+    var a = cle(x), b = cle(y);
+    return a[0] - b[0] || a[1] - b[1] || a[2] - b[2] || (x < y ? -1 : x > y ? 1 : 0);
+  });
+}
 
 async function sheetPick(id){
   var l = lots.filter(function(x){ return x.id === id; })[0];
@@ -7129,6 +7178,7 @@ async function pickRender(q){
      « ronflex » ne donne que Ronflex, « ronflex 109 » ce numero,
      « ronflex crz » cette extension. Plus de pastilles dans ce cas. */
   var tape = !!(q && q.trim());
+  var ext = tape ? pickExtension(q) : null;
   var P = tape ? stkParse(q) : null;
   var base = tape ? P.nom : (l.poke || '');
   var fam = tape ? null : familleDe(base);
@@ -7145,8 +7195,9 @@ async function pickRender(q){
     return true;
   }
 
-  var avail = [];
-  if(nameIdx){
+  var avail = [], availExt = [];
+  if(ext) availExt = pickParExtension(ext, inLot);
+  if(nameIdx && (!ext || ext.aussiNom)){
     var ids = {};
     for(var t=0;t<cibles.length;t++){
       var n = norm(cibles[t]);
@@ -7164,9 +7215,10 @@ async function pickRender(q){
   }
 
   /* charger les extensions concernees avant d'afficher, sinon pas de nom ni d'image */
-  var all = mine.concat(avail);
+  var all = mine.concat(avail).concat(availExt);
   if(all.length) await ensureCards(all);
   if(pickLot !== l) return;
+  if(availExt.length) pickTriExtension(availExt);
 
   var nb = lotCardCount(l), s = nb > 1 ? 's' : '';
   var ns = lotStickCount(l);
@@ -7188,7 +7240,18 @@ async function pickRender(q){
      ils tombent sous la liste du lot, hors de l'ecran. */
   var hLot = mine.length ? '<div class="pkH">Dans ce lot</div>' + pickRows(mine, inLot) : '';
   var hRes = '';
-  if(cibles.length && norm(cibles[0]).length >= 2){
+  var hExt = '';
+  if(ext){
+    var nx = availExt.length;
+    hExt = '<div class="pkH">' + esc(ext.titre) + ' — en stock (' + nx + ')</div>' +
+      (!nx ? '<div class="pkE">Aucun exemplaire en stock dans cette extension.</div>'
+           : pickRows(availExt.slice(0, PICK_MAX), inLot, true) +
+             (nx > PICK_MAX ? '<div class="pkE">' + PICK_MAX + ' premières sur ' + nx + '.' +
+               (ext.code ? ' Ajoute un nom de Pokémon pour affiner, par exemple « ' + esc(ext.code.toLowerCase()) + ' pikachu ».' : '') + '</div>' : ''));
+  }
+  if(ext && !ext.aussiNom){
+    hRes = hExt;
+  } else if(cibles.length && norm(cibles[0]).length >= 2){
     hRes = '<div class="pkH">' + (tape ? 'Résultats en stock' : 'Disponible en stock') + '</div>' +
            (avail.length ? pickRows(avail, inLot)
                          : '<div class="pkE">Aucun exemplaire en stock pour cette recherche.</div>');
@@ -7197,6 +7260,7 @@ async function pickRender(q){
   } else if(!mine.length){
     hRes = '<div class="pkE">Tape au moins deux lettres pour chercher dans ton stock.</div>';
   }
+  if(ext && ext.aussiNom) hRes += hExt;
   h += tape ? (hRes + hLot) : (hLot + hRes);
 
   h += '<div class="shF"><button class="bP" id="k_pk">Terminé</button></div>';
@@ -7244,8 +7308,8 @@ async function pickRender(q){
   };
 }
 
-function pickRows(keys, inLot){
-  keys.sort();
+function pickRows(keys, inLot, ordre){
+  if(!ordre) keys.sort();
   var h = '';
   for(var i=0;i<keys.length;i++){
     var key = keys[i], p = key.split('|');

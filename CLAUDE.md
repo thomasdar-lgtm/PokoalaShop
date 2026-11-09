@@ -1,4 +1,4 @@
-# PoKoalaShop — brief de reprise (v4.88, 08/11/2026)
+# PoKoalaShop — brief de reprise (v4.89, 09/11/2026)
 
 > Fichier chargé automatiquement à chaque session. **À mettre à jour à chaque version** (repères, constantes, en attente), dans le même commit que `index.html`.
 
@@ -34,7 +34,7 @@
 
 ## 4. Architecture générale
 ### Constantes clés
-`APP_VERSION '4.88'` · `CARDS_VER '17'` · `SETS_VER '19'` · `FAM_VER '11'` · `ESP_VER '2'` · `PREFIX 'pks_'` · `SOLO 'cindy'` · `POLL_MS 45000` · `RELECT_MAX 10 min` · `BAK_KEEP 10`, `BAK_EVERY 6 h` · `TCGDEX 'https://api.tcgdex.net/v2/fr'`.
+`APP_VERSION '4.89'` · `CARDS_VER '17'` · `SETS_VER '19'` · `FAM_VER '11'` · `ESP_VER '2'` · `PREFIX 'pks_'` · `SOLO 'cindy'` · `POLL_MS 45000` · `RELECT_MAX 10 min` · `BAK_KEEP 10`, `BAK_EVERY 6 h` · `TCGDEX 'https://api.tcgdex.net/v2/fr'`.
 - Les fichiers de données sont chargés avec `?v=<VER>` : modifier un fichier de données ⇒ incrémenter la constante correspondante.
 
 ### Service worker (sw.js)
@@ -88,6 +88,7 @@
 - Exclut les cartes non-Pokémon (dresseurs, énergies) ; les objets restent avec le Pokémon ; les noms à suffixe sont rattachés à la famille (`faitsFam`).
 
 ## 7. Autres fonctions
+- **Cartes du lot par extension (4.89)** : dans `pickRender` (« Cartes du lot », champ `#f_pick`), `pickExtension(q)` reconnaît une extension tapée seule — nom complet ou code ≥ 3 lettres, normalisés — et `pickParExtension` liste tout son stock > 0 hors lot (Pokémon, dresseurs, énergies), trié par `pickTriExtension` (ordre du fichier `cards/`, puis variante `VAR_ORDRE`, puis état). Section « <nom> (<code>) — en stock (N) », max `PICK_MAX` = 400 avec message (affinage proposé « <code> pikachu », chemin nom + code de `stkParse`). Collisions avec un nom de carte (`mew` = code de 151, `arceus`, `tempete`, `detectivepikachu`) : résultats par nom d'abord, puis la section extension. `pickRows(keys, inLot, ordre)` : `ordre` vrai = pas de tri alphabétique. Test : `test/t_lot_extension.py`.
 - **Acheteurs** : `achListe`, suggestions `achSugg(inp, apres)` — **préfixe uniquement**, 6 max, dans les fiches Vendre / Vente multiple / Modifier. Plus de statut « expédié » : un lot est marqué vendu et part dans l'historique.
 - **Mises à jour (4.71)** : `prete()` → `checkUpdate` quand `reg.waiting` ; bannière « Version X prête · Installer » ; `majInstaller()` envoie skipWaiting, pose `majDemandee`, recharge (sans purge de cache). `controllerchange` ne recharge que si `majDemandee`. Bouton `majBox`/`majBouton` (Vérifier / Installer) en haut de Compte. `hardReload` = « Réinstallation complète » (dans Dépannage).
 - **Compte (4.69/4.70)** : ligne d'état · Nom de l'appareil · Mise à jour · Cet appareil (stockage) · Données · Stock (Vérifier le stock, **Télécharger le stock** `stkExport` : copie brute de tous les fichiers `pkstk*` + saisies en attente, lecture seule, tout ou rien) · Dépannage replié (`#a_dep`, `#a_depC`) : analyse holo, Désélectionner Normale, Derniers démarrages, Diagnostic images, Réinstallation, infos fichiers. Plus de liens vers les autres apps.
@@ -116,4 +117,4 @@
 - **Changements d'identifiant d'appareil (01/11, 02/11, 06/11)** : cause = effacement des données de Chrome sur le S25 (pour le dev de Koalarcade). Toutes les PWA `thomasdar-lgtm.github.io` partagent le même stockage local : effacer les données du site efface aussi PoKoalaShop (identifiant, nom, saisies non envoyées). Consigne donnée : tester les autres apps en navigation privée. S25 actuel = `mw4pmh3rylp1ug`, renommé « S25 » à la main avant la 4.80 (donc déjà une trace sur Drive : pas de question, comportement normal). Deux couches « S25 » coexistent (`mvz6xb9bmb5lvt` jusqu'au 05/11, `mw4pmh3rylp1ug` ensuite) : additionnées, aucun impact sur les totaux.
 
 ## 10. Repères de versions récentes
-4.52 journal mensuel · 4.60 fiabilisation des listes Stock · 4.69–4.70 réorganisation de Compte · 4.71 mises à jour sur accord · 4.74 portrait · 4.77 vérification des nouvelles cartes · 4.78 Règne Delta · 4.79 export du stock · 4.80 reprise d'identité · 4.81 nom de l'appareil verrouillé · 4.82 scans provisoires Règne Delta + bascule TCGdex · 4.83 geste retour · 4.84 en-tête fixe de la fiche carte · 4.85 poignée fixe aussi · 4.86 plus de demandes pokemon.fr pour EV07–EV10 · 4.87 le retour efface la recherche · **4.88 carte parasite Foudre Noire + fiche en haute définition (actuelle)**.
+4.52 journal mensuel · 4.60 fiabilisation des listes Stock · 4.69–4.70 réorganisation de Compte · 4.71 mises à jour sur accord · 4.74 portrait · 4.77 vérification des nouvelles cartes · 4.78 Règne Delta · 4.79 export du stock · 4.80 reprise d'identité · 4.81 nom de l'appareil verrouillé · 4.82 scans provisoires Règne Delta + bascule TCGdex · 4.83 geste retour · 4.84 en-tête fixe de la fiche carte · 4.85 poignée fixe aussi · 4.86 plus de demandes pokemon.fr pour EV07–EV10 · 4.87 le retour efface la recherche · 4.88 carte parasite Foudre Noire + fiche en haute définition · **4.89 cartes du lot par extension (actuelle)**.
