@@ -15,6 +15,7 @@ Exports fournis par Thomas, utilisés pour les tests Playwright (jamais lus par 
 - `t_fiche_entete.py` (4.84) : défilement de la fiche carte (téléphone 412×640, tablette 1100×800), l'en-tête reste en haut et la flèche retour reste utilisable.
 - `t_sources_images.py` (4.86) : toutes les sources d'images en échec, on compte les demandes par source pour EV06–EV10 (pokemon.fr seulement pour EV06).
 - `t_fiche_hd.py` (4.88) : vrais serveurs TCGdex/pokemon.fr, taille réelle de l'image de la fiche (EV01, EV06 : 600×825 attendu) ; Foudre Noire : `zsv10pt5-80` affichée une fois, stock et total inchangés, aucune écriture. Un premier chargement peut échouer par le réseau du bac à sable (le secours pokemon.fr 245×342 s'affiche alors) : relancer.
+- `t_lot_extension.py` (4.89) : « Cartes du lot » — nom/code d'extension seul, comptes comparés au stock, tri par numéro, collisions (`mew`, `arceus`), limite (abaissée à 50 pour l'éprouver), « + » depuis la section extension.
 - Pièges : enregistrer la route « tout le reste » AVANT celle de googleapis (la dernière route gagne) ; viewport ≥ 600 px de petit côté (sinon `#rotMsg` bloque les clics) ; l'erreur JS `google is not defined` vient du faux script GIS vide.
 
 ## Constats sur l'export des lots du 07/11 (non corrigés)
