@@ -204,6 +204,20 @@ main{padding:4px 16px 20px}
 .gToggle{display:flex;gap:6px;margin-bottom:10px}
 .gToggle button{flex:1;background:var(--surf);border:1px solid var(--bd);color:var(--tx2);font-size:12px;font-weight:700;padding:8px;border-radius:20px;cursor:pointer}
 .gToggle button.on{background:var(--redS);border-color:transparent;color:var(--red)}
+/* 4.90 canal de vente */
+.cvSeg{display:flex;gap:6px}
+.cvSeg button{flex:1;background:var(--surf2);border:1px solid var(--bd);color:var(--tx2);font-size:12.5px;font-weight:700;padding:10px 6px;border-radius:10px;cursor:pointer}
+.cvSeg button.on{background:var(--redS);border-color:var(--red);color:var(--red)}
+.cvTag{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:9px;vertical-align:1px;white-space:nowrap}
+.cvTag.cv_vt{background:rgba(9,177,186,.14);color:#0a9aa2}
+.cvTag.cv_vc{background:rgba(155,89,182,.15);color:#9b59b6}
+.cvTag.cv_mp{background:rgba(230,126,34,.16);color:#d35400}
+.cvFil{display:flex;gap:6px;margin:-2px 0 10px;flex-wrap:wrap}
+.cvFil button{background:var(--surf);border:1px solid var(--bd);color:var(--tx2);font-size:11.5px;font-weight:700;padding:6px 11px;border-radius:16px;cursor:pointer}
+.cvFil button.on{background:var(--redS);border-color:transparent;color:var(--red)}
+.cvSum{display:flex;gap:6px;margin:0 0 12px}
+.cvSum div{flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:12px;padding:8px 9px;font-size:11px;color:var(--tx3)}
+.cvSum b{display:block;font-size:14px;color:var(--tx);margin-top:2px}
 .hvTop{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .hvDate{font-size:13px;font-weight:600}
 .hvPrice{font-size:15px;font-weight:800;color:var(--grn)}
@@ -866,7 +880,7 @@ if(ok)document.documentElement.className+=' sess';}catch(e){}})();
 
 <script>
 'use strict';
-var APP_VERSION = '4.89';
+var APP_VERSION = '4.90';
 var CLIENT_ID = '794515583920-a9togbole8fr9njjsrjt0f1cq6utaent.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 var PREFIX = 'pks_';
@@ -886,6 +900,33 @@ var lotsDel = [];          /* lots supprimes, recuperables depuis la vitrine */
 var sortKey = 'date', sortDir = -1;
 var groupBy = 'poke';
 try{ var _g = localStorage.getItem(LS + 'group'); if(_g === 'ach' || _g === 'poke') groupBy = _g; }catch(e){}
+/* 4.90 : canal de vente (champ cv du lot). Absent = Vinted Thomas : les
+   ventes d'avant 4.90 ne sont pas reecrites, cv n'est pose que lorsqu'on le
+   choisit ou le modifie. */
+var CANAUX = [['vt','Vinted Thomas'],['vc','Vinted Cindy'],['mp','Main propre']];
+function canalDe(l){ return (l && (l.cv === 'vc' || l.cv === 'mp')) ? l.cv : 'vt'; }
+function canalNom(c){ for(var i=0;i<CANAUX.length;i++) if(CANAUX[i][0] === c) return CANAUX[i][1]; return ''; }
+function canalTag(l){ var c = canalDe(l); return '<span class="cvTag cv_' + c + '">' + esc(canalNom(c)) + '</span>'; }
+function canalDernier(){ var c = 'vt'; try{ c = localStorage.getItem(LS + 'cvlast') || 'vt'; }catch(e){} return canalNom(c) ? c : 'vt'; }
+var cvFiltre = '';
+try{ var _cf = localStorage.getItem(LS + 'cvf') || ''; if(!_cf || canalNom(_cf)) cvFiltre = _cf; }catch(e){}
+/* selecteur a trois boutons ; la valeur choisie est lue par canalLu(id) */
+function canalChoix(id, cur){
+  var h = '<div class="cvSeg" id="' + id + '">';
+  for(var i=0;i<CANAUX.length;i++)
+    h += '<button type="button" data-cvch="' + CANAUX[i][0] + '"' + (CANAUX[i][0] === cur ? ' class="on"' : '') + '>' + esc(CANAUX[i][1]) + '</button>';
+  return h + '</div>';
+}
+function canalLier(id, apres){
+  var z = $(id); if(!z) return;
+  var bs = z.querySelectorAll('[data-cvch]');
+  for(var i=0;i<bs.length;i++) bs[i].onclick = function(){
+    for(var j=0;j<bs.length;j++) bs[j].classList.toggle('on', bs[j] === this);
+    if(apres) apres(this.getAttribute('data-cvch'));
+  };
+}
+function canalLu(id){ var b = $(id) && $(id).querySelector('[data-cvch].on'); return b ? b.getAttribute('data-cvch') : ''; }
+function achLbl(c){ return c === 'mp' ? 'Acheteur' : 'Acheteur — pseudo Vinted'; }
 var selMode = false, sel = {}, suppressClick = false, lpTimer = null, lpX = 0, lpY = 0, lpId = null, lpFired = false;
 try{ var _s = JSON.parse(localStorage.getItem(LS + 'sort') || 'null'); if(_s){ sortKey = _s.k; sortDir = _s.d; } }catch(e){}
 var token = null, tokenExp = 0, tokenClient = null;
@@ -1784,7 +1825,7 @@ function csvCell(v){
 function exportCsv(){
   var sold = lots.filter(function(l){ return l.st === 'vendu' || l.st === 'expedie'; });
   sold.sort(function(a,b){ return String(a.dtVente||'').localeCompare(String(b.dtVente||'')); });
-  var head = ['Date de vente','Pokemon','Titre','Nb cartes','Prix affiche','Prix mini','Prix vendu','Acheteur','Boite','Date mise en ligne','Jours en ligne'];
+  var head = ['Date de vente','Pokemon','Titre','Nb cartes','Prix affiche','Prix mini','Prix vendu','Canal','Acheteur','Boite','Date mise en ligne','Jours en ligne'];
   var rows = [head.map(csvCell).join(';')];
   var tot = 0;
   for(var i=0;i<sold.length;i++){
@@ -1792,7 +1833,7 @@ function exportCsv(){
     var jours = (l.dtListe && l.dtVente)
       ? Math.max(0, Math.round((new Date(l.dtVente) - new Date(l.dtListe)) / 86400000)) : '';
     tot += (num(l.pv) || 0);
-    rows.push([dt(l.dtVente), l.poke, lotTitle(l), lotNb(l), l.pa, l.pm, l.pv, l.acheteur, l.boite, dt(l.dtListe), jours].map(csvCell).join(';'));
+    rows.push([dt(l.dtVente), l.poke, lotTitle(l), lotNb(l), l.pa, l.pm, l.pv, canalNom(canalDe(l)), l.acheteur, l.boite, dt(l.dtListe), jours].map(csvCell).join(';'));
   }
   rows.push('');
   rows.push([csvCell('Total'),'','','','','',csvCell(tot.toFixed(2))].join(';'));
@@ -2005,7 +2046,7 @@ function card(l){
 }
 
 function histoGroups(){
-  var sold = lots.filter(function(l){ return l.st === 'vendu' || l.st === 'expedie'; });
+  var sold = lots.filter(function(l){ return (l.st === 'vendu' || l.st === 'expedie') && (!cvFiltre || canalDe(l) === cvFiltre); });
   var byAch = groupBy === 'ach';
   var g = {};
   for(var i=0;i<sold.length;i++){
@@ -2049,10 +2090,30 @@ function groupToggle(){
     '<button data-gb="ach"' + (groupBy === 'ach' ? ' class="on"' : '') + '>Par acheteur</button></div>';
 }
 
+/* 4.90 : filtre par canal + total par canal (sur toutes les ventes) */
+function canalBarre(){
+  var h = '<div class="cvFil"><button data-cvf=""' + (!cvFiltre ? ' class="on"' : '') + '>Tous les canaux</button>';
+  for(var i=0;i<CANAUX.length;i++)
+    h += '<button data-cvf="' + CANAUX[i][0] + '"' + (cvFiltre === CANAUX[i][0] ? ' class="on"' : '') + '>' + esc(CANAUX[i][1]) + '</button>';
+  h += '</div>';
+  var t = {}, n = {};
+  for(var j=0;j<lots.length;j++){
+    var l = lots[j];
+    if(l.st !== 'vendu' && l.st !== 'expedie') continue;
+    var c = canalDe(l);
+    t[c] = (t[c] || 0) + (num(l.pv) || 0); n[c] = (n[c] || 0) + 1;
+  }
+  h += '<div class="cvSum">';
+  for(var k=0;k<CANAUX.length;k++){
+    var cc = CANAUX[k][0];
+    h += '<div>' + esc(CANAUX[k][1]) + '<b>' + eur0(t[cc] || 0) + '</b>' + (n[cc] || 0) + ' vente' + ((n[cc] || 0) > 1 ? 's' : '') + '</div>';
+  }
+  return h + '</div>';
+}
 function renderHisto(){
   var groups = histoGroups();
   var q = query();
-  if(!groups.length){ $('view').innerHTML = groupToggle() + empty(EMPTY_HISTO,'Aucune vente enregistrée.'); return; }
+  if(!groups.length){ $('view').innerHTML = groupToggle() + canalBarre() + empty(EMPTY_HISTO, cvFiltre ? 'Aucune vente sur ce canal.' : 'Aucune vente enregistrée.'); return; }
   if(q){
     groups = groups.filter(function(o){
       if(norm(o.nom).indexOf(norm(q)) >= 0) return true;
@@ -2060,19 +2121,19 @@ function renderHisto(){
       return false;
     });
     if(!groups.length){
-      $('view').innerHTML = groupToggle() + sortBar(false) + noHit(EMPTY_HISTO, groupBy === 'ach' ? 'les acheteurs' : 'l\'historique des ventes');
+      $('view').innerHTML = groupToggle() + canalBarre() + sortBar(false) + noHit(EMPTY_HISTO, groupBy === 'ach' ? 'les acheteurs' : 'l\'historique des ventes');
       return;
     }
   }
   var total = 0, n = 0;
   for(var i=0;i<groups.length;i++){ total += groups[i].sum; n += groups[i].items.length; }
-  var h2 = groupToggle() + sortBar(false) + '<div class="secH">Ventes <span>' + n + ' lots · ' + eur(total) + '</span></div>';
+  var h2 = groupToggle() + canalBarre() + sortBar(false) + '<div class="secH">Ventes <span>' + n + ' lots · ' + eur(total) + '</span></div>';
   for(var k=0;k<groups.length;k++){
     var o = groups[k];
     var rows = o.items.slice(0,3).map(function(l){
       var _n2 = lotNb(l);
       var quoi = groupBy === 'ach' ? esc(l.poke || '?') : (_n2 ? _n2 + ' cartes' : '');
-      return '<div class="hRow"><span>' + dt(l.dtVente) + (quoi ? ' · ' + quoi : '') + '</span><b>' + eur(num(l.pv)) + '</b></div>';
+      return '<div class="hRow"><span>' + dt(l.dtVente) + (quoi ? ' · ' + quoi : '') + ' ' + canalTag(l) + '</span><b>' + eur(num(l.pv)) + '</b></div>';
     }).join('');
     var more = o.items.length > 3 ? '<div class="hRow" style="color:var(--red)"><span>Voir les ' + o.items.length + ' ventes</span><span>›</span></div>' : '';
     h2 += '<div class="hCard" data-histo="' + esc(o.key) + '"><div class="hTitle"><div class="hName">' + esc(o.nom) + '</div>' +
@@ -2135,7 +2196,8 @@ function sheetMultiSell(){
     '<div class="shS">Ajuste le prix réel de chaque lot si l\'acheteur a négocié.</div>' +
     '<div class="fld">' + rows + '</div>' +
     '<div class="msTot"><span>Total de la commande</span><b id="msTot">—</b></div>' +
-    '<div class="fld" style="margin-top:14px"><label class="lbl">Acheteur — pseudo Vinted</label>' +
+    '<div class="fld" style="margin-top:14px"><label class="lbl">Canal de vente</label>' + canalChoix('ms_cv', canalDernier()) + '</div>' +
+    '<div class="fld"><label class="lbl" id="ms_achl">' + achLbl(canalDernier()) + '</label>' +
     '<input class="inp" id="ms_ach" placeholder="pseudo Vinted" autocomplete="off"></div>' +
     '<div class="shF"><button class="bS" id="msx">Annuler</button>' +
     '<button class="bP g" id="msk">Enregistrer la commande</button></div>');
@@ -2147,9 +2209,13 @@ function sheetMultiSell(){
   var ins = document.querySelectorAll('[data-ms]');
   for(var j=0;j<ins.length;j++) ins[j].oninput = recalc;
   recalc();
+  canalLier('ms_cv', function(c){ $('ms_achl').textContent = achLbl(c); });
   achSugg($('ms_ach'));
   $('msx').onclick = closeSheet;
   $('msk').onclick = function(){
+    var cv = canalLu('ms_cv');
+    if(!cv){ toast('Choisis le canal de vente'); return; }
+    try{ localStorage.setItem(LS + 'cvlast', cv); }catch(e){}
     var cmdId = nid(), stamp = now();
     var ach = $('ms_ach').value.trim();
     var all = document.querySelectorAll('[data-ms]');
@@ -2159,6 +2225,7 @@ function sheetMultiSell(){
       if(!lot) continue;
       lot.pv = num(all[k].value);
       lot.st = 'vendu'; lot.dtVente = stamp; lot.cmdId = cmdId;
+      lot.cv = cv;
       if(ach) lot.acheteur = ach;
       commit(lot);
     }
@@ -2195,6 +2262,7 @@ function histoRow(l, byPoke){
   if(byPoke){ if(l.acheteur) meta.push(esc(l.acheteur)); }
   else meta.push(esc(l.poke || '?'));
   if(num(l.pa) != null) meta.push('affiché ' + eur(num(l.pa)));
+  meta.push(canalTag(l));
   var att = l.photo ? ' data-ph="' + l.photo + '"' : '';
   return '<div class="hvRow" data-hview="' + l.id + '"><div class="hvPh"' + att + '>' +
     '<span class="ph-holder" style="width:22px;height:22px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/> <path d="M12 22V12"/> <polyline points="3.29 7 12 12 20.71 7"/> <path d="m7.5 4.27 9 5.15"/></svg></span></div>' +
@@ -2330,6 +2398,7 @@ function sheetView(id){
     row('Prix affiché', num(l.pa) != null ? eur(num(l.pa)) : '') +
     row('Prix mini accepté', num(l.pm) != null ? eur(num(l.pm)) : '') +
     row('Prix de vente', num(l.pv) != null ? '<span style="color:var(--grn)">' + eur(num(l.pv)) + '</span>' : '') +
+    ((l.st === 'vendu' || l.st === 'expedie') ? row('Canal de vente', canalTag(l)) : '') +
     row('Acheteur', esc(l.acheteur)) +
     row('Mis en ligne le', l.dtListe ? dt(l.dtListe) : '') +
     row('Vendu le', l.dtVente ? dt(l.dtVente) : '') +
@@ -2585,15 +2654,21 @@ function sheetSell(id){
     '<div class="shT">Lot vendu</div>' +
     '<div class="shS">' + esc(lotTitle(l)) + (num(l.pa)!=null ? ' · affiché ' + eur(num(l.pa)) : '') + '</div>' +
     '<div class="fld"><label class="lbl">Prix de vente réel</label><input class="inp" id="f_pv" type="number" inputmode="decimal" step="0.5" value="' + (l.pa==null?'':l.pa) + '"></div>' +
-    '<div class="fld"><label class="lbl">Acheteur — pseudo Vinted</label><input class="inp" id="f_ach" placeholder="pseudo Vinted" autocomplete="off" value="' + esc(l.acheteur) + '"></div>' +
+    '<div class="fld"><label class="lbl">Canal de vente</label>' + canalChoix('f_cv', l.cv ? canalDe(l) : canalDernier()) + '</div>' +
+    '<div class="fld"><label class="lbl" id="f_achl">' + achLbl(l.cv ? canalDe(l) : canalDernier()) + '</label><input class="inp" id="f_ach" placeholder="pseudo Vinted" autocomplete="off" value="' + esc(l.acheteur) + '"></div>' +
     '<div class="shF"><button class="bS" id="x3">Annuler</button><button class="bP g" id="k3">Enregistrer la vente</button></div>'
   );
   $('x3').onclick = closeSheet;
+  canalLier('f_cv', function(c){ $('f_achl').textContent = achLbl(c); });
   achSugg($('f_ach'));
   $('k3').onclick = function(){
     var pv = num($('f_pv').value);
     if(pv == null){ toast('Indique le prix de vente'); return; }
+    var cv = canalLu('f_cv');
+    if(!cv){ toast('Choisis le canal de vente'); return; }
     l.pv = pv; l.acheteur = $('f_ach').value.trim();
+    l.cv = cv;
+    try{ localStorage.setItem(LS + 'cvlast', cv); }catch(e){}
     l.st = 'vendu'; l.dtVente = now();
     closeSheet(); commit(l); toast('Vente enregistrée');
   };
@@ -2619,6 +2694,8 @@ function sheetEdit(id){
       opt('afaire', l.st) + opt('pret', l.st) + opt('vitrine', l.st) + opt('vendu', l.st) + opt('expedie', l.st) +
     '</select></div>' +
     '<div class="fld"><label class="lbl">Acheteur</label><input class="inp" id="f_ach" value="' + esc(l.acheteur) + '"></div></div>' +
+    /* 4.90 : canal, visible pour un lot vendu (ou passe en vendu ici) */
+    '<div class="fld" id="f_cvz"' + ((l.st === 'vendu' || l.st === 'expedie') ? '' : ' style="display:none"') + '><label class="lbl">Canal de vente</label>' + canalChoix('f_cv', canalDe(l)) + '</div>' +
     '<div class="row2"><div class="fld"><label class="lbl">En ligne depuis le</label><input class="inp" id="f_dl" type="date" value="' + toDateInput(l.dtListe) + '" max="' + toDateInput(now()) + '"></div>' +
     '<div class="fld"><label class="lbl">Date de vente</label><input class="inp" id="f_dv" type="date" value="' + toDateInput(l.dtVente) + '" max="' + toDateInput(now()) + '"></div></div>' +
     '<div class="fld"><label class="lbl">Notes</label><textarea class="inp" id="f_notes" placeholder="Contenu, état, remarques…">' + esc(l.notes) + '</textarea></div>' +
@@ -2627,6 +2704,8 @@ function sheetEdit(id){
   );
   bindPhoto();
   achSugg($('f_ach'), $('f_ach').closest('.row2'));
+  canalLier('f_cv');
+  $('f_st').onchange = function(){ var v = this.value; $('f_cvz').style.display = (v === 'vendu' || v === 'expedie') ? '' : 'none'; };
   $('x4').onclick = closeSheet;
   $('k4d').onclick = function(){
     var nbk = lotCardCount(l);
@@ -2667,6 +2746,11 @@ function sheetEdit(id){
       if(ns === 'vitrine' && !l.dtListe) l.dtListe = now();
       if(ns === 'vendu' && !l.dtVente) l.dtVente = now();
       if(ns === 'expedie' && !l.dtExp) l.dtExp = now();
+    }
+    /* canal : ecrit seulement s'il change (un ancien lot sans cv reste tel quel) */
+    if(l.st === 'vendu' || l.st === 'expedie'){
+      var cv4 = canalLu('f_cv');
+      if(cv4 && cv4 !== canalDe(l)) l.cv = cv4;
     }
     var needSell = (l.st === 'vendu' || l.st === 'expedie') && num(l.pv) == null;
     closeSheet(); commit(l);
@@ -3092,6 +3176,13 @@ document.addEventListener('click', function(e){
   if(selMode){
     var c = e.target.closest('.card');
     if(c){ e.preventDefault(); e.stopPropagation(); toggleSel(c.getAttribute('data-open')); }
+    return;
+  }
+  var cf = e.target.closest('[data-cvf]');
+  if(cf){
+    cvFiltre = cf.getAttribute('data-cvf') || '';
+    try{ localStorage.setItem(LS + 'cvf', cvFiltre); }catch(err){}
+    render();
     return;
   }
   var gb = e.target.closest('[data-gb]');
